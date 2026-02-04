@@ -7,5 +7,6 @@ Route::get('/', function () {
 });
 
 Route::get('/health-check', function () {
+    Log::info('Health check endpoint accessed.');
     return response()->json(['status' => 'OK']);
 });

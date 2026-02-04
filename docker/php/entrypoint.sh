@@ -16,7 +16,17 @@ ensure_dir "$APP_DIR/storage/logs"
 ensure_dir "$APP_DIR/bootstrap/cache"
 
 # Best-effort permissions for bind mounts / volumes.
-chown -R www-data:www-data \
+OWNER_USER="www-data"
+OWNER_GROUP="www-data"
+
+# In the dev image, PHP-FPM runs as `app:app` (see docker/php/www.dev.conf).
+# In prod, it runs as `www-data:www-data`.
+if id app >/dev/null 2>&1; then
+  OWNER_USER="app"
+  OWNER_GROUP="app"
+fi
+
+chown -R "${OWNER_USER}:${OWNER_GROUP}" \
   "$APP_DIR/storage" \
   "$APP_DIR/bootstrap/cache" \
   2>/dev/null || true
