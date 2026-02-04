@@ -49,3 +49,10 @@ This repo runs a Laravel app (in `backend/`) via Docker Compose:
 
 Then paste it into `backend/.env.local`.
 
+## Log Viewer
+
+- URL: http://localhost:8000/log-viewer
+
+## API Doc
+- Used dedoc/scramble for api doc. 
+- URL: http://localhost:9990/docs/api
