@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${ROOT_DIR}"
+
+env_name="local"
+if [[ "${1-}" == "--prod" ]]; then
+  env_name="prod"
+  shift
+elif [[ "${1-}" == "--local" ]]; then
+  env_name="local"
+  shift
+fi
+
+if [[ "${env_name}" == "prod" ]]; then
+  env_file="backend/.env.prod"
+  compose_file="docker-compose.prod.yml"
+else
+  env_file="backend/.env.local"
+  compose_file="docker-compose.local.yml"
+fi
+
+compose=(docker compose --env-file "${env_file}" -f "${compose_file}")
+
+exec_tty=()
+if [[ -n "${CI-}" ]]; then
+  exec_tty=(-T)
+fi
+
+php_container_id="$("${compose[@]}" ps -q php 2>/dev/null || true)"
+if [[ -n "${php_container_id}" ]]; then
+  "${compose[@]}" exec "${exec_tty[@]}" php php artisan "$@"
+else
+  "${compose[@]}" run --rm php php artisan "$@"
+fi

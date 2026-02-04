@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${ROOT_DIR}"
+
+compose=(docker compose --env-file backend/.env.local -f docker-compose.local.yml)
+
+if [[ $# -gt 0 ]]; then
+  echo "Usage: $0" >&2
+  exit 2
+fi
+
+# Env vars in services are applied at container creation time, so we must recreate.
+exec "${compose[@]}" up -d --build --force-recreate --remove-orphans

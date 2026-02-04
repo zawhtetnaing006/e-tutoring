@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Assumes it is run from the repo root.
+if [[ ! -f docker-compose.prod.yml || ! -f backend/.env.prod ]]; then
+  echo "Error: run from the project root (missing docker-compose.prod.yml or backend/.env.prod)." >&2
+  exit 1
+fi
+
+compose=(docker compose --env-file backend/.env.prod -f docker-compose.prod.yml)
+
+migrate=0
+
+if [[ "${1-}" == "--migrate" ]]; then
+  migrate=1
+  shift
+fi
+
+if [[ $# -gt 0 ]]; then
+  echo "Usage: $0 [--migrate]" >&2
+  exit 2
+fi
+
+# Recreate to pick up env/service changes; always build the app images.
+"${compose[@]}" up -d --build --force-recreate --remove-orphans
+
+if [[ "${migrate}" -eq 1 ]]; then
+  "${compose[@]}" exec -T php php artisan migrate --force
+fi
+

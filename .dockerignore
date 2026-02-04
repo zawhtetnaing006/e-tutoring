@@ -1,0 +1,11 @@
+**/.git
+**/.DS_Store
+
+backend/node_modules
+backend/vendor
+backend/bootstrap/cache/*.php
+backend/mysql_data
+backend/storage/logs
+backend/storage/framework/cache
+backend/storage/framework/sessions
+backend/storage/framework/views
