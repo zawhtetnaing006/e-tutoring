@@ -12,4 +12,9 @@ if [[ $# -gt 0 ]]; then
 fi
 
 # Env vars in services are applied at container creation time, so we must recreate.
-exec "${compose[@]}" up -d --build --force-recreate --remove-orphans
+"${compose[@]}" up -d --build --force-recreate --remove-orphans
+
+# First-run convenience: install PHP deps inside the bind-mounted app if missing.
+if ! "${compose[@]}" exec -T php test -f /var/www/vendor/autoload.php; then
+  "${compose[@]}" exec -T php composer install
+fi
