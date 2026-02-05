@@ -23,7 +23,20 @@ services:
       - redis
     volumes:
       - ./backend:/var/www
-      - ./backend/.env.local:/var/www/.env
+    networks:
+      - app
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      - mysql
+      - redis
+    volumes:
+      - ./backend:/var/www
     networks:
       - app
 

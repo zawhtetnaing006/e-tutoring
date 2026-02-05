@@ -50,6 +50,20 @@ docker compose --env-file backend/.env.local -f docker-compose.local.yml exec -T
 
 - http://localhost:8000
 
+## Scheduler (Sanctum token pruning)
+
+Sanctum tokens are set to expire after 24 hours and should be pruned regularly.
+
+Local (keeps running in foreground):
+```bash
+./artisan schedule:work
+```
+
+Production (cron every minute):
+```bash
+* * * * * cd /path/to/e-tutoring && ./artisan schedule:run >> /dev/null 2>&1
+```
+
 ## Environment files
 
 - If you need a new `APP_KEY`, print one without writing files:
