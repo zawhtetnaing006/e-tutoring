@@ -16,8 +16,15 @@ This repo runs a Laravel app (in `backend/`) via Docker Compose:
 
 1) Start the stack:
 
+### FOR MAC/LINUX
 ```bash
 ./dev-restart
+```
+
+### FOR WINDOW
+```bash
+docker compose --env-file backend/.env.local -f docker-compose.local.yml up -d --build --force-recreate --remove-orphans
+docker compose --env-file backend/.env.local -f docker-compose.local.yml exec -T php composer install
 ```
 
 2) PHP dependencies:
@@ -33,6 +40,10 @@ This repo runs a Laravel app (in `backend/`) via Docker Compose:
 
 ```bash
 ./artisan migrate
+```
+
+```bash
+docker compose --env-file backend/.env.local -f docker-compose.local.yml exec -T php artisan migrate
 ```
 
 4) Open the app:
