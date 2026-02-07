@@ -20,11 +20,13 @@ export type ApiRequestInit = Omit<RequestInit, 'body'> & {
  */
 export async function apiClient<T>(
   path: string,
-  init: ApiRequestInit = {},
+  init: ApiRequestInit = {}
 ): Promise<T> {
   const baseUrl = getBaseUrl()
   if (!baseUrl) {
-    throw new Error('VITE_API_BASE_URL is not set. Add it to .env or .env.local')
+    throw new Error(
+      'VITE_API_BASE_URL is not set. Add it to .env or .env.local'
+    )
   }
   const { body, token, headers: initHeaders, ...rest } = init
   const headers = new Headers(initHeaders)
@@ -34,15 +36,19 @@ export async function apiClient<T>(
   if (body != null && !(body instanceof FormData)) {
     if (typeof body === 'string') {
       finalBody = body
-      if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+      if (!headers.has('Content-Type'))
+        headers.set('Content-Type', 'application/json')
     } else {
       finalBody = JSON.stringify(body)
-      if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+      if (!headers.has('Content-Type'))
+        headers.set('Content-Type', 'application/json')
     }
   } else if (body instanceof FormData) {
     finalBody = body
   }
-  const url = path.startsWith('http') ? path : `${baseUrl}/${path.replace(/^\//, '')}`
+  const url = path.startsWith('http')
+    ? path
+    : `${baseUrl}/${path.replace(/^\//, '')}`
   const res = await fetch(url, {
     ...rest,
     credentials: 'include',
@@ -51,7 +57,11 @@ export async function apiClient<T>(
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
-    throw new ApiError(res.status, data?.message ?? data?.error ?? res.statusText, data)
+    throw new ApiError(
+      res.status,
+      data?.message ?? data?.error ?? res.statusText,
+      data
+    )
   }
   return data as T
 }

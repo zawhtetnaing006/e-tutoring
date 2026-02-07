@@ -7,8 +7,11 @@ React + TypeScript + Vite frontend with Tailwind CSS, React Query, React Hook Fo
 ```bash
 npm install
 ```
+This installs dependencies and runs the prepare script (Husky).
 
-This installs dependencies and runs the `prepare` script (Husky). If you see "`.git can't be found`", the repo root is the parent folder; pre-commit hooks will still run when committing from the repo root if Git is configured to use this project’s hooks.
+```bash
+npm run prepare
+```
 
 ## Environment
 
@@ -18,16 +21,6 @@ Copy `.env.example` to `.env` or `.env.local` and set values. Use `import.meta.e
 cp .env.example .env.local
 ```
 
-## Toasts (Sonner)
-
-`<Toaster />` in `providers.tsx`. Use: `import { toast } from 'sonner'` then `toast()`, `toast.success()`, `toast.error()`.
-
-## Laravel API
-
-- **Base URL**: Set `VITE_API_BASE_URL` to your Laravel API base
-- **Client**: `src/lib/api-client.ts` — `apiClient(path, init)` for fetch with credentials (Sanctum cookies), JSON, optional `token` for Bearer auth.
-- **Endpoints**: Add functions in `src/api/` (e.g. `src/api/health.ts`). Use with React Query: `useQuery({ queryKey: [...], queryFn: api.getSomething })`.
-- **Example**: `useHealthCheck()` calls `GET /api/health`; the home page shows API status. Ensure Laravel CORS allows your frontend origin
 
 ## Scripts
 
@@ -37,6 +30,11 @@ cp .env.example .env.local
 | `npm run build`   | Type-check and production build                     |
 | `npm run preview` | Preview production build                            |
 | `npm run lint`    | Run ESLint (and Prettier via lint-staged on commit) |
+| `npm run lint:fix` | Automatically fix all auto-fixable lint and style errors |
+| `npm run typecheck` | Run TypeScript compiler to catch logic errors (no build) |
+| `npm run format`    | Force Prettier to reformat all files and sort Tailwind classes |
+| `npm run format:check`    | Verify that all files follow the Prettier rules |
+| `npm run validate`    | Run type-check, lint, and format checks in sequence |
 
 ## Installed packages & setup
 
@@ -54,6 +52,17 @@ cp .env.example .env.local
 | **lucide-react**                                        | Icons                 | `import { IconName } from 'lucide-react'`.                          |
 | **shadcn/ui** (components.json)                         | UI components         | `components/ui/`. Add: `npx shadcn@latest add button`.              |
 | **tailwindcss-animate**                                 | Tailwind animations   | `tailwind.config.js`.                                               |
+
+## Toasts (Sonner)
+
+`<Toaster />` in `providers.tsx`. Use: `import { toast } from 'sonner'` then `toast()`, `toast.success()`, `toast.error()`.
+
+## Laravel API
+
+- **Base URL**: Set `VITE_API_BASE_URL` to your Laravel API base
+- **Client**: `src/lib/api-client.ts` — `apiClient(path, init)` for fetch with credentials (Sanctum cookies), JSON, optional `token` for Bearer auth.
+- **Endpoints**: Add functions in `src/api/` (e.g. `src/api/health.ts`). Use with React Query: `useQuery({ queryKey: [...], queryFn: api.getSomething })`.
+- **Example**: `useHealthCheck()` calls `GET /api/health`; the home page shows API status. Ensure Laravel CORS allows your frontend origin
 
 ---
 

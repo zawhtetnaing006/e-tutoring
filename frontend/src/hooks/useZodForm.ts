@@ -1,4 +1,9 @@
-import { useForm, type FieldValues, type UseFormProps, type UseFormReturn } from 'react-hook-form'
+import {
+  useForm,
+  type FieldValues,
+  type UseFormProps,
+  type UseFormReturn,
+} from 'react-hook-form'
 import type { z } from 'zod'
 import { createZodResolver } from '@/lib/form'
 
@@ -15,10 +20,12 @@ type InferSchemaValues<T extends z.ZodType<FieldValues>> = z.infer<T>
  */
 export function useZodForm<Schema extends z.ZodType<FieldValues>>(
   schema: Schema,
-  options?: Omit<UseFormProps<InferSchemaValues<Schema>>, 'resolver'>,
+  options?: Omit<UseFormProps<InferSchemaValues<Schema>>, 'resolver'>
 ): UseFormReturn<InferSchemaValues<Schema>> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zod 4 vs @hookform/resolvers type mismatch
-  const resolver = createZodResolver(schema as any) as UseFormProps<FieldValues>['resolver']
+  const resolver = createZodResolver(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    schema as any
+  ) as UseFormProps<FieldValues>['resolver']
   const form = useForm({
     ...(options as UseFormProps<FieldValues>),
     resolver,
