@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ChatController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/health', \App\Http\Controllers\Api\HealthCheckController::class);
 
@@ -16,4 +16,13 @@ Route::prefix('auth')
             Route::get('me', 'me');
             Route::post('logout', 'logout');
         });
+    });
+
+Route::middleware('auth:sanctum')
+    ->prefix('chat')
+    ->controller(ChatController::class)
+    ->group(function () {
+        Route::post('direct', 'createDirectConversation');
+        Route::get('{conversation}/messages', 'listMessages');
+        Route::post('{conversation}/messages', 'sendMessage');
     });
