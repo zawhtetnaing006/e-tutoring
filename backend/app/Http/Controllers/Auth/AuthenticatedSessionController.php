@@ -4,22 +4,28 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 
 class AuthenticatedSessionController extends Controller
 {
     /**
      * Handle an incoming authentication request.
      */
-    public function store(LoginRequest $request): Response
+    public function store(LoginRequest $request): JsonResponse
     {
-        $request->authenticate();
+        $user = $request->authenticate();
 
-        $request->session()->regenerate();
+        $plainTextToken = $user->createToken(
+            $request->string('device_name')->toString() ?: 'api-token'
+        )->plainTextToken;
 
-        return response()->noContent();
+        return response()->json([
+            'token' => $plainTextToken,
+            'token_type' => 'Bearer',
+            'user' => $user,
+        ]);
     }
 
     /**
@@ -27,11 +33,10 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): Response
     {
-        Auth::guard('web')->logout();
-
-        $request->session()->invalidate();
-
-        $request->session()->regenerateToken();
+        $token = $request->user()?->currentAccessToken();
+        if ($token) {
+            $token->delete();
+        }
 
         return response()->noContent();
     }
