@@ -17,7 +17,7 @@ class AuthService
     {
         $user = User::firstWhere('email', $credentials['email']);
 
-        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! $user->is_active || ! Hash::check($credentials['password'], $user->password)) {
             return null;
         }
 

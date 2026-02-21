@@ -10,24 +10,47 @@ use Illuminate\Support\Str;
 class UserSeeder extends Seeder
 {
     /**
-     * Seed a default API user.
+     * Seed default users.
      */
     public function run(): void
     {
-        $name = 'Admin User';
-        $email = 'admin@gmail.com';
-        $password = 'password';
+        $users = [
+            [
+                'name' => 'Admin User',
+                'email' => 'admin@gmail.com',
+                'password' => 'password',
+                'role' => 'admin',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Tutor User',
+                'email' => 'tutor@gmail.com',
+                'password' => 'password',
+                'role' => 'tutor',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'Student User',
+                'email' => 'student@gmail.com',
+                'password' => 'password',
+                'role' => 'student',
+                'is_active' => true,
+            ],
+        ];
 
-        $user = User::firstOrNew(['email' => $email]);
+        foreach ($users as $userData) {
+            $user = User::firstOrNew(['email' => $userData['email']]);
 
-        if (empty($user->uuid)) {
-            $user->uuid = (string) Str::uuid();
+            if (empty($user->uuid)) {
+                $user->uuid = (string) Str::uuid();
+            }
+
+            $user->name = $userData['name'];
+            $user->is_active = $userData['is_active'];
+            $user->password = Hash::make($userData['password']);
+            $user->save();
+
+            $user->syncRoles([$userData['role']]);
         }
-
-        $user->name = $name;
-        $user->password = Hash::make($password);
-        $user->save();
-
-        User::factory()->count(9)->create();
     }
 }
