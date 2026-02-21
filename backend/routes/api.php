@@ -11,6 +11,9 @@ Route::prefix('auth')
     ->group(function () {
         Route::post('register', 'register');
         Route::post('login', 'login');
+        Route::post('forgot-password', 'forgotPassword');
+        Route::post('verify-reset-code', 'verifyResetCode');
+        Route::post('reset-password', 'resetPassword');
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('me', 'me');

@@ -1,4 +1,4 @@
-name: laravel-starter-kit-prod
+name: e-tutoring-prod
 
 services:
   nginx:
@@ -39,7 +39,7 @@ services:
     image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password
     environment:
-      MYSQL_DATABASE: laravel_starter_kit
+      MYSQL_DATABASE: e_tutoring
       MYSQL_USER: laravel
       MYSQL_PASSWORD: prod_laravel_password
       MYSQL_ROOT_PASSWORD: root_password

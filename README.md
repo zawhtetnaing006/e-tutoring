@@ -1,4 +1,4 @@
-# Laravel Starter Kit (Local Development)
+# e-tutoring (Local Development)
 
 This repo runs a Laravel app (in `backend/`) via Docker Compose:
 
@@ -6,6 +6,11 @@ This repo runs a Laravel app (in `backend/`) via Docker Compose:
 - **mysql** (database)
 - **redis** (cache/session/queue)
 - **adminer** (DB UI) at http://localhost:8000/adminer
+- **mailhog** (SMTP + mail UI) at http://localhost:8025
+
+Compose project names:
+- Local: `e-tutoring-local`
+- Prod: `e-tutoring-prod`
 
 ## Prerequisites
 
@@ -49,6 +54,8 @@ docker compose --env-file backend/.env.local -f docker-compose.local.yml exec -T
 4) Open the app:
 
 - http://localhost:8000
+- API base URL: `http://localhost:8000/api`
+- MailHog UI: `http://localhost:8025`
 
 ## Scheduler (Sanctum token pruning)
 
@@ -80,4 +87,4 @@ Then paste it into `backend/.env.local`.
 
 ## API Doc
 - Used dedoc/scramble for api doc. 
-- URL: http://localhost:9990/docs/api
+- URL: http://localhost:8000/docs/api

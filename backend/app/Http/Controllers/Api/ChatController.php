@@ -32,7 +32,7 @@ class ChatController
         $pairKey = "{$ids[0]}:{$ids[1]}";
 
         $conversation = DB::transaction(function () use ($currentUserId, $otherUserId, $pairKey): Conversation {
-            $conversation = Conversation::query()->firstOrCreate(
+            $conversation = Conversation::firstOrCreate(
                 [
                     'type' => 'direct',
                     'direct_pair_key' => $pairKey,
@@ -45,7 +45,7 @@ class ChatController
 
             $now = now();
 
-            ConversationMember::query()->upsert(
+            ConversationMember::upsert(
                 [
                     [
                         'conversation_id' => $conversation->id,
@@ -90,8 +90,7 @@ class ChatController
 
         $perPage = max(1, min(100, (int) $request->integer('per_page', 20)));
 
-        $messages = Message::query()
-            ->where('conversation_id', $conversation->id)
+        $messages = Message::where('conversation_id', $conversation->id)
             ->latest('id')
             ->paginate($perPage);
 
@@ -106,7 +105,7 @@ class ChatController
             'body' => ['required', 'string', 'max:5000'],
         ]);
 
-        $message = Message::query()->create([
+        $message = Message::create([
             'conversation_id' => $conversation->id,
             'sender_id' => (int) $request->user()->id,
             'body' => $data['body'],
@@ -131,8 +130,7 @@ class ChatController
 
     private function ensureConversationMember(Request $request, Conversation $conversation): void
     {
-        $isMember = ConversationMember::query()
-            ->where('conversation_id', $conversation->id)
+        $isMember = ConversationMember::where('conversation_id', $conversation->id)
             ->where('user_id', (int) $request->user()->id)
             ->whereNull('left_at')
             ->exists();

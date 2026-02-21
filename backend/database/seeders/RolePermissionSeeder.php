@@ -14,12 +14,10 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         foreach (Role::all() as $role) {
-            $allPermissions = Permission::query()
-                ->where('guard_name', $role->guard_name)
+            $allPermissions = Permission::where('guard_name', $role->guard_name)
                 ->get();
 
-            $viewPermissions = Permission::query()
-                ->where('guard_name', $role->guard_name)
+            $viewPermissions = Permission::where('guard_name', $role->guard_name)
                 ->where('name', 'like', '%.view')
                 ->get();
 
