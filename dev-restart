@@ -14,6 +14,44 @@ fi
 # Env vars in services are applied at container creation time, so we must recreate.
 "${compose[@]}" up -d --build --force-recreate --remove-orphans
 
+# Ensure DB/schema permissions match backend/.env.local (idempotent).
+read_env_value() {
+  local key="$1"
+  awk -F= -v k="${key}" '
+    $1==k {
+      value=$2
+      gsub(/^"|"$/, "", value)
+      print value
+      exit
+    }
+  ' backend/.env.local
+}
+
+db_name="$(read_env_value DB_DATABASE)"
+db_user="$(read_env_value DB_USERNAME)"
+db_password="$(read_env_value DB_PASSWORD)"
+mysql_root_password="${MYSQL_ROOT_PASSWORD_LOCAL:-root_password}"
+
+if [[ -z "${db_name}" || -z "${db_user}" || -z "${db_password}" ]]; then
+  echo "DB_DATABASE, DB_USERNAME, and DB_PASSWORD must be set in backend/.env.local." >&2
+  exit 1
+fi
+
+for _ in {1..30}; do
+  if "${compose[@]}" exec -T mysql mysqladmin ping -uroot "-p${mysql_root_password}" --silent >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+"${compose[@]}" exec -T mysql mysql -uroot "-p${mysql_root_password}" -e "
+CREATE DATABASE IF NOT EXISTS \`${db_name}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${db_user}'@'%' IDENTIFIED BY '${db_password}';
+ALTER USER '${db_user}'@'%' IDENTIFIED BY '${db_password}';
+GRANT ALL PRIVILEGES ON \`${db_name}\`.* TO '${db_user}'@'%';
+FLUSH PRIVILEGES;
+"
+
 # First-run convenience: install PHP deps inside the bind-mounted app if missing.
 if ! "${compose[@]}" exec -T php test -f /var/www/vendor/autoload.php; then
   "${compose[@]}" exec -T php composer install

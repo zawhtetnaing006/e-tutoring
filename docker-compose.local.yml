@@ -1,4 +1,4 @@
-name: laravel-starter-kit-local
+name: e-tutoring-local
 
 services:
   nginx:
@@ -21,9 +21,24 @@ services:
     depends_on:
       - mysql
       - redis
+      - mailhog
     volumes:
       - ./backend:/var/www
-      - ./backend/.env.local:/var/www/.env
+    networks:
+      - app
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      - mysql
+      - redis
+      - mailhog
+    volumes:
+      - ./backend:/var/www
     networks:
       - app
 
@@ -31,7 +46,7 @@ services:
     image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password
     environment:
-      MYSQL_DATABASE: laravel_starter_kit
+      MYSQL_DATABASE: e_tutoring
       MYSQL_USER: laravel
       MYSQL_PASSWORD: laravel_password
       MYSQL_ROOT_PASSWORD: root_password
@@ -51,6 +66,16 @@ services:
     image: adminer:4
     depends_on:
       - mysql
+    networks:
+      - app
+
+  mailhog:
+    image: mailhog/mailhog
+    platform: linux/amd64
+    ports:
+      - "8025:8025"
+    expose:
+      - "1025"
     networks:
       - app
 

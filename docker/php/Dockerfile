@@ -14,6 +14,7 @@ RUN apt-get update \
     bcmath \
     intl \
     opcache \
+    pcntl \
     pdo_mysql \
     zip \
   && pecl install redis \

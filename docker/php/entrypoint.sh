@@ -7,6 +7,12 @@ ensure_dir() {
   mkdir -p "$1"
 }
 
+# If .env is missing or empty and .env.local exists (common in local dev),
+# copy it once on container start.
+if [ ! -s "$APP_DIR/.env" ] && [ -f "$APP_DIR/.env.local" ]; then
+  cp "$APP_DIR/.env.local" "$APP_DIR/.env"
+fi
+
 ensure_dir "$APP_DIR/storage"
 ensure_dir "$APP_DIR/storage/app"
 ensure_dir "$APP_DIR/storage/framework/cache"

@@ -1,4 +1,4 @@
-# Laravel Starter Kit (Local Development)
+# e-tutoring (Local Development)
 
 This repo runs a Laravel app (in `backend/`) via Docker Compose:
 
@@ -6,6 +6,11 @@ This repo runs a Laravel app (in `backend/`) via Docker Compose:
 - **mysql** (database)
 - **redis** (cache/session/queue)
 - **adminer** (DB UI) at http://localhost:8000/adminer
+- **mailhog** (SMTP + mail UI) at http://localhost:8025
+
+Compose project names:
+- Local: `e-tutoring-local`
+- Prod: `e-tutoring-prod`
 
 ## Prerequisites
 
@@ -16,8 +21,15 @@ This repo runs a Laravel app (in `backend/`) via Docker Compose:
 
 1) Start the stack:
 
+### FOR MAC/LINUX
 ```bash
 ./dev-restart
+```
+
+### FOR WINDOW
+```bash
+docker compose --env-file backend/.env.local -f docker-compose.local.yml up -d --build --force-recreate --remove-orphans
+docker compose --env-file backend/.env.local -f docker-compose.local.yml exec -T php composer install
 ```
 
 2) PHP dependencies:
@@ -35,9 +47,29 @@ This repo runs a Laravel app (in `backend/`) via Docker Compose:
 ./artisan migrate
 ```
 
+```bash
+docker compose --env-file backend/.env.local -f docker-compose.local.yml exec -T php artisan migrate
+```
+
 4) Open the app:
 
 - http://localhost:8000
+- API base URL: `http://localhost:8000/api`
+- MailHog UI: `http://localhost:8025`
+
+## Scheduler (Sanctum token pruning)
+
+Sanctum tokens are set to expire after 24 hours and should be pruned regularly.
+
+Local (keeps running in foreground):
+```bash
+./artisan schedule:work
+```
+
+Production (cron every minute):
+```bash
+* * * * * cd /path/to/e-tutoring && ./artisan schedule:run >> /dev/null 2>&1
+```
 
 ## Environment files
 
@@ -55,4 +87,4 @@ Then paste it into `backend/.env.local`.
 
 ## API Doc
 - Used dedoc/scramble for api doc. 
-- URL: http://localhost:9990/docs/api
+- URL: http://localhost:8000/docs/api

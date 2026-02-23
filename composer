@@ -23,14 +23,18 @@ fi
 
 compose=(docker compose --env-file "${env_file}" -f "${compose_file}")
 
-exec_tty=()
+exec_tty_flag=""
 if [[ -n "${CI-}" ]]; then
-  exec_tty=(-T)
+  exec_tty_flag="-T"
 fi
 
 php_container_id="$("${compose[@]}" ps -q php 2>/dev/null || true)"
 if [[ -n "${php_container_id}" ]]; then
-  "${compose[@]}" exec "${exec_tty[@]}" php composer "$@"
+  if [[ -n "${exec_tty_flag}" ]]; then
+    "${compose[@]}" exec "${exec_tty_flag}" php composer "$@"
+  else
+    "${compose[@]}" exec php composer "$@"
+  fi
 else
   "${compose[@]}" run --rm php composer "$@"
 fi
