@@ -9,7 +9,6 @@ Route::get('/health', \App\Http\Controllers\Api\HealthCheckController::class);
 Route::prefix('auth')
     ->controller(AuthController::class)
     ->group(function () {
-        Route::post('register', 'register');
         Route::post('login', 'login');
         Route::post('forgot-password', 'forgotPassword');
         Route::post('verify-reset-code', 'verifyResetCode');
