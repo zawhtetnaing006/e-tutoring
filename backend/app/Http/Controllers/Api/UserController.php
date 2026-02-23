@@ -6,6 +6,7 @@ use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Notifications\UserGeneratedPasswordNotification;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
@@ -13,6 +14,7 @@ use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 #[Group('Users', description: 'User management endpoints.', weight: 2)]
 class UserController
@@ -50,7 +52,8 @@ class UserController
     #[Endpoint(title: 'Create User')]
     #[BodyParameter('name', required: true, example: 'Jane Doe')]
     #[BodyParameter('email', required: true, example: 'jane@example.com')]
-    #[BodyParameter('password', required: true, example: 'secret123')]
+    #[BodyParameter('auto_generate_password', required: false, example: true)]
+    #[BodyParameter('password', required: false, example: 'secret123')]
     #[BodyParameter('phone', required: false, example: '+1-555-1234')]
     #[BodyParameter('address', required: false, example: '123 Main St')]
     #[BodyParameter('is_active', required: false, example: true)]
@@ -75,14 +78,22 @@ class UserController
     {
         $validated = $request->validated();
         $subjectIds = $validated['subject_ids'] ?? [];
+        $autoGeneratePassword = (bool) ($validated['auto_generate_password'] ?? false);
+        $plainPassword = $autoGeneratePassword
+            ? Str::random(12)
+            : (string) ($validated['password'] ?? '');
 
-        unset($validated['subject_ids']);
+        unset($validated['subject_ids'], $validated['auto_generate_password']);
 
-        $validated['password'] = Hash::make((string) $validated['password']);
+        $validated['password'] = Hash::make($plainPassword);
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
         $user = User::create($validated);
         $user->subjects()->sync($subjectIds);
+
+        if ($autoGeneratePassword) {
+            $user->notify(new UserGeneratedPasswordNotification($plainPassword));
+        }
 
         return response()->json(new UserResource($user->load('subjects:id,name')), 201);
     }
