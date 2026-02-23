@@ -20,6 +20,7 @@ class UserSeeder extends Seeder
                 'email' => 'admin@gmail.com',
                 'password' => 'password',
                 'role' => 'admin',
+                'user_type' => User::TYPE_STAFF,
                 'is_active' => true,
             ],
             [
@@ -27,6 +28,7 @@ class UserSeeder extends Seeder
                 'email' => 'tutor@gmail.com',
                 'password' => 'password',
                 'role' => 'tutor',
+                'user_type' => User::TYPE_TUTOR,
                 'is_active' => true,
             ],
             [
@@ -34,6 +36,7 @@ class UserSeeder extends Seeder
                 'email' => 'student@gmail.com',
                 'password' => 'password',
                 'role' => 'student',
+                'user_type' => User::TYPE_STUDENT,
                 'is_active' => true,
             ],
         ];
@@ -47,6 +50,7 @@ class UserSeeder extends Seeder
 
             $user->name = $userData['name'];
             $user->is_active = $userData['is_active'];
+            $user->user_type = $userData['user_type'];
             $user->password = Hash::make($userData['password']);
             $user->save();
 

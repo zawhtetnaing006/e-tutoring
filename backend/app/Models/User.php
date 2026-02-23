@@ -5,8 +5,10 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Concerns\HasUuid;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -14,6 +16,16 @@ class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, HasUuid, Notifiable, HasRoles;
+
+    public const TYPE_STAFF = 'STAFF';
+    public const TYPE_STUDENT = 'STUDENT';
+    public const TYPE_TUTOR = 'TUTOR';
+
+    public const TYPES = [
+        self::TYPE_STAFF,
+        self::TYPE_STUDENT,
+        self::TYPE_TUTOR,
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -26,6 +38,7 @@ class User extends Authenticatable
         'phone',
         'address',
         'is_active',
+        'user_type',
         'password',
     ];
 
@@ -51,5 +64,28 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'password' => 'hashed',
         ];
+    }
+
+    public function subjects(): BelongsToMany
+    {
+        return $this->belongsToMany(Subject::class);
+    }
+
+    public function resolveRouteBinding($value, $field = null): ?Model
+    {
+        if ($field !== null) {
+            return parent::resolveRouteBinding($value, $field);
+        }
+
+        $query = $this->newQuery();
+
+        if (is_numeric($value)) {
+            return $query
+                ->whereKey($value)
+                ->orWhere('uuid', (string) $value)
+                ->first();
+        }
+
+        return $query->where('uuid', (string) $value)->first();
     }
 }
