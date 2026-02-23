@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\NotiController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -51,4 +52,11 @@ Route::middleware(['auth:sanctum', 'user_type:STAFF'])
         Route::get('{subject}', 'show');
         Route::put('{subject}', 'update');
         Route::delete('{subject}', 'destroy');
+    });
+
+Route::middleware('auth:sanctum')
+    ->prefix('notis')
+    ->controller(NotiController::class)
+    ->group(function () {
+        Route::get('/', 'index');
     });
