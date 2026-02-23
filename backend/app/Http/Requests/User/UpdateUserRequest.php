@@ -33,6 +33,8 @@ class UpdateUserRequest extends FormRequest
             'phone' => ['sometimes', 'nullable', 'string', 'max:50'],
             'address' => ['sometimes', 'nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
+            'subject_ids' => ['sometimes', 'array'],
+            'subject_ids.*' => ['integer', 'distinct', 'exists:subjects,id'],
         ];
     }
 }

@@ -23,6 +23,12 @@ class UserResource extends JsonResource
             'address' => $this->resource->address,
             'is_active' => $this->resource->is_active,
             'user_type' => $this->resource->user_type,
+            'subjects' => $this->whenLoaded('subjects', fn () => $this->resource->subjects->map(
+                static fn ($subject): array => [
+                    'id' => $subject->id,
+                    'name' => $subject->name,
+                ],
+            )->values()),
             'created_at' => $this->resource->created_at?->toISOString(),
             'updated_at' => $this->resource->updated_at?->toISOString(),
         ];

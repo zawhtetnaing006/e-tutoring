@@ -26,6 +26,8 @@ class StoreUserRequest extends FormRequest
             'address' => ['nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
             'user_type' => ['required', Rule::in(User::TYPES)],
+            'subject_ids' => ['sometimes', 'array'],
+            'subject_ids.*' => ['integer', 'distinct', 'exists:subjects,id'],
         ];
     }
 }
