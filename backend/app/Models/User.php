@@ -15,6 +15,16 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, HasUuid, Notifiable, HasRoles;
 
+    public const TYPE_STAFF = 'STAFF';
+    public const TYPE_STUDENT = 'STUDENT';
+    public const TYPE_TUTOR = 'TUTOR';
+
+    public const TYPES = [
+        self::TYPE_STAFF,
+        self::TYPE_STUDENT,
+        self::TYPE_TUTOR,
+    ];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -26,6 +36,7 @@ class User extends Authenticatable
         'phone',
         'address',
         'is_active',
+        'user_type',
         'password',
     ];
 

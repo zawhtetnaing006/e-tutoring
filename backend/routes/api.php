@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', \App\Http\Controllers\Api\HealthCheckController::class);
@@ -27,4 +28,15 @@ Route::middleware('auth:sanctum')
         Route::post('direct', 'createDirectConversation');
         Route::get('{conversation}/messages', 'listMessages');
         Route::post('{conversation}/messages', 'sendMessage');
+    });
+
+Route::middleware(['auth:sanctum', 'user_type:STAFF'])
+    ->prefix('users')
+    ->controller(UserController::class)
+    ->group(function () {
+        Route::get('/', 'index');
+        Route::post('/', 'store');
+        Route::get('{user}', 'show');
+        Route::put('{user}', 'update');
+        Route::delete('{user}', 'destroy');
     });

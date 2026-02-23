@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
-use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\VerifyResetCodeRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AuthService;
@@ -26,39 +25,6 @@ class AuthController
     {
     }
 
-    #[Endpoint(title: 'Register')]
-    #[BodyParameter('name', required: true, example: 'Jane Doe')]
-    #[BodyParameter('email', required: true, example: 'jane@example.com')]
-    #[BodyParameter('password', required: true, example: 'secret123')]
-    #[BodyParameter('password_confirmation', required: true, example: 'secret123')]
-    #[Response(
-        status: 201,
-        examples: [
-            [
-                'token' => '1|example_token_value',
-                'token_type' => 'Bearer',
-                'user' => [
-                    'uuid' => 'b0c1d2e3-4f5a-6789-aaaa-bbbbbbbbbbbb',
-                    'name' => 'Jane Doe',
-                    'email' => 'jane@example.com',
-                    'phone' => null,
-                    'address' => null,
-                    'created_at' => '2026-02-05T00:00:00.000000Z',
-                    'updated_at' => '2026-02-05T00:00:00.000000Z',
-                ],
-            ],
-        ],
-    )]
-    /** @unauthenticated */
-    public function register(RegisterRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
-
-        $payload = $this->authService->register($validated, $request->userAgent());
-
-        return response()->json($payload, 201);
-    }
-
     #[Endpoint(title: 'Login')]
     #[BodyParameter('email', required: true, example: 'admin@gmail.com')]
     #[BodyParameter('password', required: true, example: 'password')]
@@ -74,6 +40,7 @@ class AuthController
                     'email' => 'admin@gmail.com',
                     'phone' => null,
                     'address' => null,
+                    'user_type' => 'STAFF',
                     'created_at' => '2026-02-05T00:00:00.000000Z',
                     'updated_at' => '2026-02-05T00:00:00.000000Z',
                 ],
@@ -114,6 +81,7 @@ class AuthController
                 'email' => 'admin@gmail.com',
                 'phone' => null,
                 'address' => null,
+                'user_type' => 'STAFF',
                 'created_at' => '2026-02-05T00:00:00.000000Z',
                 'updated_at' => '2026-02-05T00:00:00.000000Z',
             ],

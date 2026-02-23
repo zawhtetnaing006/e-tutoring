@@ -22,6 +22,7 @@ class UserResource extends JsonResource
             'phone' => $this->resource->phone,
             'address' => $this->resource->address,
             'is_active' => $this->resource->is_active,
+            'user_type' => $this->resource->user_type,
             'created_at' => $this->resource->created_at?->toISOString(),
             'updated_at' => $this->resource->updated_at?->toISOString(),
         ];
