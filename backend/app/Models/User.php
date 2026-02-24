@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -69,6 +70,11 @@ class User extends Authenticatable
     public function subjects(): BelongsToMany
     {
         return $this->belongsToMany(Subject::class);
+    }
+
+    public function workSchedules(): HasMany
+    {
+        return $this->hasMany(WorkSchedule::class);
     }
 
     public function resolveRouteBinding($value, $field = null): ?Model

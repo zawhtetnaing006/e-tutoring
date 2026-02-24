@@ -2,22 +2,30 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Traits\FormatsListingResponse;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Notifications\UserGeneratedPasswordNotification;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 #[Group('Users', description: 'User management endpoints.', weight: 2)]
 class UserController
 {
+    use FormatsListingResponse;
+
     #[Endpoint(title: 'List Users')]
+    #[QueryParameter('per_page', required: false, example: 15)]
+    #[QueryParameter('page', required: false, example: 1)]
     #[Response(
         status: 200,
         examples: [[
@@ -33,24 +41,34 @@ class UserController
                 'created_at' => '2026-02-05T00:00:00.000000Z',
                 'updated_at' => '2026-02-05T00:00:00.000000Z',
             ]],
+            'current_page' => 1,
+            'total_page' => 1,
+            'total_items' => 1,
         ]],
     )]
     public function index(Request $request): JsonResponse
     {
         $perPage = max(1, min(100, (int) $request->integer('per_page', 15)));
+        $page = max(1, (int) $request->integer('page', 1));
 
         $users = User::query()
             ->with('subjects:id,name')
             ->latest('id')
-            ->paginate($perPage);
+            ->paginate($perPage, ['*'], 'page', $page);
 
-        return UserResource::collection($users)->response();
+        $data = $users->getCollection()
+            ->map(fn (User $user) => (new UserResource($user))->toArray($request))
+            ->values()
+            ->all();
+
+        return $this->formatListingResponse($users, $data);
     }
 
     #[Endpoint(title: 'Create User')]
     #[BodyParameter('name', required: true, example: 'Jane Doe')]
     #[BodyParameter('email', required: true, example: 'jane@example.com')]
-    #[BodyParameter('password', required: true, example: 'secret123')]
+    #[BodyParameter('auto_generate_password', required: false, example: true)]
+    #[BodyParameter('password', required: false, example: 'secret123')]
     #[BodyParameter('phone', required: false, example: '+1-555-1234')]
     #[BodyParameter('address', required: false, example: '123 Main St')]
     #[BodyParameter('is_active', required: false, example: true)]
@@ -75,14 +93,22 @@ class UserController
     {
         $validated = $request->validated();
         $subjectIds = $validated['subject_ids'] ?? [];
+        $autoGeneratePassword = (bool) ($validated['auto_generate_password'] ?? false);
+        $plainPassword = $autoGeneratePassword
+            ? Str::random(12)
+            : (string) ($validated['password'] ?? '');
 
-        unset($validated['subject_ids']);
+        unset($validated['subject_ids'], $validated['auto_generate_password']);
 
-        $validated['password'] = Hash::make((string) $validated['password']);
+        $validated['password'] = Hash::make($plainPassword);
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
         $user = User::create($validated);
         $user->subjects()->sync($subjectIds);
+
+        if ($autoGeneratePassword) {
+            $user->notify(new UserGeneratedPasswordNotification($plainPassword));
+        }
 
         return response()->json(new UserResource($user->load('subjects:id,name')), 201);
     }
