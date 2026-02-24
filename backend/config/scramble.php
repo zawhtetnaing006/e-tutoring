@@ -127,6 +127,11 @@ return [
      */
     'flatten_deep_query_parameters' => true,
 
+    /*
+     * Allow API docs in non-local environments.
+     */
+    'public_docs' => filter_var(env('SCRAMBLE_PUBLIC_DOCS', false), FILTER_VALIDATE_BOOLEAN),
+
     'middleware' => [
         'web',
         RestrictedDocsAccess::class,

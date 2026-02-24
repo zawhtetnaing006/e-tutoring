@@ -24,7 +24,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('viewApiDocs', function ($user = null): bool {
-            return (bool) env('SCRAMBLE_PUBLIC_DOCS', false);
+            return (bool) config('scramble.public_docs', false);
         });
 
         Scramble::configure()->afterOpenApiGenerated(function (OpenApi $openApi): void {
