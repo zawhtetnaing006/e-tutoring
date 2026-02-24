@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Traits\FormatsListingResponse;
 use App\Http\Requests\WorkSchedule\StoreWorkScheduleRequest;
 use App\Http\Requests\WorkSchedule\UpdateWorkScheduleRequest;
 use App\Http\Resources\WorkScheduleResource;
@@ -10,6 +11,7 @@ use App\Models\WorkSchedule;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +20,12 @@ use Illuminate\Support\Facades\DB;
 #[Group('Work Schedules', description: 'User work schedule management.', weight: 5)]
 class WorkScheduleController
 {
+    use FormatsListingResponse;
+
     #[Endpoint(title: 'List User Work Schedules')]
+    #[QueryParameter('user_id', required: true, example: 'b0c1d2e3-4f5a-6789-aaaa-bbbbbbbbbbbb')]
+    #[QueryParameter('per_page', required: false, example: 15)]
+    #[QueryParameter('page', required: false, example: 1)]
     #[Response(status: 200, examples: [[
         'data' => [[
             'id' => 1,
@@ -29,6 +36,9 @@ class WorkScheduleController
             'created_at' => '2026-02-23T11:00:00.000000Z',
             'updated_at' => '2026-02-23T11:00:00.000000Z',
         ]],
+        'current_page' => 1,
+        'total_page' => 1,
+        'total_items' => 1,
     ]])]
     public function index(Request $request): JsonResponse
     {
@@ -41,13 +51,19 @@ class WorkScheduleController
         $this->ensureCanViewUserSchedule($request, $user);
 
         $perPage = max(1, min(100, (int) $request->integer('per_page', 15)));
+        $page = max(1, (int) $request->integer('page', 1));
 
         $schedules = $user->workSchedules()
             ->orderBy('day_of_week')
             ->orderBy('from_time')
-            ->paginate($perPage);
+            ->paginate($perPage, ['*'], 'page', $page);
 
-        return WorkScheduleResource::collection($schedules)->response();
+        $data = $schedules->getCollection()
+            ->map(fn (WorkSchedule $workSchedule) => (new WorkScheduleResource($workSchedule))->toArray($request))
+            ->values()
+            ->all();
+
+        return $this->formatListingResponse($schedules, $data);
     }
 
     #[Endpoint(title: 'Create User Work Schedule')]
