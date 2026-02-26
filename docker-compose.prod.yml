@@ -27,6 +27,7 @@ services:
     depends_on:
       - mysql
       - redis
+      - mailhog
     volumes:
       - ./backend/.env.prod:/var/www/.env:ro
       - app_storage:/var/www/storage
@@ -61,6 +62,16 @@ services:
     image: adminer:4
     depends_on:
       - mysql
+    networks:
+      - app
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "127.0.0.1:8025:8025"
+    expose:
+      - "1025"
     networks:
       - app
     restart: unless-stopped
