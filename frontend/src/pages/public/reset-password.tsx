@@ -1,48 +1,72 @@
+/* eslint-disable security/detect-possible-timing-attacks */
 import type { FormEvent } from 'react'
-import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { ApiError } from '@/lib/api-client'
-import { login } from '@/features/auth/api'
-import { useIsAuthenticated } from '@/features/auth'
+import { resetPassword } from '@/features/auth/api'
 
-export function LoginPage() {
+export function ResetPasswordPage() {
+  const location = useLocation()
   const navigate = useNavigate()
-  const isAuthenticated = useIsAuthenticated()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />
-  }
+  const state = location.state as { email?: string; otp?: string } | null
+  const email = state?.email
+  const otp = state?.otp
+
+  useEffect(() => {
+    if (!email || !otp) {
+      navigate('/forgot-password', { replace: true })
+    }
+  }, [email, otp, navigate])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    const formData = new FormData(event.currentTarget)
-    const email = String(formData.get('email') ?? '').trim()
-    const password = String(formData.get('password') ?? '')
+    if (!email || !otp) {
+      toast.error(
+        'Email or code is missing. Please restart the password reset flow.'
+      )
+      navigate('/forgot-password', { replace: true })
+      return
+    }
 
-    if (!email || !password) {
-      toast.error('Email and password are required')
+    const formData = new FormData(event.currentTarget)
+    const password = String(formData.get('password') ?? '')
+    const confirmPassword = String(formData.get('confirmPassword') ?? '')
+
+    if (!password || !confirmPassword) {
+      toast.error('Please fill in both password fields')
+      return
+    }
+
+    if (password.length < 8) {
+      toast.error('Password must be at least 8 characters long')
+      return
+    }
+
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match')
       return
     }
 
     try {
       setIsSubmitting(true)
-      const result = await login(email, password)
+      await resetPassword(email, otp, password, confirmPassword)
 
-      toast.success('Logged in', {
-        description: `Welcome back, ${result.user.name}`,
+      toast.success('Password reset successful', {
+        description: 'You can now log in with your new password.',
       })
 
-      navigate('/', { replace: true })
+      navigate('/login', { replace: true })
     } catch (error) {
       const description =
         error instanceof ApiError
-          ? error.message || 'Unable to log in. Please check your credentials.'
-          : 'Unable to log in. Please try again.'
+          ? error.message || 'Unable to reset password.'
+          : 'Unable to reset password.'
 
-      toast.error('Login failed', { description })
+      toast.error('Reset failed', { description })
     } finally {
       setIsSubmitting(false)
     }
@@ -54,27 +78,10 @@ export function LoginPage() {
         <div className="mb-10 h-16 w-16 rounded-lg bg-muted" />
 
         <h1 className="text-2xl font-semibold text-foreground">
-          Log in to eTutor
+          Set new password
         </h1>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
-          <div className="space-y-1.5">
-            <label
-              htmlFor="email"
-              className="text-subtext font-medium text-foreground"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="example@gmail.com"
-              className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
-            />
-          </div>
-
           <div className="space-y-1.5">
             <label
               htmlFor="password"
@@ -86,8 +93,23 @@ export function LoginPage() {
               id="password"
               name="password"
               type="password"
-              autoComplete="current-password"
-              placeholder="Password"
+              autoComplete="new-password"
+              className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label
+              htmlFor="confirmPassword"
+              className="text-subtext font-medium text-foreground"
+            >
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              autoComplete="new-password"
               className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
             />
           </div>
@@ -97,16 +119,17 @@ export function LoginPage() {
             disabled={isSubmitting}
             className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
           >
-            {isSubmitting ? 'Logging in...' : 'Continue'}
+            {isSubmitting ? 'Resetting...' : 'Reset password'}
           </button>
         </form>
 
         <div className="mt-8 border-t border-border pt-4">
           <Link
-            to="/forgot-password"
-            className="text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            to="/login"
+            className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"
           >
-            Forget your password?
+            <span className="mr-1 text-base">&larr;</span>
+            Back to log in
           </Link>
         </div>
       </div>

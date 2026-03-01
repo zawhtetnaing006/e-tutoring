@@ -1,48 +1,41 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ApiError } from '@/lib/api-client'
-import { login } from '@/features/auth/api'
-import { useIsAuthenticated } from '@/features/auth'
+import { forgotPassword } from '@/features/auth/api'
 
-export function LoginPage() {
+export function ForgotPasswordPage() {
   const navigate = useNavigate()
-  const isAuthenticated = useIsAuthenticated()
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />
-  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
     const formData = new FormData(event.currentTarget)
     const email = String(formData.get('email') ?? '').trim()
-    const password = String(formData.get('password') ?? '')
 
-    if (!email || !password) {
-      toast.error('Email and password are required')
+    if (!email) {
+      toast.error('Email is required')
       return
     }
 
     try {
       setIsSubmitting(true)
-      const result = await login(email, password)
+      await forgotPassword(email)
 
-      toast.success('Logged in', {
-        description: `Welcome back, ${result.user.name}`,
+      toast.success('Check your email', {
+        description: 'If the email exists, a reset code has been sent.',
       })
 
-      navigate('/', { replace: true })
+      navigate('/password-reset/code', { state: { email } })
     } catch (error) {
       const description =
         error instanceof ApiError
-          ? error.message || 'Unable to log in. Please check your credentials.'
-          : 'Unable to log in. Please try again.'
+          ? error.message || 'Unable to start password reset.'
+          : 'Unable to start password reset.'
 
-      toast.error('Login failed', { description })
+      toast.error('Request failed', { description })
     } finally {
       setIsSubmitting(false)
     }
@@ -54,7 +47,7 @@ export function LoginPage() {
         <div className="mb-10 h-16 w-16 rounded-lg bg-muted" />
 
         <h1 className="text-2xl font-semibold text-foreground">
-          Log in to eTutor
+          Forgot password?
         </h1>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
@@ -75,38 +68,22 @@ export function LoginPage() {
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label
-              htmlFor="password"
-              className="text-subtext font-medium text-foreground"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="Password"
-              className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
-            />
-          </div>
-
           <button
             type="submit"
             disabled={isSubmitting}
             className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
           >
-            {isSubmitting ? 'Logging in...' : 'Continue'}
+            {isSubmitting ? 'Sending...' : 'Continue'}
           </button>
         </form>
 
         <div className="mt-8 border-t border-border pt-4">
           <Link
-            to="/forgot-password"
-            className="text-sm font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            to="/login"
+            className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"
           >
-            Forget your password?
+            <span className="mr-1 text-base">&larr;</span>
+            Back to log in
           </Link>
         </div>
       </div>

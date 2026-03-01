@@ -1,10 +1,18 @@
 import type { AuthRole } from './types'
+import { getAuthSession } from './storage'
+
+function userTypeToRole(userType: string | undefined): AuthRole {
+  if (!userType) return 'student'
+  const lower = userType.toLowerCase()
+  if (lower === 'staff' || lower === 'tutor' || lower === 'student')
+    return lower as AuthRole
+  return 'student'
+}
 
 /**
- * Placeholder: returns current user role for role-based UI.
- * Wire to auth context / session when auth is implemented.
+ * Returns current user role from session for role-based UI.
  */
 export function useRole(): AuthRole {
-  // TODO: read from AuthContext / session (e.g. useAuth().user.role)
-  return 'staff'
+  const session = getAuthSession()
+  return userTypeToRole(session?.user?.user_type)
 }

@@ -43,15 +43,40 @@ const staffSidebarNavigation: NavSection[] = [
 
 const studentSidebarNavigation: NavSection[] = [
   {
-    title: 'Main',
-    items: [{ name: 'Dashboard', href: '/', icon: LayoutDashboard }],
+    title: 'Main Menu',
+    items: [
+      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { name: 'Blogs', href: '/blogs', icon: Newspaper },
+    ],
+  },
+  {
+    title: 'System',
+    items: [
+      { name: 'Notifications', href: '/notifications', icon: Bell },
+      { name: 'Settings', href: '/settings', icon: Settings2 },
+    ],
   },
 ]
 
 const tutorSidebarNavigation: NavSection[] = [
   {
-    title: 'Main',
-    items: [{ name: 'Dashboard', href: '/', icon: LayoutDashboard }],
+    title: 'Main Menu',
+    items: [
+      { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+      {
+        name: 'Allocation & Scheduling',
+        href: '/allocations',
+        icon: CalendarRange,
+      },
+      { name: 'Blogs', href: '/blogs', icon: Newspaper },
+    ],
+  },
+  {
+    title: 'System',
+    items: [
+      { name: 'Notifications', href: '/notifications', icon: Bell },
+      { name: 'Settings', href: '/settings', icon: Settings2 },
+    ],
   },
 ]
 

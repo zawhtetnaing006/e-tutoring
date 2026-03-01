@@ -9,7 +9,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>{children}</BrowserRouter>
-      <Toaster richColors position="bottom-right" />
+      <Toaster richColors position="top-right" />
       {import.meta.env.DEV && (
         <ReactQueryDevtools
           initialIsOpen={false}

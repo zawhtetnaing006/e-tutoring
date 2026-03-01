@@ -51,7 +51,7 @@ export async function apiClient<T>(
     : `${baseUrl}/${path.replace(/^\//, '')}`
   const res = await fetch(url, {
     ...rest,
-    credentials: 'include',
+    credentials: 'omit',
     headers,
     body: finalBody,
   })

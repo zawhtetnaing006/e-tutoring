@@ -1,33 +1,52 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, LogOut } from 'lucide-react'
 import { paths } from '@/routes/index'
 import { useRole } from '@/features/auth/useRole'
+import { useCurrentUser } from '@/features/auth/useCurrentUser'
+import { logout } from '@/features/auth/api'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 
-/** Placeholder user until auth is wired. */
-const placeholderUser = {
-  name: 'John Mathan',
-  email: 'example@gmail.com',
-  initials: 'JM',
+function getInitials(name: string): string {
+  return (
+    name
+      .split(/\s+/)
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || '?'
+  )
 }
 
-const roleLabels: Record<string, string> = {
-  staff: 'Admin Access',
-  tutor: 'Tutor Access',
-  student: 'Student',
-}
+const roleLabels = new Map<string, string>([
+  ['staff', 'Admin Access'],
+  ['tutor', 'Tutor Access'],
+  ['student', 'Student'],
+])
+
+type ValidRole = 'staff' | 'tutor' | 'student'
 
 export function SidebarUserSection() {
   const role = useRole()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const { data: user, isLoading } = useCurrentUser()
+  const label = roleLabels.get(role as ValidRole) ?? 'Guest'
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     setOpen(false)
+    await logout()
+    queryClient.removeQueries({ queryKey: ['auth', 'me'] })
     navigate(paths.public.login)
-    // TODO: clear auth state when auth is implemented
+    toast.success('Logged out successfully')
   }
+
+  const displayName = user?.name ?? 'User'
+  const displayEmail = user?.email ?? ''
+  const initials = getInitials(displayName)
 
   return (
     <div className="relative mt-auto border-t border-border pt-4">
@@ -37,7 +56,7 @@ export function SidebarUserSection() {
           role="menu"
         >
           <p className="truncate text-subtext text-muted-foreground underline">
-            {placeholderUser.email}
+            {displayEmail}
           </p>
           <div className="my-2 border-t border-border" />
           <button
@@ -61,15 +80,13 @@ export function SidebarUserSection() {
           className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-subtext font-semibold text-foreground"
           aria-hidden
         >
-          {placeholderUser.initials}
+          {isLoading ? '…' : initials}
         </div>
         <div className="min-w-0 flex-1 text-left">
           <p className="truncate text-body font-semibold text-foreground">
-            {placeholderUser.name}
+            {isLoading ? 'Loading…' : displayName}
           </p>
-          <p className="truncate text-subtext text-muted-foreground">
-            {roleLabels[role] ?? role}
-          </p>
+          <p className="truncate text-subtext text-muted-foreground">{label}</p>
         </div>
         <ChevronDown
           className={cn(
