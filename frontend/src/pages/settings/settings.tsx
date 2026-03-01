@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { useZodForm } from '@/hooks/useZodForm'
+import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { cn } from '@/lib/utils'
 
 function isE164PhoneNumber(value: string) {
@@ -39,12 +40,25 @@ const passwordSchema = z
 
 type ProfileFormValues = z.infer<typeof profileSchema>
 
-const placeholderUser: ProfileFormValues = {
-  userId: '00000000',
-  username: 'John Mathan',
-  email: 'example@gmail.com',
-  phoneNumber: '+959000000000',
-  dateOfBirth: '',
+function userToProfileValues(user: {
+  uuid: string
+  name: string
+  email: string
+  phone: string | null
+}): ProfileFormValues {
+  return {
+    userId: user.uuid,
+    username: user.name,
+    email: user.email,
+    phoneNumber: user.phone ?? '',
+    dateOfBirth: '',
+  }
+}
+
+const roleLabels: Record<string, string> = {
+  staff: 'Staff',
+  tutor: 'Tutor',
+  student: 'Student',
 }
 
 type ActiveTab = 'profile' | 'audit'
@@ -52,10 +66,24 @@ type ActiveTab = 'profile' | 'audit'
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('profile')
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const { data: user, isLoading } = useCurrentUser()
 
   const profileForm = useZodForm(profileSchema, {
-    defaultValues: placeholderUser,
+    defaultValues: {
+      userId: '',
+      username: '',
+      email: '',
+      phoneNumber: '',
+      dateOfBirth: '',
+    },
   })
+
+  useEffect(() => {
+    if (user) {
+      profileForm.reset(userToProfileValues(user))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when user loads; profileForm.reset is stable
+  }, [user])
 
   const passwordForm = useZodForm(passwordSchema, {
     defaultValues: {
@@ -84,7 +112,7 @@ export function SettingsPage() {
   })
 
   const handleCancelProfile = () => {
-    profileForm.reset(placeholderUser)
+    if (user) profileForm.reset(userToProfileValues(user))
   }
 
   const handleClosePasswordModal = () => {
@@ -137,14 +165,27 @@ export function SettingsPage() {
               <div className="flex flex-col gap-6 md:flex-row md:items-center">
                 <div className="flex items-center gap-4">
                   <div className="relative flex size-20 items-center justify-center rounded-full bg-muted text-xl font-semibold text-foreground">
-                    JM
+                    {isLoading
+                      ? '…'
+                      : user
+                        ? user.name
+                            .split(/\s+/)
+                            .map(p => p[0])
+                            .join('')
+                            .toUpperCase()
+                            .slice(0, 2) || '?'
+                        : '?'}
                   </div>
                   <div className="space-y-1">
                     <h2 className="text-lg font-semibold text-foreground">
-                      John Mathan
+                      {isLoading ? 'Loading…' : (user?.name ?? 'User')}
                     </h2>
                     <p className="text-subtext text-muted-foreground">
-                      Role: Staff
+                      Role:{' '}
+                      {user
+                        ? (roleLabels[user.user_type?.toLowerCase() ?? ''] ??
+                          user.user_type)
+                        : '—'}
                     </p>
                     <button
                       type="button"
