@@ -1,0 +1,170 @@
+/**
+ * eTutoring Design Tokens
+ * Single source of truth for the design system.
+ * Values are CSS custom properties; Tailwind theme references these.
+ */
+
+@layer base {
+  :root {
+    /* ─── Color (HSL components: H S% L%) ─── */
+    /* Surfaces */
+    --color-background: 0 0% 100%;
+    --color-foreground: 0 0% 3.9%;
+    --color-card: 0 0% 100%;
+    --color-card-foreground: 0 0% 3.9%;
+    --color-popover: 0 0% 100%;
+    --color-popover-foreground: 0 0% 3.9%;
+    --color-muted: 0 0% 96.1%;
+    --color-muted-foreground: 0 0% 45.1%;
+    /* Interactive */
+    --color-primary: 0 0% 9%;
+    --color-primary-foreground: 0 0% 98%;
+    --color-secondary: 0 0% 96.1%;
+    --color-secondary-foreground: 0 0% 9%;
+    --color-accent: 0 0% 96.1%;
+    --color-accent-foreground: 0 0% 9%;
+    /* Semantic */
+    --color-destructive: 0 84.2% 60.2%;
+    --color-destructive-foreground: 0 0% 98%;
+    --color-success: 142 76% 36%;
+    --color-success-foreground: 0 0% 98%;
+    --color-warning: 38 92% 50%;
+    --color-warning-foreground: 0 0% 9%;
+    --color-info: 199 89% 48%;
+    --color-info-foreground: 0 0% 98%;
+    /* UI borders & inputs */
+    --color-border: 0 0% 89.8%;
+    --color-input: 0 0% 89.8%;
+    --color-ring: 0 0% 3.9%;
+    /* Text hierarchy */
+    --color-text-primary: 0 0% 3.9%;
+    --color-text-secondary: 0 0% 45.1%;
+    --color-text-disabled: 0 0% 62%;
+    /* Charts */
+    --color-chart-1: 12 76% 61%;
+    --color-chart-2: 173 58% 39%;
+    --color-chart-3: 197 37% 24%;
+    --color-chart-4: 43 74% 66%;
+    --color-chart-5: 27 87% 67%;
+
+    /* Legacy semantic names (map to above for compatibility) */
+    --background: var(--color-background);
+    --foreground: var(--color-foreground);
+    --card: var(--color-card);
+    --card-foreground: var(--color-card-foreground);
+    --popover: var(--color-popover);
+    --popover-foreground: var(--color-popover-foreground);
+    --primary: var(--color-primary);
+    --primary-foreground: var(--color-primary-foreground);
+    --secondary: var(--color-secondary);
+    --secondary-foreground: var(--color-secondary-foreground);
+    --muted: var(--color-muted);
+    --muted-foreground: var(--color-muted-foreground);
+    --accent: var(--color-accent);
+    --accent-foreground: var(--color-accent-foreground);
+    --destructive: var(--color-destructive);
+    --destructive-foreground: var(--color-destructive-foreground);
+    --border: var(--color-border);
+    --input: var(--color-input);
+    --ring: var(--color-ring);
+    --chart-1: var(--color-chart-1);
+    --chart-2: var(--color-chart-2);
+    --chart-3: var(--color-chart-3);
+    --chart-4: var(--color-chart-4);
+    --chart-5: var(--color-chart-5);
+
+    /* ─── Spacing (4px base) ─── */
+    --spacing-0: 0;
+    --spacing-1: 0.25rem;   /* 4px */
+    --spacing-2: 0.5rem;    /* 8px */
+    --spacing-3: 0.75rem;   /* 12px */
+    --spacing-4: 1rem;      /* 16px */
+    --spacing-5: 1.25rem;   /* 20px */
+    --spacing-6: 1.5rem;    /* 24px */
+    --spacing-8: 2rem;      /* 32px */
+    --spacing-10: 2.5rem;   /* 40px */
+    --spacing-12: 3rem;     /* 48px */
+    --spacing-16: 4rem;     /* 64px */
+    --spacing-20: 5rem;     /* 80px */
+    --spacing-24: 6rem;     /* 96px */
+
+    /* ─── Typography ─── */
+    --font-sans: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+    --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, monospace;
+
+    /* Font size + line height */
+    --text-xs: 0.75rem;       /* 12px */
+    --text-xs--line: 1rem;
+    --text-sm: 0.875rem;      /* 14px */
+    --text-sm--line: 1.25rem;
+    --text-base: 1rem;       /* 16px - body */
+    --text-base--line: 1.5rem;
+    --text-lg: 1.125rem;      /* 18px */
+    --text-lg--line: 1.75rem;
+    --text-xl: 1.25rem;       /* 20px */
+    --text-xl--line: 1.75rem;
+    --text-2xl: 1.5rem;      /* 24px */
+    --text-2xl--line: 2rem;
+    --text-3xl: 1.875rem;    /* 30px */
+    --text-3xl--line: 2.25rem;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* ─── Radius ─── */
+    --radius-sm: 0.25rem;   /* 4px */
+    --radius-md: 0.375rem;  /* 6px */
+    --radius-lg: 0.5rem;    /* 8px */
+    --radius-xl: 0.75rem;   /* 12px */
+    --radius: var(--radius-lg); /* default */
+
+    /* ─── Shadow ─── */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+    /* ─── Z-index ─── */
+    --z-dropdown: 50;
+    --z-sticky: 100;
+    --z-modal: 200;
+    --z-toast: 300;
+
+    /* ─── Layout ─── */
+    --width-sidebar: 16.5rem;
+  }
+
+  .dark {
+    --color-background: 0 0% 3.9%;
+    --color-foreground: 0 0% 98%;
+    --color-card: 0 0% 3.9%;
+    --color-card-foreground: 0 0% 98%;
+    --color-popover: 0 0% 3.9%;
+    --color-popover-foreground: 0 0% 98%;
+    --color-muted: 0 0% 14.9%;
+    --color-muted-foreground: 0 0% 63.9%;
+    --color-primary: 0 0% 98%;
+    --color-primary-foreground: 0 0% 9%;
+    --color-secondary: 0 0% 14.9%;
+    --color-secondary-foreground: 0 0% 98%;
+    --color-accent: 0 0% 14.9%;
+    --color-accent-foreground: 0 0% 98%;
+    --color-destructive: 0 62.8% 30.6%;
+    --color-destructive-foreground: 0 0% 98%;
+    --color-success: 142 70% 45%;
+    --color-warning: 38 92% 50%;
+    --color-info: 199 89% 48%;
+    --color-border: 0 0% 14.9%;
+    --color-input: 0 0% 14.9%;
+    --color-ring: 0 0% 83.1%;
+    --color-text-primary: 0 0% 98%;
+    --color-text-secondary: 0 0% 63.9%;
+    --color-text-disabled: 0 0% 45%;
+    --color-chart-1: 220 70% 50%;
+    --color-chart-2: 160 60% 45%;
+    --color-chart-3: 30 80% 55%;
+    --color-chart-4: 280 65% 60%;
+    --color-chart-5: 340 75% 55%;
+  }
+}
