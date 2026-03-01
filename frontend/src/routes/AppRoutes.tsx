@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { PublicLayout, DashboardLayout } from '@/layouts'
 import { LoginPage } from '@/pages/public'
 import { DashboardPage } from '@/pages/dashboard'
+import { SettingsPage } from '@/pages/settings'
 // import { ProtectedRoute } from '@/routes/ProtectedRoute'
 
 /**
@@ -17,6 +18,7 @@ export function AppRoutes() {
       {/* <Route element={<ProtectedRoute />}> */}
       <Route path="/" element={<DashboardLayout />}>
         <Route index element={<DashboardPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
       {/* </Route> */}
 

@@ -6,6 +6,7 @@ export const paths = {
     login: '/login',
   },
   dashboard: '/',
+  settings: '/settings',
 } as const
 
 export type PathKey = keyof typeof paths
