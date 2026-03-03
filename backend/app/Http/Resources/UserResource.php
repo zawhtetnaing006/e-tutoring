@@ -30,6 +30,7 @@ class UserResource extends JsonResource
                 static fn ($subject): array => [
                     'id' => $subject->id,
                     'name' => $subject->name,
+                    'description' => $subject->description,
                 ],
             )->values()),
             'created_at' => $this->resource->created_at?->toISOString(),

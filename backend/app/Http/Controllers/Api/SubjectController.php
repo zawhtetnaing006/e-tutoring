@@ -29,6 +29,7 @@ class SubjectController
             'data' => [[
                 'id' => 1,
                 'name' => 'Mathematics',
+                'description' => 'Core mathematics topics and problem-solving.',
                 'created_at' => '2026-02-05T00:00:00.000000Z',
                 'updated_at' => '2026-02-05T00:00:00.000000Z',
             ]],
@@ -56,11 +57,13 @@ class SubjectController
 
     #[Endpoint(title: 'Create Subject')]
     #[BodyParameter('name', required: true, example: 'Mathematics')]
+    #[BodyParameter('description', required: false, example: 'Core mathematics topics and problem-solving.')]
     #[Response(
         status: 201,
         examples: [[
             'id' => 1,
             'name' => 'Mathematics',
+            'description' => 'Core mathematics topics and problem-solving.',
             'created_at' => '2026-02-05T00:00:00.000000Z',
             'updated_at' => '2026-02-05T00:00:00.000000Z',
         ]],
@@ -78,6 +81,7 @@ class SubjectController
         examples: [[
             'id' => 1,
             'name' => 'Mathematics',
+            'description' => 'Core mathematics topics and problem-solving.',
             'created_at' => '2026-02-05T00:00:00.000000Z',
             'updated_at' => '2026-02-05T00:00:00.000000Z',
         ]],
@@ -89,11 +93,13 @@ class SubjectController
 
     #[Endpoint(title: 'Update Subject')]
     #[BodyParameter('name', required: true, example: 'Advanced Mathematics')]
+    #[BodyParameter('description', required: false, example: 'Advanced algebra, calculus, and discrete mathematics.')]
     #[Response(
         status: 200,
         examples: [[
             'id' => 1,
             'name' => 'Advanced Mathematics',
+            'description' => 'Advanced algebra, calculus, and discrete mathematics.',
             'created_at' => '2026-02-05T00:00:00.000000Z',
             'updated_at' => '2026-02-06T00:00:00.000000Z',
         ]],

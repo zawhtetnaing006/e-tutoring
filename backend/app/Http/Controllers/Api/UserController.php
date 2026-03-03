@@ -40,7 +40,11 @@ class UserController
                 'township' => null,
                 'is_active' => true,
                 'user_type' => 'STAFF',
-                'subjects' => [['id' => 1, 'name' => 'Mathematics']],
+                'subjects' => [[
+                    'id' => 1,
+                    'name' => 'Mathematics',
+                    'description' => 'Core mathematics topics and problem-solving.',
+                ]],
                 'created_at' => '2026-02-05T00:00:00.000000Z',
                 'updated_at' => '2026-02-05T00:00:00.000000Z',
             ]],
@@ -55,7 +59,7 @@ class UserController
         $page = max(1, (int) $request->integer('page', 1));
 
         $users = User::query()
-            ->with('subjects:id,name')
+            ->with('subjects:id,name,description')
             ->latest('id')
             ->paginate($perPage, ['*'], 'page', $page);
 
@@ -93,7 +97,11 @@ class UserController
             'township' => 'Manhattan',
             'is_active' => true,
             'user_type' => 'STUDENT',
-            'subjects' => [['id' => 1, 'name' => 'Mathematics']],
+            'subjects' => [[
+                'id' => 1,
+                'name' => 'Mathematics',
+                'description' => 'Core mathematics topics and problem-solving.',
+            ]],
             'created_at' => '2026-02-05T00:00:00.000000Z',
             'updated_at' => '2026-02-05T00:00:00.000000Z',
         ]],
@@ -119,7 +127,7 @@ class UserController
             $user->notify(new UserGeneratedPasswordNotification($plainPassword));
         }
 
-        return response()->json(new UserResource($user->load('subjects:id,name')), 201);
+        return response()->json(new UserResource($user->load('subjects:id,name,description')), 201);
     }
 
     #[Endpoint(title: 'Get User')]
@@ -136,14 +144,18 @@ class UserController
             'township' => null,
             'is_active' => true,
             'user_type' => 'STAFF',
-            'subjects' => [['id' => 1, 'name' => 'Mathematics']],
+            'subjects' => [[
+                'id' => 1,
+                'name' => 'Mathematics',
+                'description' => 'Core mathematics topics and problem-solving.',
+            ]],
             'created_at' => '2026-02-05T00:00:00.000000Z',
             'updated_at' => '2026-02-05T00:00:00.000000Z',
         ]],
     )]
     public function show(User $user): JsonResponse
     {
-        return response()->json(new UserResource($user->load('subjects:id,name')));
+        return response()->json(new UserResource($user->load('subjects:id,name,description')));
     }
 
     #[Endpoint(title: 'Update User')]
@@ -171,7 +183,11 @@ class UserController
             'township' => 'SOMA',
             'is_active' => true,
             'user_type' => 'STUDENT',
-            'subjects' => [['id' => 1, 'name' => 'Mathematics']],
+            'subjects' => [[
+                'id' => 1,
+                'name' => 'Mathematics',
+                'description' => 'Core mathematics topics and problem-solving.',
+            ]],
             'created_at' => '2026-02-05T00:00:00.000000Z',
             'updated_at' => '2026-02-06T00:00:00.000000Z',
         ]],
@@ -194,7 +210,7 @@ class UserController
             $user->subjects()->sync($subjectIds);
         }
 
-        return response()->json(new UserResource($user->fresh()->load('subjects:id,name')));
+        return response()->json(new UserResource($user->fresh()->load('subjects:id,name,description')));
     }
 
     #[Endpoint(title: 'Delete User')]
