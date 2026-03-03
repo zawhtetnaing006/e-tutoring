@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\ClassRoomController;
 use App\Http\Controllers\Api\NotiController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\UserController;
@@ -53,6 +54,21 @@ Route::middleware(['auth:sanctum', 'user_type:STAFF'])
         Route::get('{subject}', 'show');
         Route::put('{subject}', 'update');
         Route::delete('{subject}', 'destroy');
+    });
+
+Route::prefix('class-rooms')
+    ->controller(ClassRoomController::class)
+    ->group(function () {
+        Route::middleware(['auth:sanctum', 'user_type:STAFF,TUTOR,STUDENT'])->group(function () {
+            Route::get('/', 'index');
+            Route::get('{classRoom}', 'show');
+        });
+
+        Route::middleware(['auth:sanctum', 'user_type:STAFF'])->group(function () {
+            Route::post('/', 'store');
+            Route::put('{classRoom}', 'update');
+            Route::delete('{classRoom}', 'destroy');
+        });
     });
 
 Route::prefix('work-schedules')
