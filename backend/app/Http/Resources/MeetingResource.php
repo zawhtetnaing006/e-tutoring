@@ -31,6 +31,7 @@ class MeetingResource extends JsonResource
                     'date' => $schedule->date,
                     'start_time' => $schedule->start_time,
                     'end_time' => $schedule->end_time,
+                    'note' => $schedule->note,
                     'created_at' => $schedule->created_at?->toISOString(),
                     'updated_at' => $schedule->updated_at?->toISOString(),
                 ])->values()),

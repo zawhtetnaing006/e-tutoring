@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ClassRoomController;
 use App\Http\Controllers\Api\MeetingController;
+use App\Http\Controllers\Api\MeetingScheduleController;
 use App\Http\Controllers\Api\NotiController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\UserController;
@@ -96,6 +97,13 @@ Route::middleware(['auth:sanctum', 'user_type:STAFF'])
         Route::get('{meeting}', 'show');
         Route::put('{meeting}', 'update');
         Route::delete('{meeting}', 'destroy');
+    });
+
+Route::middleware(['auth:sanctum', 'user_type:STAFF'])
+    ->prefix('meeting-schedules')
+    ->controller(MeetingScheduleController::class)
+    ->group(function () {
+        Route::put('{meetingSchedule}', 'update');
     });
 
 Route::middleware('auth:sanctum')
