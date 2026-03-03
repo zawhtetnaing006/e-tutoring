@@ -24,6 +24,7 @@ class UpdateMeetingRequest extends FormRequest
             'type' => ['sometimes', Rule::in(['virtual', 'physical'])],
             'platform' => ['sometimes', 'nullable', 'string', 'max:255'],
             'link' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'location' => ['sometimes', 'nullable', 'string'],
         ];
     }
 
@@ -33,6 +34,7 @@ class UpdateMeetingRequest extends FormRequest
             $meeting = $this->route('meeting');
             $type = (string) $this->input('type', $meeting?->type);
             $link = $this->input('link', $meeting?->link);
+            $location = $this->input('location', $meeting?->location);
 
             if ($type === 'virtual' && (! is_string($link) || trim($link) === '')) {
                 $validator->errors()->add('link', 'The link field is required when type is virtual.');
@@ -40,6 +42,14 @@ class UpdateMeetingRequest extends FormRequest
 
             if ($type === 'physical' && $link !== null && trim((string) $link) !== '') {
                 $validator->errors()->add('link', 'The link must be null/empty when type is physical.');
+            }
+
+            if ($type === 'physical' && (! is_string($location) || trim($location) === '')) {
+                $validator->errors()->add('location', 'The location field is required when type is physical.');
+            }
+
+            if ($type === 'virtual' && $location !== null && trim((string) $location) !== '') {
+                $validator->errors()->add('location', 'The location must be null/empty when type is virtual.');
             }
         });
     }

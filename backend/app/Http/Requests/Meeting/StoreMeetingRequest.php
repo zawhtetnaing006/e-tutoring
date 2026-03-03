@@ -24,6 +24,7 @@ class StoreMeetingRequest extends FormRequest
             'type' => ['required', Rule::in(['virtual', 'physical'])],
             'platform' => ['nullable', 'string', 'max:255'],
             'link' => ['nullable', 'string', 'max:1000'],
+            'location' => ['nullable', 'string'],
             'class_id' => ['required', 'integer', 'exists:classRoom,id'],
             'meeting_schedules' => ['required', 'array', 'min:1'],
             'meeting_schedules.*.date' => ['required', 'date'],
@@ -37,6 +38,7 @@ class StoreMeetingRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             $type = (string) $this->input('type', '');
             $link = $this->input('link');
+            $location = $this->input('location');
 
             if ($type === 'virtual' && (! is_string($link) || trim($link) === '')) {
                 $validator->errors()->add('link', 'The link field is required when type is virtual.');
@@ -44,6 +46,14 @@ class StoreMeetingRequest extends FormRequest
 
             if ($type === 'physical' && $link !== null && trim((string) $link) !== '') {
                 $validator->errors()->add('link', 'The link must be null/empty when type is physical.');
+            }
+
+            if ($type === 'physical' && (! is_string($location) || trim($location) === '')) {
+                $validator->errors()->add('location', 'The location field is required when type is physical.');
+            }
+
+            if ($type === 'virtual' && $location !== null && trim((string) $location) !== '') {
+                $validator->errors()->add('location', 'The location must be null/empty when type is virtual.');
             }
 
             $schedules = $this->input('meeting_schedules', []);

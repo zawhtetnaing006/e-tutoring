@@ -22,6 +22,7 @@ class MeetingResource extends JsonResource
             'type' => $this->resource->type,
             'platform' => $this->resource->platform,
             'link' => $this->resource->link,
+            'location' => $this->resource->location,
             'class_id' => $this->resource->class_id,
             'meeting_schedules' => $this->whenLoaded('schedules', fn () => $this->resource->schedules
                 ->map(static fn ($schedule): array => [

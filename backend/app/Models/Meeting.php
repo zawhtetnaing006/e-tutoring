@@ -22,6 +22,7 @@ class Meeting extends Model
         'type',
         'platform',
         'link',
+        'location',
         'class_id',
     ];
 

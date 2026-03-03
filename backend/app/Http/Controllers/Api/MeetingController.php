@@ -32,6 +32,7 @@ class MeetingController
             'type' => 'virtual',
             'platform' => 'Google Meet',
             'link' => 'https://meet.example.com/abc',
+            'location' => null,
             'class_id' => 1,
             'meeting_schedules' => [[
                 'id' => 1,
@@ -73,6 +74,7 @@ class MeetingController
     #[BodyParameter('type', required: true, example: 'virtual')]
     #[BodyParameter('platform', required: false, example: 'Google Meet')]
     #[BodyParameter('link', required: false, example: 'https://meet.example.com/abc')]
+    #[BodyParameter('location', required: false, example: null)]
     #[BodyParameter('class_id', required: true, example: 1)]
     #[BodyParameter('meeting_schedules', required: true, example: [
         ['date' => '2026-03-10', 'start_time' => '09:00', 'end_time' => '10:00'],
@@ -85,6 +87,7 @@ class MeetingController
         'type' => 'virtual',
         'platform' => 'Google Meet',
         'link' => 'https://meet.example.com/abc',
+        'location' => null,
         'class_id' => 1,
         'meeting_schedules' => [[
             'id' => 1,
@@ -109,6 +112,7 @@ class MeetingController
                 'type' => $validated['type'],
                 'platform' => $validated['platform'] ?? null,
                 'link' => $validated['link'] ?? null,
+                'location' => $validated['location'] ?? null,
                 'class_id' => (int) $validated['class_id'],
             ]);
 
@@ -138,6 +142,7 @@ class MeetingController
         'type' => 'virtual',
         'platform' => 'Google Meet',
         'link' => 'https://meet.example.com/abc',
+        'location' => null,
         'class_id' => 1,
         'meeting_schedules' => [[
             'id' => 1,
@@ -164,6 +169,7 @@ class MeetingController
     #[BodyParameter('type', required: false, example: 'physical')]
     #[BodyParameter('platform', required: false, example: 'Campus Room A')]
     #[BodyParameter('link', required: false, example: null)]
+    #[BodyParameter('location', required: false, example: 'Building A, Room 203')]
     #[Response(status: 200, examples: [[
         'id' => 1,
         'title' => 'Math Session - Updated',
@@ -171,6 +177,7 @@ class MeetingController
         'type' => 'physical',
         'platform' => 'Campus Room A',
         'link' => null,
+        'location' => 'Building A, Room 203',
         'class_id' => 1,
         'meeting_schedules' => [[
             'id' => 1,
