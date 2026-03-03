@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ClassRoomController;
+use App\Http\Controllers\Api\MeetingAttendanceController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\MeetingScheduleController;
 use App\Http\Controllers\Api\NotiController;
@@ -104,6 +105,13 @@ Route::middleware(['auth:sanctum', 'user_type:STAFF'])
     ->controller(MeetingScheduleController::class)
     ->group(function () {
         Route::put('{meetingSchedule}', 'update');
+    });
+
+Route::middleware(['auth:sanctum', 'user_type:STAFF'])
+    ->prefix('meeting-attendances')
+    ->controller(MeetingAttendanceController::class)
+    ->group(function () {
+        Route::post('/', 'store');
     });
 
 Route::middleware('auth:sanctum')
