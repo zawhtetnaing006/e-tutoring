@@ -28,6 +28,7 @@ class UpdateSubjectRequest extends FormRequest
                 'max:255',
                 Rule::unique('subjects', 'name')->ignore($subject?->id),
             ],
+            'description' => ['nullable', 'string', 'max:1000'],
         ];
     }
 }

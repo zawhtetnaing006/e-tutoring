@@ -35,9 +35,16 @@ class UserController
                 'email' => 'admin@gmail.com',
                 'phone' => null,
                 'address' => null,
+                'country' => null,
+                'city' => null,
+                'township' => null,
                 'is_active' => true,
                 'user_type' => 'STAFF',
-                'subjects' => [['id' => 1, 'name' => 'Mathematics']],
+                'subjects' => [[
+                    'id' => 1,
+                    'name' => 'Mathematics',
+                    'description' => 'Core mathematics topics and problem-solving.',
+                ]],
                 'created_at' => '2026-02-05T00:00:00.000000Z',
                 'updated_at' => '2026-02-05T00:00:00.000000Z',
             ]],
@@ -52,7 +59,7 @@ class UserController
         $page = max(1, (int) $request->integer('page', 1));
 
         $users = User::query()
-            ->with('subjects:id,name')
+            ->with('subjects:id,name,description')
             ->latest('id')
             ->paginate($perPage, ['*'], 'page', $page);
 
@@ -71,6 +78,9 @@ class UserController
     #[BodyParameter('password', required: false, example: 'secret123')]
     #[BodyParameter('phone', required: false, example: '+1-555-1234')]
     #[BodyParameter('address', required: false, example: '123 Main St')]
+    #[BodyParameter('country', required: false, example: 'USA')]
+    #[BodyParameter('city', required: false, example: 'New York')]
+    #[BodyParameter('township', required: false, example: 'Manhattan')]
     #[BodyParameter('is_active', required: false, example: true)]
     #[BodyParameter('user_type', required: true, example: 'STUDENT')]
     #[BodyParameter('subject_ids', required: false, example: [1, 2])]
@@ -82,9 +92,16 @@ class UserController
             'email' => 'jane@example.com',
             'phone' => '+1-555-1234',
             'address' => '123 Main St',
+            'country' => 'USA',
+            'city' => 'New York',
+            'township' => 'Manhattan',
             'is_active' => true,
             'user_type' => 'STUDENT',
-            'subjects' => [['id' => 1, 'name' => 'Mathematics']],
+            'subjects' => [[
+                'id' => 1,
+                'name' => 'Mathematics',
+                'description' => 'Core mathematics topics and problem-solving.',
+            ]],
             'created_at' => '2026-02-05T00:00:00.000000Z',
             'updated_at' => '2026-02-05T00:00:00.000000Z',
         ]],
@@ -110,7 +127,7 @@ class UserController
             $user->notify(new UserGeneratedPasswordNotification($plainPassword));
         }
 
-        return response()->json(new UserResource($user->load('subjects:id,name')), 201);
+        return response()->json(new UserResource($user->load('subjects:id,name,description')), 201);
     }
 
     #[Endpoint(title: 'Get User')]
@@ -122,16 +139,23 @@ class UserController
             'email' => 'admin@gmail.com',
             'phone' => null,
             'address' => null,
+            'country' => null,
+            'city' => null,
+            'township' => null,
             'is_active' => true,
             'user_type' => 'STAFF',
-            'subjects' => [['id' => 1, 'name' => 'Mathematics']],
+            'subjects' => [[
+                'id' => 1,
+                'name' => 'Mathematics',
+                'description' => 'Core mathematics topics and problem-solving.',
+            ]],
             'created_at' => '2026-02-05T00:00:00.000000Z',
             'updated_at' => '2026-02-05T00:00:00.000000Z',
         ]],
     )]
     public function show(User $user): JsonResponse
     {
-        return response()->json(new UserResource($user->load('subjects:id,name')));
+        return response()->json(new UserResource($user->load('subjects:id,name,description')));
     }
 
     #[Endpoint(title: 'Update User')]
@@ -141,6 +165,9 @@ class UserController
     #[BodyParameter('password_confirmation', required: false, example: 'new-secret-123')]
     #[BodyParameter('phone', required: false, example: '+1-555-0000')]
     #[BodyParameter('address', required: false, example: '456 Oak St')]
+    #[BodyParameter('country', required: false, example: 'USA')]
+    #[BodyParameter('city', required: false, example: 'San Francisco')]
+    #[BodyParameter('township', required: false, example: 'SOMA')]
     #[BodyParameter('is_active', required: false, example: true)]
     #[BodyParameter('subject_ids', required: false, example: [1, 3])]
     #[Response(
@@ -151,9 +178,16 @@ class UserController
             'email' => 'jane.updated@example.com',
             'phone' => '+1-555-0000',
             'address' => '456 Oak St',
+            'country' => 'USA',
+            'city' => 'San Francisco',
+            'township' => 'SOMA',
             'is_active' => true,
             'user_type' => 'STUDENT',
-            'subjects' => [['id' => 1, 'name' => 'Mathematics']],
+            'subjects' => [[
+                'id' => 1,
+                'name' => 'Mathematics',
+                'description' => 'Core mathematics topics and problem-solving.',
+            ]],
             'created_at' => '2026-02-05T00:00:00.000000Z',
             'updated_at' => '2026-02-06T00:00:00.000000Z',
         ]],
@@ -176,7 +210,7 @@ class UserController
             $user->subjects()->sync($subjectIds);
         }
 
-        return response()->json(new UserResource($user->fresh()->load('subjects:id,name')));
+        return response()->json(new UserResource($user->fresh()->load('subjects:id,name,description')));
     }
 
     #[Endpoint(title: 'Delete User')]

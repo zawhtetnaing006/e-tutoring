@@ -18,6 +18,7 @@ class SubjectResource extends JsonResource
         return [
             'id' => $this->resource->id,
             'name' => $this->resource->name,
+            'description' => $this->resource->description,
             'created_at' => $this->resource->created_at?->toISOString(),
             'updated_at' => $this->resource->updated_at?->toISOString(),
         ];
