@@ -21,7 +21,18 @@ class MeetingSchedule extends Model
         'start_time',
         'end_time',
         'note',
+        'cancel_at',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'cancel_at' => 'datetime',
+        ];
+    }
 
     public function meeting(): BelongsTo
     {

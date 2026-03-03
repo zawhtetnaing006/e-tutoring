@@ -105,6 +105,7 @@ Route::middleware(['auth:sanctum', 'user_type:STAFF'])
     ->controller(MeetingScheduleController::class)
     ->group(function () {
         Route::put('{meetingSchedule}', 'update');
+        Route::post('{meetingSchedule}/cancel', 'cancel');
     });
 
 Route::middleware(['auth:sanctum', 'user_type:STAFF'])

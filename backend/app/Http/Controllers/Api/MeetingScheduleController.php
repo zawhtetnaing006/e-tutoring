@@ -35,4 +35,27 @@ class MeetingScheduleController
 
         return response()->json(new MeetingScheduleResource($meetingSchedule->fresh()));
     }
+
+    #[Endpoint(title: 'Cancel Meeting Schedule')]
+    #[Response(status: 200, examples: [[
+        'id' => 1,
+        'meeting_id' => 1,
+        'date' => '2026-03-10',
+        'start_time' => '10:00:00',
+        'end_time' => '11:00:00',
+        'note' => 'Bring chapter 5 worksheet',
+        'cancel_at' => '2026-03-03T08:00:00.000000Z',
+        'created_at' => '2026-03-01T00:00:00.000000Z',
+        'updated_at' => '2026-03-03T08:00:00.000000Z',
+    ]])]
+    public function cancel(MeetingSchedule $meetingSchedule): JsonResponse
+    {
+        if ($meetingSchedule->cancel_at === null) {
+            $meetingSchedule->update([
+                'cancel_at' => now(),
+            ]);
+        }
+
+        return response()->json(new MeetingScheduleResource($meetingSchedule->fresh()));
+    }
 }

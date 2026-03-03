@@ -22,6 +22,7 @@ class MeetingScheduleResource extends JsonResource
             'start_time' => $this->resource->start_time,
             'end_time' => $this->resource->end_time,
             'note' => $this->resource->note,
+            'cancel_at' => $this->resource->cancel_at?->toISOString(),
             'created_at' => $this->resource->created_at?->toISOString(),
             'updated_at' => $this->resource->updated_at?->toISOString(),
         ];
