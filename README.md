@@ -28,8 +28,7 @@ Compose project names:
 
 ### FOR WINDOW
 ```bash
-docker compose --env-file backend/.env.local -f docker-compose.local.yml up -d --build --force-recreate --remove-orphans
-docker compose --env-file backend/.env.local -f docker-compose.local.yml exec -T php composer install
+bash dev-restart
 ```
 
 2) PHP dependencies:
@@ -48,7 +47,14 @@ docker compose --env-file backend/.env.local -f docker-compose.local.yml exec -T
 ```
 
 ```bash
-docker compose --env-file backend/.env.local -f docker-compose.local.yml exec -T php artisan migrate
+./artisan migrate
+```
+
+For production deployment:
+
+```bash
+bash deploy
+bash deploy --migrate
 ```
 
 4) Open the app:

@@ -27,6 +27,7 @@ COPY docker/php/php.ini /usr/local/etc/php/conf.d/99-app.ini
 
 COPY docker/php/entrypoint.sh /usr/local/bin/app-entrypoint
 RUN chmod +x /usr/local/bin/app-entrypoint
+RUN sed -i 's/\r$//' /usr/local/bin/app-entrypoint
 
 FROM base AS dev
 

@@ -32,7 +32,7 @@ Route::middleware('auth:sanctum')
     ->prefix('chat')
     ->controller(ChatController::class)
     ->group(function () {
-        Route::post('direct', 'createDirectConversation');
+        Route::get('/', 'listConversations');
         Route::get('{conversation}/messages', 'listMessages');
         Route::post('{conversation}/messages', 'sendMessage');
     });

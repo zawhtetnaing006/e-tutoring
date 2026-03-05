@@ -2,139 +2,142 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\MessageSent;
-use App\Models\Conversation;
-use App\Models\ConversationMember;
-use App\Models\Message;
-use Illuminate\Http\JsonResponse;
+use App\Http\Resources\ChatMessageResource;
+use App\Http\Resources\ChatConversationResource;
+use App\Models\ClassRoom;
+use App\Services\ChatService;
+use Dedoc\Scramble\Attributes\BodyParameter;
+use Dedoc\Scramble\Attributes\Endpoint;
+use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\QueryParameter;
+use Dedoc\Scramble\Attributes\Response;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
+#[Group('Chat', description: 'Chat conversations and messages.', weight: 7)]
 class ChatController
 {
-    public function createDirectConversation(Request $request): JsonResponse
+    public function __construct(
+        private readonly ChatService $chatService,
+    ) {
+    }
+
+    #[Endpoint(title: 'List Chat Conversations')]
+    #[QueryParameter('per_page', required: false, example: 15)]
+    #[QueryParameter('page', required: false, example: 1)]
+    #[Response(
+        status: 200,
+        examples: [[
+            'data' => [[
+                'id' => 12,
+                'tutor_user_id' => 2,
+                'student_user_id' => 5,
+                'start_date' => '2026-03-01',
+                'end_date' => '2026-03-30',
+                'tutor' => [
+                    'id' => 2,
+                    'name' => 'Jane Tutor',
+                ],
+                'student' => [
+                    'id' => 5,
+                    'name' => 'John Student',
+                ],
+                'last_message' => [
+                    'id' => 321,
+                    'conversation_id' => 12,
+                    'sender_id' => 5,
+                    'sender_name' => 'John Student',
+                    'content' => 'When is our next class?',
+                    'created_at' => '2026-03-05T10:00:00.000000Z',
+                    'updated_at' => '2026-03-05T10:00:00.000000Z',
+                ],
+                'created_at' => '2026-03-01T00:00:00.000000Z',
+                'updated_at' => '2026-03-05T10:01:00.000000Z',
+            ]],
+            'current_page' => 1,
+            'total_page' => 1,
+            'total_items' => 1,
+        ]],
+    )]
+    public function listConversations(Request $request): AnonymousResourceCollection
     {
+        $userId = (int) $request->user()->id;
+        $validated = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
+        $perPage = $this->chatService->sanitizePerPage((int) ($validated['per_page'] ?? ChatService::DEFAULT_PER_PAGE));
+
+        $conversations = $this->chatService->listConversations($userId, $perPage);
+
+        return ChatConversationResource::collection($conversations)->additional($this->paginationMeta($conversations));
+    }
+
+    #[Endpoint(title: 'List Chat Messages')]
+    #[QueryParameter('per_page', required: false, example: 15)]
+    #[QueryParameter('page', required: false, example: 1)]
+    #[Response(
+        status: 200,
+        examples: [[
+            'data' => [[
+                'id' => 321,
+                'conversation_id' => 12,
+                'sender_id' => 5,
+                'sender_name' => 'John Student',
+                'content' => 'When is our next class?',
+                'created_at' => '2026-03-05T10:00:00.000000Z',
+                'updated_at' => '2026-03-05T10:00:00.000000Z',
+            ]],
+            'current_page' => 1,
+            'total_page' => 1,
+            'total_items' => 1,
+        ]],
+    )]
+    public function listMessages(Request $request, ClassRoom $conversation): AnonymousResourceCollection
+    {
+        $userId = (int) $request->user()->id;
+        $validated = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+        ]);
+        $perPage = $this->chatService->sanitizePerPage((int) ($validated['per_page'] ?? ChatService::DEFAULT_PER_PAGE));
+
+        $messages = $this->chatService->listMessages($userId, $conversation, $perPage);
+
+        return ChatMessageResource::collection($messages)->additional($this->paginationMeta($messages));
+    }
+
+    #[Endpoint(title: 'Send Chat Message')]
+    #[BodyParameter('content', required: true, example: 'What time is our next class?')]
+    #[Response(
+        status: 200,
+        examples: [[
+            'id' => 322,
+            'conversation_id' => 12,
+            'sender_id' => 2,
+            'sender_name' => 'Jane Tutor',
+            'content' => 'Our next class starts at 14:00.',
+            'created_at' => '2026-03-05T10:15:00.000000Z',
+            'updated_at' => '2026-03-05T10:15:00.000000Z',
+        ]],
+    )]
+    public function sendMessage(Request $request, ClassRoom $conversation): ChatMessageResource
+    {
+        $userId = (int) $request->user()->id;
         $data = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'content' => ['required', 'string', 'max:5000'],
         ]);
 
-        $currentUserId = (int) $request->user()->id;
-        $otherUserId = (int) $data['user_id'];
+        $message = $this->chatService->sendMessage($userId, $conversation, $data['content']);
 
-        if ($otherUserId === $currentUserId) {
-            return response()->json([
-                'message' => 'You cannot create a direct conversation with yourself.',
-            ], 422);
-        }
-
-        $ids = [$currentUserId, $otherUserId];
-        sort($ids, SORT_NUMERIC);
-        $pairKey = "{$ids[0]}:{$ids[1]}";
-
-        $conversation = DB::transaction(function () use ($currentUserId, $otherUserId, $pairKey): Conversation {
-            $conversation = Conversation::firstOrCreate(
-                [
-                    'type' => 'direct',
-                    'direct_pair_key' => $pairKey,
-                ],
-                [
-                    'name' => null,
-                    'created_by' => $currentUserId,
-                ],
-            );
-
-            $now = now();
-
-            ConversationMember::upsert(
-                [
-                    [
-                        'conversation_id' => $conversation->id,
-                        'user_id' => $currentUserId,
-                        'joined_at' => $now,
-                        'left_at' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ],
-                    [
-                        'conversation_id' => $conversation->id,
-                        'user_id' => $otherUserId,
-                        'joined_at' => $now,
-                        'left_at' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ],
-                ],
-                ['conversation_id', 'user_id'],
-                ['joined_at', 'left_at', 'updated_at'],
-            );
-
-            return $conversation;
-        });
-
-        return response()->json([
-            'data' => [
-                'id' => $conversation->id,
-                'type' => $conversation->type,
-                'name' => $conversation->name,
-                'created_by' => $conversation->created_by,
-                'direct_pair_key' => $conversation->direct_pair_key,
-                'created_at' => $conversation->created_at?->toISOString(),
-                'updated_at' => $conversation->updated_at?->toISOString(),
-            ],
-        ]);
+        return new ChatMessageResource($message);
     }
 
-    public function listMessages(Request $request, Conversation $conversation): JsonResponse
+    private function paginationMeta(LengthAwarePaginator $paginator): array
     {
-        $this->ensureConversationMember($request, $conversation);
-
-        $perPage = max(1, min(100, (int) $request->integer('per_page', 20)));
-
-        $messages = Message::where('conversation_id', $conversation->id)
-            ->latest('id')
-            ->paginate($perPage);
-
-        return response()->json($messages);
-    }
-
-    public function sendMessage(Request $request, Conversation $conversation): JsonResponse
-    {
-        $this->ensureConversationMember($request, $conversation);
-
-        $data = $request->validate([
-            'body' => ['required', 'string', 'max:5000'],
-        ]);
-
-        $message = Message::create([
-            'conversation_id' => $conversation->id,
-            'sender_id' => (int) $request->user()->id,
-            'body' => $data['body'],
-        ]);
-
-        $conversation->touch();
-
-        broadcast(new MessageSent($message))->toOthers();
-
-        return response()->json([
-            'data' => [
-                'id' => $message->id,
-                'conversation_id' => $message->conversation_id,
-                'sender_id' => $message->sender_id,
-                'body' => $message->body,
-                'edited_at' => $message->edited_at?->toISOString(),
-                'created_at' => $message->created_at?->toISOString(),
-                'updated_at' => $message->updated_at?->toISOString(),
-            ],
-        ], 201);
-    }
-
-    private function ensureConversationMember(Request $request, Conversation $conversation): void
-    {
-        $isMember = ConversationMember::where('conversation_id', $conversation->id)
-            ->where('user_id', (int) $request->user()->id)
-            ->whereNull('left_at')
-            ->exists();
-
-        abort_unless($isMember, 403, 'You are not a member of this conversation.');
+        return [
+            'current_page' => $paginator->currentPage(),
+            'total_page' => $paginator->lastPage(),
+            'total_items' => $paginator->total(),
+        ];
     }
 }
