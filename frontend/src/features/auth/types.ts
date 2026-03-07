@@ -9,11 +9,15 @@ export type AuthRole = 'student' | 'tutor' | 'staff'
 export type UserType = 'STUDENT' | 'TUTOR' | 'STAFF' | string
 
 export type User = {
+  id?: number
   uuid: string
   name: string
   email: string
   phone: string | null
   address: string | null
+  country?: string | null
+  city?: string | null
+  township?: string | null
   is_active: boolean
   user_type: UserType
   subjects?: string | null

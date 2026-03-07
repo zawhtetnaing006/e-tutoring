@@ -7,8 +7,9 @@ import {
   ResetPasswordPage,
 } from '@/pages/public'
 import { DashboardPage } from '@/pages/dashboard'
-import { SettingsPage } from '@/pages/settings'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
+import { PlaceholderPage } from '@/components/common/PlaceholderPage'
+import { ProfilePage } from '@/pages/profile'
 
 /**
  * Routes: login (public); root is dashboard (protected, redirects to login if unauthenticated).
@@ -29,7 +30,38 @@ export function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<DashboardLayout />}>
           <Route index element={<DashboardPage />} />
-          <Route path="settings" element={<SettingsPage />} />
+          <Route path="staffs" element={<PlaceholderPage title="Staffs" />} />
+          <Route path="tutors" element={<PlaceholderPage title="Tutors" />} />
+          <Route
+            path="students"
+            element={<PlaceholderPage title="Students" />}
+          />
+          <Route
+            path="subjects"
+            element={<PlaceholderPage title="Subjects" />}
+          />
+          <Route
+            path="allocations"
+            element={<PlaceholderPage title="Allocation & Scheduling" />}
+          />
+          <Route
+            path="meeting-manager"
+            element={<PlaceholderPage title="Meeting Manager" />}
+          />
+          <Route path="blogs" element={<PlaceholderPage title="Blogs" />} />
+          <Route
+            path="communication-hub"
+            element={<PlaceholderPage title="Communication Hub" />}
+          />
+          <Route
+            path="notifications"
+            element={<PlaceholderPage title="Notifications" />}
+          />
+          <Route
+            path="audit-log"
+            element={<PlaceholderPage title="Audit Log" />}
+          />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
 

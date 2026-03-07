@@ -23,7 +23,7 @@ export function DashboardLayout() {
             <PanelRightOpen className="size-5 shrink-0" />
             eTutor System
           </Link>
-          <section className="flex flex-1 flex-col gap-6 pt-8">
+          <section className="flex flex-1 flex-col gap-6 pt-6">
             {sections.map(section => (
               <div key={section.title} className="space-y-1">
                 <h2 className="mb-2 text-subtext font-semibold uppercase tracking-wide text-text-disabled">
