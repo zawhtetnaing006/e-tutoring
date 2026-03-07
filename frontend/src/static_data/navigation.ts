@@ -5,7 +5,10 @@ import {
   UsersRound,
   Newspaper,
   Bell,
-  Settings2,
+  CalendarClock,
+  MessagesSquare,
+  UserPen,
+  FileClock,
   type LucideIcon,
 } from 'lucide-react'
 import type { AuthRole } from '@/features/auth'
@@ -29,14 +32,25 @@ const staffSidebarNavigation: NavSection[] = [
         href: '/allocations',
         icon: CalendarRange,
       },
+      {
+        name: 'Meeting Manager',
+        href: '/meeting-manager',
+        icon: CalendarClock,
+      },
       { name: 'Blogs', href: '/blogs', icon: Newspaper },
+      {
+        name: 'Communication Hub',
+        href: '/communication-hub',
+        icon: MessagesSquare,
+      },
     ],
   },
   {
     title: 'System',
     items: [
       { name: 'Notifications', href: '/notifications', icon: Bell },
-      { name: 'Settings', href: '/settings', icon: Settings2 },
+      { name: 'Audit Log', href: '/audit-log', icon: FileClock },
+      { name: 'Profile', href: '/profile', icon: UserPen },
     ],
   },
 ]
@@ -46,14 +60,24 @@ const studentSidebarNavigation: NavSection[] = [
     title: 'Main Menu',
     items: [
       { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+      {
+        name: 'Meeting Manager',
+        href: '/meeting-manager',
+        icon: CalendarClock,
+      },
       { name: 'Blogs', href: '/blogs', icon: Newspaper },
+      {
+        name: 'Communication Hub',
+        href: '/communication-hub',
+        icon: MessagesSquare,
+      },
     ],
   },
   {
     title: 'System',
     items: [
       { name: 'Notifications', href: '/notifications', icon: Bell },
-      { name: 'Settings', href: '/settings', icon: Settings2 },
+      { name: 'Profile', href: '/profile', icon: UserPen },
     ],
   },
 ]
@@ -68,14 +92,24 @@ const tutorSidebarNavigation: NavSection[] = [
         href: '/allocations',
         icon: CalendarRange,
       },
+      {
+        name: 'Meeting Manager',
+        href: '/meeting-manager',
+        icon: CalendarClock,
+      },
       { name: 'Blogs', href: '/blogs', icon: Newspaper },
+      {
+        name: 'Communication Hub',
+        href: '/communication-hub',
+        icon: MessagesSquare,
+      },
     ],
   },
   {
     title: 'System',
     items: [
       { name: 'Notifications', href: '/notifications', icon: Bell },
-      { name: 'Settings', href: '/settings', icon: Settings2 },
+      { name: 'Profile', href: '/profile', icon: UserPen },
     ],
   },
 ]
