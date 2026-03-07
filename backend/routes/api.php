@@ -2,6 +2,10 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\ClassRoomController;
+use App\Http\Controllers\Api\MeetingAttendanceController;
+use App\Http\Controllers\Api\MeetingController;
+use App\Http\Controllers\Api\MeetingScheduleController;
 use App\Http\Controllers\Api\NotiController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\UserController;
@@ -28,7 +32,7 @@ Route::middleware('auth:sanctum')
     ->prefix('chat')
     ->controller(ChatController::class)
     ->group(function () {
-        Route::post('direct', 'createDirectConversation');
+        Route::get('/', 'listConversations');
         Route::get('{conversation}/messages', 'listMessages');
         Route::post('{conversation}/messages', 'sendMessage');
     });
@@ -55,6 +59,21 @@ Route::middleware(['auth:sanctum', 'user_type:STAFF'])
         Route::delete('{subject}', 'destroy');
     });
 
+Route::prefix('class-rooms')
+    ->controller(ClassRoomController::class)
+    ->group(function () {
+        Route::middleware(['auth:sanctum', 'user_type:STAFF,TUTOR,STUDENT'])->group(function () {
+            Route::get('/', 'index');
+            Route::get('{classRoom}', 'show');
+        });
+
+        Route::middleware(['auth:sanctum', 'user_type:STAFF'])->group(function () {
+            Route::post('/', 'store');
+            Route::put('{classRoom}', 'update');
+            Route::delete('{classRoom}', 'destroy');
+        });
+    });
+
 Route::prefix('work-schedules')
     ->controller(WorkScheduleController::class)
     ->group(function () {
@@ -68,6 +87,32 @@ Route::prefix('work-schedules')
             Route::put('{workSchedule}', 'update');
             Route::delete('{workSchedule}', 'destroy');
         });
+    });
+
+Route::middleware(['auth:sanctum', 'user_type:STAFF'])
+    ->prefix('meetings')
+    ->controller(MeetingController::class)
+    ->group(function () {
+        Route::get('/', 'index');
+        Route::post('/', 'store');
+        Route::get('{meeting}', 'show');
+        Route::put('{meeting}', 'update');
+        Route::delete('{meeting}', 'destroy');
+    });
+
+Route::middleware(['auth:sanctum', 'user_type:STAFF'])
+    ->prefix('meeting-schedules')
+    ->controller(MeetingScheduleController::class)
+    ->group(function () {
+        Route::put('{meetingSchedule}', 'update');
+        Route::post('{meetingSchedule}/cancel', 'cancel');
+    });
+
+Route::middleware(['auth:sanctum', 'user_type:STAFF'])
+    ->prefix('meeting-attendances')
+    ->controller(MeetingAttendanceController::class)
+    ->group(function () {
+        Route::post('/', 'store');
     });
 
 Route::middleware('auth:sanctum')
