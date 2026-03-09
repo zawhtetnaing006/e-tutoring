@@ -10,6 +10,7 @@ import { DashboardPage } from '@/pages/dashboard'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import { ProfilePage } from '@/pages/profile'
 import { AllocationsPage } from '@/pages/allocations'
+import { CommunicationHubPage } from '@/pages/communication-hub'
 import { PlaceholderPage } from '@/components/common/PlaceholderPage'
 
 /**
@@ -47,10 +48,7 @@ export function AppRoutes() {
             element={<PlaceholderPage title="Meeting Manager" />}
           />
           <Route path="blogs" element={<PlaceholderPage title="Blogs" />} />
-          <Route
-            path="communication-hub"
-            element={<PlaceholderPage title="Communication Hub" />}
-          />
+          <Route path="communication-hub" element={<CommunicationHubPage />} />
           <Route
             path="notifications"
             element={<PlaceholderPage title="Notifications" />}

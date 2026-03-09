@@ -15,7 +15,7 @@ class ChatConversationResource extends JsonResource
     public function toArray(Request $request): array
     {
         $lastMessage = $this->resource instanceof ClassRoom
-            ? $this->resource->messages->first()
+            ? $this->resource->latestMessage
             : null;
 
         return [
