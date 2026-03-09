@@ -24,6 +24,7 @@ class ClassRoomController
 
     #[Endpoint(title: 'List Class Rooms')]
     #[QueryParameter('only_mine', required: false, example: true)]
+    #[QueryParameter('search', required: false, example: 'John')]
     #[QueryParameter('per_page', required: false, example: 15)]
     #[QueryParameter('page', required: false, example: 1)]
     #[Response(status: 200, examples: [[
@@ -44,6 +45,7 @@ class ClassRoomController
     {
         $data = $request->validate([
             'only_mine' => ['sometimes', 'boolean'],
+            'search' => ['sometimes', 'string'],
         ]);
 
         /** @var User|null $currentUser */
@@ -52,6 +54,7 @@ class ClassRoomController
         $perPage = max(1, min(100, (int) $request->integer('per_page', 15)));
         $page = max(1, (int) $request->integer('page', 1));
         $onlyMine = (bool) ($data['only_mine'] ?? false);
+        $search = trim((string) ($data['search'] ?? ''));
 
         $query = ClassRoom::query();
 
@@ -63,6 +66,18 @@ class ClassRoomController
             } elseif ($userType === User::TYPE_STUDENT) {
                 $query->where('student_user_id', (int) $currentUser->id);
             }
+        }
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search): void {
+                $builder
+                    ->whereHas('student', function ($userQuery) use ($search): void {
+                        $userQuery->where('name', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('tutor', function ($userQuery) use ($search): void {
+                        $userQuery->where('name', 'like', '%' . $search . '%');
+                    });
+            });
         }
 
         $classRooms = $query

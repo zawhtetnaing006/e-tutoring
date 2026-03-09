@@ -62,9 +62,15 @@ class UpdateClassRoomRequest extends FormRequest
                 ->exists();
 
             if ($exists) {
+                $userNames = User::query()
+                    ->whereIn('id', [$tutorUserId, $studentUserId])
+                    ->pluck('name', 'id');
+                $tutorName = $userNames->get($tutorUserId, "Tutor #{$tutorUserId}");
+                $studentName = $userNames->get($studentUserId, "Student #{$studentUserId}");
+
                 $validator->errors()->add(
                     'student_user_id',
-                    "Class already exists for tutor_user_id {$tutorUserId} and student_user_id {$studentUserId}."
+                    "Class already exists for {$tutorName} and {$studentName}."
                 );
             }
         });

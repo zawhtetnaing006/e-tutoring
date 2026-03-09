@@ -14,6 +14,34 @@ export type ApiRequestInit = Omit<RequestInit, 'body'> & {
   token?: string | null
 }
 
+function getApiErrorMessage(data: unknown, fallback: string): string {
+  if (!data || typeof data !== 'object') return fallback
+
+  const payload = data as {
+    message?: unknown
+    error?: {
+      details?: {
+        errors?: Record<string, unknown>
+      }
+    }
+  }
+
+  const detailedErrors = payload.error?.details?.errors
+  if (detailedErrors && typeof detailedErrors === 'object') {
+    for (const value of Object.values(detailedErrors)) {
+      if (Array.isArray(value) && typeof value[0] === 'string' && value[0]) {
+        return value[0]
+      }
+    }
+  }
+
+  if (typeof payload.message === 'string' && payload.message) {
+    return payload.message
+  }
+
+  return fallback
+}
+
 /**
  * Fetch that prefixes path with VITE_API_BASE_URL, sends JSON by default,
  * credentials: 'include' for Laravel Sanctum cookies, and optional Bearer token.
@@ -59,7 +87,7 @@ export async function apiClient<T>(
   if (!res.ok) {
     throw new ApiError(
       res.status,
-      data?.message ?? data?.error ?? res.statusText,
+      getApiErrorMessage(data, res.statusText),
       data
     )
   }
