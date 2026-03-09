@@ -8,8 +8,9 @@ import {
 } from '@/pages/public'
 import { DashboardPage } from '@/pages/dashboard'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
-import { PlaceholderPage } from '@/components/common/PlaceholderPage'
 import { ProfilePage } from '@/pages/profile'
+import { AllocationsPage } from '@/pages/allocations'
+import { PlaceholderPage } from '@/components/common/PlaceholderPage'
 
 /**
  * Routes: login (public); root is dashboard (protected, redirects to login if unauthenticated).
@@ -40,10 +41,7 @@ export function AppRoutes() {
             path="subjects"
             element={<PlaceholderPage title="Subjects" />}
           />
-          <Route
-            path="allocations"
-            element={<PlaceholderPage title="Allocation & Scheduling" />}
-          />
+          <Route path="allocations" element={<AllocationsPage />} />
           <Route
             path="meeting-manager"
             element={<PlaceholderPage title="Meeting Manager" />}

@@ -1,0 +1,1 @@
+export { AllocationsPage } from './allocations'

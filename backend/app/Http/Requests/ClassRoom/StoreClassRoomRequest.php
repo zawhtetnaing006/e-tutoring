@@ -54,10 +54,18 @@ class StoreClassRoomRequest extends FormRequest
                 ->pluck('student_user_id')
                 ->all();
 
+            $userNames = User::query()
+                ->whereIn('id', [(int) $tutorUserId, ...array_map('intval', $existingStudentIds)])
+                ->pluck('name', 'id');
+
+            $tutorName = $userNames->get((int) $tutorUserId, "Tutor #{$tutorUserId}");
+
             foreach ($existingStudentIds as $studentUserId) {
+                $studentName = $userNames->get((int) $studentUserId, "Student #{$studentUserId}");
+
                 $validator->errors()->add(
                     'student_user_ids',
-                    "Class already exists for tutor_user_id {$tutorUserId} and student_user_id {$studentUserId}."
+                    "Class already exists for {$tutorName} and {$studentName}."
                 );
             }
         });
