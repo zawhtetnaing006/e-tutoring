@@ -30,9 +30,7 @@ class ChatService
             ->with([
                 'tutor:id,name',
                 'student:id,name',
-                'messages' => function ($query): void {
-                    $query->latest('id')->limit(1)->with('sender:id,name');
-                },
+                'latestMessage.sender:id,name',
             ])
             ->latest('updated_at')
             ->paginate($perPage);
