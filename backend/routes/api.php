@@ -69,6 +69,7 @@ Route::prefix('class-rooms')
 
         Route::middleware(['auth:sanctum', 'user_type:STAFF'])->group(function () {
             Route::post('/', 'store');
+            Route::delete('/', 'bulkDestroy');
             Route::put('{classRoom}', 'update');
             Route::delete('{classRoom}', 'destroy');
         });

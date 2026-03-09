@@ -2,22 +2,26 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Eye,
-  Filter,
   LoaderCircle,
+  MoreVertical,
   Pencil,
   Plus,
   Search,
   Trash2,
   Upload,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import type { User } from '@/features/auth'
-import { deleteAllocation, type Allocation } from '@/features/allocations/api'
+import {
+  deleteAllocation,
+  deleteAllocations,
+  type Allocation,
+} from '@/features/allocations/api'
 import { useAllocations } from '@/features/allocations/useAllocations'
 import { useUsers } from '@/features/users/useUsers'
 import { useDebouncedValue } from '@/hooks'
 import { CreateAllocationModal } from './components/CreateAllocationModal'
 import { AllocationDetailsModal } from './components/AllocationDetailsModal'
-import { toast } from 'sonner'
 
 type AllocationRow = Allocation & {
   tutorName: string
@@ -45,7 +49,6 @@ export function AllocationsPage() {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
-  const debouncedSearch = useDebouncedValue(search.trim(), 400)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingAllocation, setEditingAllocation] = useState<Allocation | null>(
     null
@@ -53,6 +56,9 @@ export function AllocationsPage() {
   const [selectedAllocationId, setSelectedAllocationId] = useState<
     number | null
   >(null)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+
+  const debouncedSearch = useDebouncedValue(search.trim(), 400)
 
   const allocationsQuery = useAllocations({
     page,
@@ -69,21 +75,6 @@ export function AllocationsPage() {
     ],
     [studentsQuery.data?.data, tutorsQuery.data?.data]
   )
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteAllocation,
-    onSuccess: () => {
-      toast.success('Allocation deleted', {
-        description: 'The allocation has been removed successfully.',
-      })
-      void queryClient.invalidateQueries({ queryKey: ['allocations'] })
-    },
-    onError: error => {
-      const description =
-        error instanceof Error ? error.message : 'Please try again later.'
-      toast.error('Failed to delete allocation', { description })
-    },
-  })
 
   const rows = useMemo<AllocationRow[]>(() => {
     return (allocationsQuery.data?.data ?? []).map(allocation => ({
@@ -105,7 +96,49 @@ export function AllocationsPage() {
     tutorsQuery.data?.data,
   ])
 
+  const currentPageIds = useMemo(() => rows.map(row => row.id), [rows])
+  const visibleSelectedIds = useMemo(
+    () => selectedIds.filter(id => currentPageIds.includes(id)),
+    [currentPageIds, selectedIds]
+  )
+  const allCurrentPageSelected =
+    currentPageIds.length > 0 &&
+    currentPageIds.every(id => visibleSelectedIds.includes(id))
   const totalPages = allocationsQuery.data?.total_page ?? 1
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteAllocation,
+    onSuccess: () => {
+      toast.success('Allocation deleted', {
+        description: 'The allocation has been removed successfully.',
+      })
+      void queryClient.invalidateQueries({ queryKey: ['allocations'] })
+      setSelectedIds(current =>
+        current.filter(id => !currentPageIds.includes(id))
+      )
+    },
+    onError: error => {
+      const description =
+        error instanceof Error ? error.message : 'Please try again later.'
+      toast.error('Failed to delete allocation', { description })
+    },
+  })
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: deleteAllocations,
+    onSuccess: (_, ids) => {
+      toast.success('Allocations deleted', {
+        description: `${ids.length} allocation(s) have been removed successfully.`,
+      })
+      setSelectedIds(current => current.filter(id => !ids.includes(id)))
+      void queryClient.invalidateQueries({ queryKey: ['allocations'] })
+    },
+    onError: error => {
+      const description =
+        error instanceof Error ? error.message : 'Please try again later.'
+      toast.error('Failed to delete allocations', { description })
+    },
+  })
 
   const handleDelete = (allocation: Allocation) => {
     const confirmed = window.confirm(
@@ -115,6 +148,34 @@ export function AllocationsPage() {
     if (!confirmed) return
 
     deleteMutation.mutate(allocation.id)
+  }
+
+  const handleBulkDelete = () => {
+    if (visibleSelectedIds.length === 0) return
+
+    const confirmed = window.confirm(
+      `Delete ${visibleSelectedIds.length} selected allocation(s)?`
+    )
+
+    if (!confirmed) return
+
+    bulkDeleteMutation.mutate(visibleSelectedIds)
+  }
+
+  const handleToggleRow = (id: number) => {
+    setSelectedIds(current =>
+      current.includes(id)
+        ? current.filter(currentId => currentId !== id)
+        : [...current, id]
+    )
+  }
+
+  const handleToggleSelectAll = () => {
+    setSelectedIds(current =>
+      allCurrentPageSelected
+        ? current.filter(id => !currentPageIds.includes(id))
+        : [...new Set([...current, ...currentPageIds])]
+    )
   }
 
   return (
@@ -130,14 +191,29 @@ export function AllocationsPage() {
                 Assign tutors to students
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center gap-2 self-start rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-            >
-              <Plus className="size-4" />
-              Allocation Student
-            </button>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {visibleSelectedIds.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleteMutation.isPending}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 hover:bg-red-100 disabled:opacity-50"
+                >
+                  <Trash2 className="size-4" />
+                  Delete Selected ({visibleSelectedIds.length})
+                </button>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => setIsCreateOpen(true)}
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                <Plus className="size-4" />
+                Allocation Student
+              </button>
+            </div>
           </div>
 
           <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
@@ -153,13 +229,7 @@ export function AllocationsPage() {
                 className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
               />
             </div>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-muted"
-            >
-              <Filter className="size-4" />
-              Filter
-            </button>
+
             <button
               type="button"
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-muted"
@@ -174,6 +244,15 @@ export function AllocationsPage() {
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted/40">
                   <tr className="text-left text-muted-foreground">
+                    <th className="w-12 px-4 py-3 font-medium">
+                      <input
+                        type="checkbox"
+                        checked={allCurrentPageSelected}
+                        onChange={handleToggleSelectAll}
+                        aria-label="Select all allocations on this page"
+                        className="size-4"
+                      />
+                    </th>
                     <th className="px-4 py-3 font-medium">Student</th>
                     <th className="px-4 py-3 font-medium">Tutor</th>
                     <th className="px-4 py-3 font-medium">Semester Period</th>
@@ -182,11 +261,12 @@ export function AllocationsPage() {
                     </th>
                   </tr>
                 </thead>
+
                 <tbody className="divide-y divide-border bg-background">
                   {allocationsQuery.isLoading ? (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-4 py-8 text-center text-muted-foreground"
                       >
                         <span className="inline-flex items-center gap-2">
@@ -198,6 +278,15 @@ export function AllocationsPage() {
                   ) : rows.length > 0 ? (
                     rows.map(row => (
                       <tr key={row.id} className="hover:bg-muted/20">
+                        <td className="px-4 py-4">
+                          <input
+                            type="checkbox"
+                            checked={visibleSelectedIds.includes(row.id)}
+                            onChange={() => handleToggleRow(row.id)}
+                            aria-label={`Select allocation ${row.id}`}
+                            className="size-4"
+                          />
+                        </td>
                         <td className="px-4 py-4 text-foreground">
                           {row.studentName}
                         </td>
@@ -235,6 +324,13 @@ export function AllocationsPage() {
                             >
                               <Trash2 className="size-4" />
                             </button>
+                            <button
+                              type="button"
+                              className="rounded-md p-2 text-slate-500 hover:bg-muted"
+                              aria-label={`More actions for allocation ${row.id}`}
+                            >
+                              <MoreVertical className="size-4" />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -242,7 +338,7 @@ export function AllocationsPage() {
                   ) : (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="px-4 py-8 text-center text-muted-foreground"
                       >
                         No allocations found.
@@ -256,6 +352,7 @@ export function AllocationsPage() {
 
           <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
             <p>Rows per page: 10</p>
+
             <div className="flex items-center gap-3">
               <span>
                 {allocationsQuery.data?.total_items ?? 0} total allocation(s)

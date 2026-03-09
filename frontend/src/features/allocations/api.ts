@@ -100,3 +100,13 @@ export async function deleteAllocation(id: number): Promise<void> {
     token: getToken(),
   })
 }
+
+export async function deleteAllocations(ids: number[]): Promise<void> {
+  await apiClient<null>('class-rooms', {
+    method: 'DELETE',
+    token: getToken(),
+    body: {
+      class_room_ids: ids,
+    },
+  })
+}

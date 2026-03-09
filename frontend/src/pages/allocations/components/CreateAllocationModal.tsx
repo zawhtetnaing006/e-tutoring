@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Calendar, LoaderCircle, Plus, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -11,6 +11,7 @@ import {
   updateAllocation,
 } from '@/features/allocations/api'
 import { useUsers } from '@/features/users/useUsers'
+import { useDebouncedValue } from '@/hooks'
 
 type UserPickerProps = {
   label: string
@@ -106,6 +107,7 @@ type MultiUserPickerProps = UserPickerProps & {
   value: number[]
   selectedUsers: User[]
   onToggle: (userId: number) => void
+  onRemove: (userId: number) => void
 }
 
 function MultiUserPicker({
@@ -119,6 +121,7 @@ function MultiUserPicker({
   value,
   selectedUsers,
   onToggle,
+  onRemove,
 }: MultiUserPickerProps) {
   return (
     <div className="space-y-2">
@@ -130,9 +133,17 @@ function MultiUserPicker({
               {selectedUsers.map(user => (
                 <span
                   key={user.uuid}
-                  className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-sm text-foreground"
+                  className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-1 text-sm text-foreground"
                 >
                   {user.name}
+                  <button
+                    type="button"
+                    onClick={() => onRemove(user.id as number)}
+                    className="rounded-full text-muted-foreground hover:text-foreground"
+                    aria-label={`Remove ${user.name}`}
+                  >
+                    <X className="size-3" />
+                  </button>
                 </span>
               ))}
             </div>
@@ -222,8 +233,8 @@ export function CreateAllocationModal({
   const queryClient = useQueryClient()
   const [tutorSearch, setTutorSearch] = useState('')
   const [studentSearch, setStudentSearch] = useState('')
-  const deferredTutorSearch = useDeferredValue(tutorSearch.trim())
-  const deferredStudentSearch = useDeferredValue(studentSearch.trim())
+  const debouncedTutorSearch = useDebouncedValue(tutorSearch.trim(), 400)
+  const debouncedStudentSearch = useDebouncedValue(studentSearch.trim(), 400)
   const [form, setForm] = useState<CreateAllocationPayload>(() =>
     getInitialForm(allocation)
   )
@@ -233,13 +244,13 @@ export function CreateAllocationModal({
   const tutorsQuery = useUsers({
     perPage: 10,
     userType: 'TUTOR',
-    name: deferredTutorSearch,
+    name: debouncedTutorSearch,
     enabled: isOpen,
   })
   const studentsQuery = useUsers({
     perPage: 10,
     userType: 'STUDENT',
-    name: deferredStudentSearch,
+    name: debouncedStudentSearch,
     enabled: isOpen,
   })
 
@@ -282,30 +293,24 @@ export function CreateAllocationModal({
   })
 
   const tutorOptions = useMemo(() => {
-    const map = new Map<number, User>()
-
-    ;[...tutors, ...(tutorsQuery.data?.data ?? [])].forEach(user => {
-      if (user.id != null) map.set(user.id, user)
-    })
-
-    return [...map.values()]
-  }, [tutors, tutorsQuery.data?.data])
+    return tutorsQuery.data?.data ?? []
+  }, [tutorsQuery.data?.data])
 
   const studentOptions = useMemo(() => {
-    const map = new Map<number, User>()
+    return studentsQuery.data?.data ?? []
+  }, [studentsQuery.data?.data])
 
-    ;[...students, ...(studentsQuery.data?.data ?? [])].forEach(user => {
-      if (user.id != null) map.set(user.id, user)
-    })
-
-    return [...map.values()]
-  }, [students, studentsQuery.data?.data])
-
-  const selectedStudents = studentOptions.filter(student =>
-    form.student_user_ids.includes(student.id as number)
+  const selectedStudents = useMemo(
+    () =>
+      students.filter(user =>
+        form.student_user_ids.includes(user.id as number)
+      ),
+    [form.student_user_ids, students]
   )
-  const selectedTutor =
-    tutorOptions.find(tutor => tutor.id === form.tutor_user_id) ?? null
+  const selectedTutor = useMemo(
+    () => tutors.find(tutor => tutor.id === form.tutor_user_id) ?? null,
+    [form.tutor_user_id, tutors]
+  )
   const isSaving = createMutation.isPending || updateMutation.isPending
 
   if (!isOpen) return null
@@ -430,6 +435,14 @@ export function CreateAllocationModal({
                 value={form.student_user_ids}
                 selectedUsers={selectedStudents}
                 onToggle={handleToggleStudent}
+                onRemove={userId =>
+                  setForm(current => ({
+                    ...current,
+                    student_user_ids: current.student_user_ids.filter(
+                      id => id !== userId
+                    ),
+                  }))
+                }
               />
             )}
           </div>

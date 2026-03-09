@@ -210,4 +210,21 @@ class ClassRoomController
 
         return response()->json(null, 204);
     }
+
+    #[Endpoint(title: 'Delete Multiple Class Rooms')]
+    #[BodyParameter('class_room_ids', required: true, example: [1, 2, 3])]
+    #[Response(status: 204, examples: [[null]])]
+    public function bulkDestroy(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'class_room_ids' => ['required', 'array', 'min:1'],
+            'class_room_ids.*' => ['required', 'integer', 'distinct', 'exists:classRoom,id'],
+        ]);
+
+        ClassRoom::query()
+            ->whereIn('id', $validated['class_room_ids'])
+            ->delete();
+
+        return response()->json(null, 204);
+    }
 }
