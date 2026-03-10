@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('classRoomFileComments', function (Blueprint $table) {
+        Schema::create('document_comments', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('class_file_id')
+            $table->foreignId('document_id')
                 ->nullable()
-                ->constrained('classRoomFiles')
+                ->constrained('documents')
                 ->nullOnDelete();
 
             $table->foreignId('commenter_user_id')
@@ -27,7 +27,7 @@ return new class extends Migration
             $table->text('comment_text');
             $table->timestamps();
 
-            $table->index(['class_file_id', 'created_at']);
+            $table->index(['document_id', 'created_at'], 'document_comments_document_id_created_at_index');
         });
     }
 
@@ -36,6 +36,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('classRoomFileComments');
+        Schema::dropIfExists('document_comments');
     }
 };

@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Traits\FormatsListingResponse;
-use App\Http\Resources\NotiResource;
-use App\Models\Noti;
+use App\Http\Resources\NotificationResource;
+use App\Models\Notification;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\QueryParameter;
@@ -13,7 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 #[Group('Notifications', description: 'Notification endpoints.', weight: 4)]
-class NotiController
+class NotificationController
 {
     use FormatsListingResponse;
 
@@ -41,16 +41,16 @@ class NotiController
         $perPage = max(1, min(100, (int) $request->integer('per_page', 15)));
         $page = max(1, (int) $request->integer('page', 1));
 
-        $notis = Noti::query()
+        $notifications = Notification::query()
             ->where('user_id', (int) $request->user()->id)
             ->latest('id')
             ->paginate($perPage, ['*'], 'page', $page);
 
-        $data = $notis->getCollection()
-            ->map(fn (Noti $noti) => (new NotiResource($noti))->toArray($request))
+        $data = $notifications->getCollection()
+            ->map(fn (Notification $notification) => (new NotificationResource($notification))->toArray($request))
             ->values()
             ->all();
 
-        return $this->formatListingResponse($notis, $data);
+        return $this->formatListingResponse($notifications, $data);
     }
 }

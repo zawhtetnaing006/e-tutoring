@@ -22,6 +22,8 @@ return new class extends Migration
             $table->date('date');
             $table->time('start_time');
             $table->time('end_time');
+            $table->text('note')->nullable();
+            $table->timestamp('cancel_at')->nullable();
             $table->timestamps();
 
             $table->index(['meeting_id', 'date', 'start_time']);

@@ -2,30 +2,30 @@
 
 namespace App\Models;
 
-use App\Models\ClassRoom;
+use App\Models\TutorAssignment;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ClassRoomMessage extends Model
+class TutorAssignmentMessage extends Model
 {
     use HasFactory;
 
-    protected $table = 'classRoomMessages';
+    protected $table = 'messages';
 
     /**
      * @var list<string>
      */
     protected $fillable = [
-        'class_id',
+        'tutor_assignment_id',
         'sender_user_id',
         'content',
     ];
 
-    public function classRoom(): BelongsTo
+    public function tutorAssignment(): BelongsTo
     {
-        return $this->belongsTo(ClassRoom::class, 'class_id');
+        return $this->belongsTo(TutorAssignment::class, 'tutor_assignment_id');
     }
 
     public function sender(): BelongsTo

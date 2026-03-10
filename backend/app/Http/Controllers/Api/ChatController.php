@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Resources\ChatMessageResource;
 use App\Http\Resources\ChatConversationResource;
-use App\Models\ClassRoom;
+use App\Models\TutorAssignment;
 use App\Services\ChatService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
@@ -93,7 +93,7 @@ class ChatController
             'total_items' => 1,
         ]],
     )]
-    public function listMessages(Request $request, ClassRoom $conversation): AnonymousResourceCollection
+    public function listMessages(Request $request, TutorAssignment $conversation): AnonymousResourceCollection
     {
         $userId = (int) $request->user()->id;
         $validated = $request->validate([
@@ -120,7 +120,7 @@ class ChatController
             'updated_at' => '2026-03-05T10:15:00.000000Z',
         ]],
     )]
-    public function sendMessage(Request $request, ClassRoom $conversation): ChatMessageResource
+    public function sendMessage(Request $request, TutorAssignment $conversation): ChatMessageResource
     {
         $userId = (int) $request->user()->id;
         $data = $request->validate([

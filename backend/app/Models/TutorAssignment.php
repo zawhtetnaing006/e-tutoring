@@ -2,18 +2,18 @@
 
 namespace App\Models;
 
-use App\Models\ClassRoomMessage;
+use App\Models\TutorAssignmentMessage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class ClassRoom extends Model
+class TutorAssignment extends Model
 {
     use HasFactory;
 
-    protected $table = 'classRoom';
+    protected $table = 'tutor_assignments';
 
     /**
      * @var list<string>
@@ -37,11 +37,11 @@ class ClassRoom extends Model
 
     public function messages(): HasMany
     {
-        return $this->hasMany(ClassRoomMessage::class, 'class_id');
+        return $this->hasMany(TutorAssignmentMessage::class, 'tutor_assignment_id');
     }
 
     public function latestMessage(): HasOne
     {
-        return $this->hasOne(ClassRoomMessage::class, 'class_id')->latestOfMany();
+        return $this->hasOne(TutorAssignmentMessage::class, 'tutor_assignment_id')->latestOfMany();
     }
 }

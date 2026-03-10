@@ -57,8 +57,8 @@ export async function getAllocations(
   if (params.search) searchParams.set('search', params.search)
 
   const path = searchParams.toString()
-    ? `class-rooms?${searchParams.toString()}`
-    : 'class-rooms'
+    ? `tutor-assignments?${searchParams.toString()}`
+    : 'tutor-assignments'
 
   return apiClient<AllocationsResponse>(path, {
     method: 'GET',
@@ -67,7 +67,7 @@ export async function getAllocations(
 }
 
 export async function getAllocation(id: number): Promise<Allocation> {
-  return apiClient<Allocation>(`class-rooms/${id}`, {
+  return apiClient<Allocation>(`tutor-assignments/${id}`, {
     method: 'GET',
     token: getToken(),
   })
@@ -76,7 +76,7 @@ export async function getAllocation(id: number): Promise<Allocation> {
 export async function createAllocation(
   payload: CreateAllocationPayload
 ): Promise<Allocation[]> {
-  return apiClient<Allocation[]>('class-rooms', {
+  return apiClient<Allocation[]>('tutor-assignments', {
     method: 'POST',
     token: getToken(),
     body: payload,
@@ -87,7 +87,7 @@ export async function updateAllocation(
   id: number,
   payload: UpdateAllocationPayload
 ): Promise<Allocation> {
-  return apiClient<Allocation>(`class-rooms/${id}`, {
+  return apiClient<Allocation>(`tutor-assignments/${id}`, {
     method: 'PUT',
     token: getToken(),
     body: payload,
@@ -95,18 +95,18 @@ export async function updateAllocation(
 }
 
 export async function deleteAllocation(id: number): Promise<void> {
-  await apiClient<null>(`class-rooms/${id}`, {
+  await apiClient<null>(`tutor-assignments/${id}`, {
     method: 'DELETE',
     token: getToken(),
   })
 }
 
 export async function deleteAllocations(ids: number[]): Promise<void> {
-  await apiClient<null>('class-rooms', {
+  await apiClient<null>('tutor-assignments', {
     method: 'DELETE',
     token: getToken(),
     body: {
-      class_room_ids: ids,
+      tutor_assignment_ids: ids,
     },
   })
 }
