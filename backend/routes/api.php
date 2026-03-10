@@ -41,11 +41,11 @@ Route::middleware('auth:sanctum')
 Route::prefix('blogs')
     ->controller(BlogController::class)
     ->group(function () {
-        Route::get('/', 'index');
         Route::get('{blog}', 'show');
         Route::get('{blog}/comments', 'listComments');
 
         Route::middleware('auth:sanctum')->group(function () {
+            Route::get('/', 'index');
             Route::post('/', 'store');
             Route::post('{blog}/comments', 'storeComment');
         });
