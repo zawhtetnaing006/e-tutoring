@@ -20,6 +20,10 @@ return new class extends Migration
             $table->string('password');
             $table->string('phone')->nullable();
             $table->string('address')->nullable();
+            $table->string('country')->nullable();
+            $table->string('city')->nullable();
+            $table->string('township')->nullable();
+            $table->enum('user_type', ['STAFF', 'STUDENT', 'TUTOR'])->default('STUDENT');
             $table->boolean('is_active')->default(true);
             $table->rememberToken();
             $table->timestamps();

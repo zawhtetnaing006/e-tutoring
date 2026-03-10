@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('classRoomFiles', function (Blueprint $table) {
+        Schema::create('documents', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('class_id')
+            $table->foreignId('tutor_assignment_id')
                 ->nullable()
-                ->constrained('classRoom')
+                ->constrained('tutor_assignments')
                 ->nullOnDelete();
 
             $table->foreignId('uploaded_by_user_id')
@@ -30,7 +30,7 @@ return new class extends Migration
             $table->string('mime_type');
             $table->timestamps();
 
-            $table->index(['class_id', 'created_at']);
+            $table->index(['tutor_assignment_id', 'created_at'], 'documents_tutor_assignment_id_created_at_index');
         });
     }
 
@@ -39,6 +39,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('classRoomFiles');
+        Schema::dropIfExists('documents');
     }
 };

@@ -6,9 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @property \App\Models\Noti $resource
+ * @property \App\Models\Notification $resource
  */
-class NotiResource extends JsonResource
+class NotificationResource extends JsonResource
 {
     /**
      * @return array<string, mixed>

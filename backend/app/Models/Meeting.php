@@ -23,12 +23,12 @@ class Meeting extends Model
         'platform',
         'link',
         'location',
-        'class_id',
+        'tutor_assignment_id',
     ];
 
-    public function classRoom(): BelongsTo
+    public function tutorAssignment(): BelongsTo
     {
-        return $this->belongsTo(ClassRoom::class, 'class_id');
+        return $this->belongsTo(TutorAssignment::class, 'tutor_assignment_id');
     }
 
     public function schedules(): HasMany

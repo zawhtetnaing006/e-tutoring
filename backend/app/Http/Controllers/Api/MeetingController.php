@@ -33,7 +33,7 @@ class MeetingController
             'platform' => 'Google Meet',
             'link' => 'https://meet.example.com/abc',
             'location' => null,
-            'class_id' => 1,
+            'tutor_assignment_id' => 1,
             'meeting_schedules' => [[
                 'id' => 1,
                 'meeting_id' => 1,
@@ -76,7 +76,7 @@ class MeetingController
     #[BodyParameter('platform', required: false, example: 'Google Meet')]
     #[BodyParameter('link', required: false, example: 'https://meet.example.com/abc')]
     #[BodyParameter('location', required: false, example: null)]
-    #[BodyParameter('class_id', required: true, example: 1)]
+    #[BodyParameter('tutor_assignment_id', required: true, example: 1)]
     #[BodyParameter('meeting_schedules', required: true, example: [
         ['date' => '2026-03-10', 'start_time' => '09:00', 'end_time' => '10:00'],
         ['date' => '2026-03-12', 'start_time' => '09:00', 'end_time' => '10:00'],
@@ -89,7 +89,7 @@ class MeetingController
         'platform' => 'Google Meet',
         'link' => 'https://meet.example.com/abc',
         'location' => null,
-        'class_id' => 1,
+        'tutor_assignment_id' => 1,
         'meeting_schedules' => [[
             'id' => 1,
             'meeting_id' => 1,
@@ -115,7 +115,7 @@ class MeetingController
                 'platform' => $validated['platform'] ?? null,
                 'link' => $validated['link'] ?? null,
                 'location' => $validated['location'] ?? null,
-                'class_id' => (int) $validated['class_id'],
+                'tutor_assignment_id' => (int) $validated['tutor_assignment_id'],
             ]);
 
             $meeting->schedules()->createMany(array_map(
@@ -145,7 +145,7 @@ class MeetingController
         'platform' => 'Google Meet',
         'link' => 'https://meet.example.com/abc',
         'location' => null,
-        'class_id' => 1,
+        'tutor_assignment_id' => 1,
         'meeting_schedules' => [[
             'id' => 1,
             'meeting_id' => 1,
@@ -181,7 +181,7 @@ class MeetingController
         'platform' => 'Campus Room A',
         'link' => null,
         'location' => 'Building A, Room 203',
-        'class_id' => 1,
+        'tutor_assignment_id' => 1,
         'meeting_schedules' => [[
             'id' => 1,
             'meeting_id' => 1,

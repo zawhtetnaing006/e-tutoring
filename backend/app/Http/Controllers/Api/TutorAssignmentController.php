@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\ClassRoom\StoreClassRoomRequest;
-use App\Http\Requests\ClassRoom\UpdateClassRoomRequest;
-use App\Http\Resources\ClassRoomResource;
-use App\Models\ClassRoom;
+use App\Http\Requests\TutorAssignment\StoreTutorAssignmentRequest;
+use App\Http\Requests\TutorAssignment\UpdateTutorAssignmentRequest;
+use App\Http\Resources\TutorAssignmentResource;
+use App\Models\TutorAssignment;
 use App\Models\User;
 use App\Traits\FormatsListingResponse;
 use Dedoc\Scramble\Attributes\BodyParameter;
@@ -17,12 +17,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
-#[Group('Class Rooms', description: 'Class room management endpoints.', weight: 6)]
-class ClassRoomController
+#[Group('Tutor Assignments', description: 'Tutor assignment management endpoints.', weight: 6)]
+class TutorAssignmentController
 {
     use FormatsListingResponse;
 
-    #[Endpoint(title: 'List Class Rooms')]
+    #[Endpoint(title: 'List Tutor Assignments')]
     #[QueryParameter('only_mine', required: false, example: true)]
     #[QueryParameter('search', required: false, example: 'John')]
     #[QueryParameter('per_page', required: false, example: 15)]
@@ -56,7 +56,7 @@ class ClassRoomController
         $onlyMine = (bool) ($data['only_mine'] ?? false);
         $search = trim((string) ($data['search'] ?? ''));
 
-        $query = ClassRoom::query();
+        $query = TutorAssignment::query();
 
         if ($onlyMine && $currentUser !== null) {
             $userType = strtoupper((string) $currentUser->user_type);
@@ -80,19 +80,19 @@ class ClassRoomController
             });
         }
 
-        $classRooms = $query
+        $tutorAssignments = $query
             ->latest('id')
             ->paginate($perPage, ['*'], 'page', $page);
 
-        $data = $classRooms->getCollection()
-            ->map(fn (ClassRoom $classRoom) => (new ClassRoomResource($classRoom))->toArray($request))
+        $data = $tutorAssignments->getCollection()
+            ->map(fn (TutorAssignment $tutorAssignment) => (new TutorAssignmentResource($tutorAssignment))->toArray($request))
             ->values()
             ->all();
 
-        return $this->formatListingResponse($classRooms, $data);
+        return $this->formatListingResponse($tutorAssignments, $data);
     }
 
-    #[Endpoint(title: 'Create Class Rooms')]
+    #[Endpoint(title: 'Create Tutor Assignments')]
     #[BodyParameter('tutor_user_id', required: true, example: 2)]
     #[BodyParameter('student_user_ids', required: true, example: [5, 9])]
     #[BodyParameter('from_date', required: true, example: '2026-03-01')]
@@ -117,7 +117,7 @@ class ClassRoomController
             'updated_at' => '2026-03-01T00:00:00.000000Z',
         ],
     ]])]
-    public function store(StoreClassRoomRequest $request): JsonResponse
+    public function store(StoreTutorAssignmentRequest $request): JsonResponse
     {
         $validated = $request->validated();
 
@@ -130,7 +130,7 @@ class ClassRoomController
             $records = [];
 
             foreach ($studentUserIds as $studentUserId) {
-                $records[] = ClassRoom::query()->create([
+                $records[] = TutorAssignment::query()->create([
                     'tutor_user_id' => $tutorUserId,
                     'student_user_id' => (int) $studentUserId,
                     'start_date' => $fromDate,
@@ -141,12 +141,12 @@ class ClassRoomController
             return $records;
         });
 
-        return ClassRoomResource::collection(collect($created))
+        return TutorAssignmentResource::collection(collect($created))
             ->response()
             ->setStatusCode(201);
     }
 
-    #[Endpoint(title: 'Get Class Room')]
+    #[Endpoint(title: 'Get Tutor Assignment')]
     #[Response(status: 200, examples: [[
         'id' => 1,
         'tutor_user_id' => 2,
@@ -156,12 +156,12 @@ class ClassRoomController
         'created_at' => '2026-03-01T00:00:00.000000Z',
         'updated_at' => '2026-03-01T00:00:00.000000Z',
     ]])]
-    public function show(ClassRoom $classRoom): JsonResponse
+    public function show(TutorAssignment $tutorAssignment): JsonResponse
     {
-        return response()->json(new ClassRoomResource($classRoom));
+        return response()->json(new TutorAssignmentResource($tutorAssignment));
     }
 
-    #[Endpoint(title: 'Update Class Room')]
+    #[Endpoint(title: 'Update Tutor Assignment')]
     #[BodyParameter('tutor_user_id', required: false, example: 2)]
     #[BodyParameter('student_user_id', required: false, example: 7)]
     #[BodyParameter('from_date', required: false, example: '2026-03-05')]
@@ -175,7 +175,7 @@ class ClassRoomController
         'created_at' => '2026-03-01T00:00:00.000000Z',
         'updated_at' => '2026-03-02T00:00:00.000000Z',
     ]])]
-    public function update(UpdateClassRoomRequest $request, ClassRoom $classRoom): JsonResponse
+    public function update(UpdateTutorAssignmentRequest $request, TutorAssignment $tutorAssignment): JsonResponse
     {
         $validated = $request->validated();
 
@@ -197,32 +197,32 @@ class ClassRoomController
             $payload['end_date'] = $validated['to_date'];
         }
 
-        $classRoom->update($payload);
+        $tutorAssignment->update($payload);
 
-        return response()->json(new ClassRoomResource($classRoom->fresh()));
+        return response()->json(new TutorAssignmentResource($tutorAssignment->fresh()));
     }
 
-    #[Endpoint(title: 'Delete Class Room')]
+    #[Endpoint(title: 'Delete Tutor Assignment')]
     #[Response(status: 204, examples: [[null]])]
-    public function destroy(ClassRoom $classRoom): JsonResponse
+    public function destroy(TutorAssignment $tutorAssignment): JsonResponse
     {
-        $classRoom->delete();
+        $tutorAssignment->delete();
 
         return response()->json(null, 204);
     }
 
-    #[Endpoint(title: 'Delete Multiple Class Rooms')]
-    #[BodyParameter('class_room_ids', required: true, example: [1, 2, 3])]
+    #[Endpoint(title: 'Delete Multiple Tutor Assignments')]
+    #[BodyParameter('tutor_assignment_ids', required: true, example: [1, 2, 3])]
     #[Response(status: 204, examples: [[null]])]
     public function bulkDestroy(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'class_room_ids' => ['required', 'array', 'min:1'],
-            'class_room_ids.*' => ['required', 'integer', 'distinct', 'exists:classRoom,id'],
+            'tutor_assignment_ids' => ['required', 'array', 'min:1'],
+            'tutor_assignment_ids.*' => ['required', 'integer', 'distinct', 'exists:tutor_assignments,id'],
         ]);
 
-        ClassRoom::query()
-            ->whereIn('id', $validated['class_room_ids'])
+        TutorAssignment::query()
+            ->whereIn('id', $validated['tutor_assignment_ids'])
             ->delete();
 
         return response()->json(null, 204);
