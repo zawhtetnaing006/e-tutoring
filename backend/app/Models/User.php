@@ -80,6 +80,16 @@ class User extends Authenticatable
         return $this->hasMany(WorkSchedule::class);
     }
 
+    public function blogs(): HasMany
+    {
+        return $this->hasMany(Blog::class, 'author_user_id');
+    }
+
+    public function blogComments(): HasMany
+    {
+        return $this->hasMany(BlogComment::class, 'commenter_user_id');
+    }
+
     public function resolveRouteBinding($value, $field = null): ?Model
     {
         if ($field !== null) {

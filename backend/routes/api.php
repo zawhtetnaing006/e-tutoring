@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\TutorAssignmentController;
 use App\Http\Controllers\Api\MeetingAttendanceController;
@@ -35,6 +36,19 @@ Route::middleware('auth:sanctum')
         Route::get('/', 'listConversations');
         Route::get('{conversation}/messages', 'listMessages');
         Route::post('{conversation}/messages', 'sendMessage');
+    });
+
+Route::prefix('blogs')
+    ->controller(BlogController::class)
+    ->group(function () {
+        Route::get('/', 'index');
+        Route::get('{blog}', 'show');
+        Route::get('{blog}/comments', 'listComments');
+
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/', 'store');
+            Route::post('{blog}/comments', 'storeComment');
+        });
     });
 
 Route::middleware(['auth:sanctum', 'user_type:STAFF'])
