@@ -18,7 +18,23 @@ class Blog extends Model
         'author_user_id',
         'title',
         'content',
+        'cover_image_path',
+        'hashtags',
+        'is_active',
+        'view_count',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'hashtags' => 'array',
+            'is_active' => 'boolean',
+            'view_count' => 'integer',
+        ];
+    }
 
     public function author(): BelongsTo
     {

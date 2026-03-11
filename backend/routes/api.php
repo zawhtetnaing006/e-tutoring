@@ -40,15 +40,16 @@ Route::middleware('auth:sanctum')
 
 Route::prefix('blogs')
     ->controller(BlogController::class)
+    ->middleware('auth:sanctum')
     ->group(function () {
+        Route::get('/', 'index');
         Route::get('{blog}', 'show');
         Route::get('{blog}/comments', 'listComments');
-
-        Route::middleware('auth:sanctum')->group(function () {
-            Route::get('/', 'index');
-            Route::post('/', 'store');
-            Route::post('{blog}/comments', 'storeComment');
-        });
+        Route::post('/', 'store');
+        Route::put('{blog}', 'update');
+        Route::post('{blog}/toggle-status', 'toggleStatus');
+        Route::delete('{blog}', 'destroy');
+        Route::post('{blog}/comments', 'storeComment');
     });
 
 Route::middleware(['auth:sanctum', 'user_type:STAFF'])
