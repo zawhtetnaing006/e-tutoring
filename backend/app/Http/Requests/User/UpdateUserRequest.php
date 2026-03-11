@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\User;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,6 +37,8 @@ class UpdateUserRequest extends FormRequest
             'city' => ['sometimes', 'nullable', 'string', 'max:255'],
             'township' => ['sometimes', 'nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
+            'role_codes' => ['sometimes', 'array', 'min:1'],
+            'role_codes.*' => ['required', 'string', 'distinct', Rule::in(Role::CODES)],
             'subject_ids' => ['sometimes', 'array'],
             'subject_ids.*' => ['integer', 'distinct', 'exists:subjects,id'],
         ];

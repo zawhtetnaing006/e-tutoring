@@ -15,8 +15,7 @@
         "laravel/reverb": "^1.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
-        "opcodesio/log-viewer": "*",
-        "spatie/laravel-permission": "^7.2"
+        "opcodesio/log-viewer": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

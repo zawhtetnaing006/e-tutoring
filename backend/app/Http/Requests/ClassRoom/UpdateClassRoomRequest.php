@@ -2,10 +2,11 @@
 
 namespace App\Http\Requests\ClassRoom;
 
+use Closure;
 use App\Models\ClassRoom;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class UpdateClassRoomRequest extends FormRequest
@@ -24,12 +25,14 @@ class UpdateClassRoomRequest extends FormRequest
             'tutor_user_id' => [
                 'sometimes',
                 'integer',
-                Rule::exists('users', 'id')->where('user_type', User::TYPE_TUTOR),
+                'exists:users,id',
+                $this->ensureUserHasRole(Role::TUTOR, 'tutor'),
             ],
             'student_user_id' => [
                 'sometimes',
                 'integer',
-                Rule::exists('users', 'id')->where('user_type', User::TYPE_STUDENT),
+                'exists:users,id',
+                $this->ensureUserHasRole(Role::STUDENT, 'student'),
             ],
             'from_date' => ['sometimes', 'date'],
             'to_date' => ['sometimes', 'date'],
@@ -74,5 +77,20 @@ class UpdateClassRoomRequest extends FormRequest
                 );
             }
         });
+    }
+
+    private function ensureUserHasRole(string $roleCode, string $label): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) use ($roleCode, $label): void {
+            if (! is_numeric($value)) {
+                return;
+            }
+
+            $user = User::query()->find((int) $value);
+
+            if ($user === null || ! $user->hasRole($roleCode)) {
+                $fail("The selected {$attribute} must belong to a {$label}.");
+            }
+        };
     }
 }

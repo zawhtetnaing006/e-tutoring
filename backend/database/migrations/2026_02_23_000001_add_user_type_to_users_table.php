@@ -1,9 +1,6 @@
 <?php
 
-use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -12,9 +9,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->enum('user_type', User::TYPES)->default(User::TYPE_STUDENT);
-        });
+        // user_type was removed in favor of the roles/role_user tables.
     }
 
     /**
@@ -22,8 +17,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('user_type');
-        });
+        // No-op.
     }
 };

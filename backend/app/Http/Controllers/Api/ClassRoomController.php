@@ -6,6 +6,7 @@ use App\Http\Requests\ClassRoom\StoreClassRoomRequest;
 use App\Http\Requests\ClassRoom\UpdateClassRoomRequest;
 use App\Http\Resources\ClassRoomResource;
 use App\Models\ClassRoom;
+use App\Models\Role;
 use App\Models\User;
 use App\Traits\FormatsListingResponse;
 use Dedoc\Scramble\Attributes\BodyParameter;
@@ -58,14 +59,28 @@ class ClassRoomController
 
         $query = ClassRoom::query();
 
-        if ($onlyMine && $currentUser !== null) {
-            $userType = strtoupper((string) $currentUser->user_type);
+        if ($onlyMine && $currentUser !== null && ! $currentUser->hasRole(Role::STAFF)) {
+            $query->where(function ($builder) use ($currentUser): void {
+                $hasScopedRole = false;
 
-            if ($userType === User::TYPE_TUTOR) {
-                $query->where('tutor_user_id', (int) $currentUser->id);
-            } elseif ($userType === User::TYPE_STUDENT) {
-                $query->where('student_user_id', (int) $currentUser->id);
-            }
+                if ($currentUser->hasRole(Role::TUTOR)) {
+                    $builder->where('tutor_user_id', (int) $currentUser->id);
+                    $hasScopedRole = true;
+                }
+
+                if ($currentUser->hasRole(Role::STUDENT)) {
+                    if ($hasScopedRole) {
+                        $builder->orWhere('student_user_id', (int) $currentUser->id);
+                    } else {
+                        $builder->where('student_user_id', (int) $currentUser->id);
+                        $hasScopedRole = true;
+                    }
+                }
+
+                if (! $hasScopedRole) {
+                    $builder->whereRaw('1 = 0');
+                }
+            });
         }
 
         if ($search !== '') {

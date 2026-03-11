@@ -40,7 +40,10 @@ class AuthController
                     'email' => 'admin@gmail.com',
                     'phone' => null,
                     'address' => null,
-                    'user_type' => 'STAFF',
+                    'roles' => [[
+                        'code' => 'ADMIN',
+                        'name' => 'Admin',
+                    ]],
                     'created_at' => '2026-02-05T00:00:00.000000Z',
                     'updated_at' => '2026-02-05T00:00:00.000000Z',
                 ],
@@ -81,7 +84,10 @@ class AuthController
                 'email' => 'admin@gmail.com',
                 'phone' => null,
                 'address' => null,
-                'user_type' => 'STAFF',
+                'roles' => [[
+                    'code' => 'ADMIN',
+                    'name' => 'Admin',
+                ]],
                 'created_at' => '2026-02-05T00:00:00.000000Z',
                 'updated_at' => '2026-02-05T00:00:00.000000Z',
             ],

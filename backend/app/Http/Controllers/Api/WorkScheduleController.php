@@ -6,6 +6,7 @@ use App\Traits\FormatsListingResponse;
 use App\Http\Requests\WorkSchedule\StoreWorkScheduleRequest;
 use App\Http\Requests\WorkSchedule\UpdateWorkScheduleRequest;
 use App\Http\Resources\WorkScheduleResource;
+use App\Models\Role;
 use App\Models\User;
 use App\Models\WorkSchedule;
 use Dedoc\Scramble\Attributes\BodyParameter;
@@ -165,13 +166,11 @@ class WorkScheduleController
             abort(401, 'Unauthenticated.');
         }
 
-        $currentUserType = strtoupper((string) $currentUser->user_type);
-
-        if ($currentUserType === User::TYPE_STAFF || $currentUserType === User::TYPE_STUDENT) {
+        if ($currentUser->hasAnyRole([Role::STAFF, Role::STUDENT])) {
             return;
         }
 
-        if ($currentUserType === User::TYPE_TUTOR && (int) $currentUser->id === (int) $user->id) {
+        if ($currentUser->hasRole(Role::TUTOR) && (int) $currentUser->id === (int) $user->id) {
             return;
         }
 
@@ -186,13 +185,11 @@ class WorkScheduleController
             abort(401, 'Unauthenticated.');
         }
 
-        $currentUserType = strtoupper((string) $currentUser->user_type);
-
-        if ($currentUserType === User::TYPE_STAFF) {
+        if ($currentUser->hasRole(Role::STAFF)) {
             return;
         }
 
-        if ($currentUserType === User::TYPE_TUTOR && (int) $currentUser->id === (int) $user->id) {
+        if ($currentUser->hasRole(Role::TUTOR) && (int) $currentUser->id === (int) $user->id) {
             return;
         }
 

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -14,30 +15,30 @@ class TutorStudentSeeder extends Seeder
     {
         $this->seedUsers(
             count: 15,
-            userType: User::TYPE_TUTOR,
-            role: 'tutor',
+            roleCode: Role::TUTOR,
             emailPrefix: 'seeded.tutor'
         );
 
         $this->seedUsers(
             count: 30,
-            userType: User::TYPE_STUDENT,
-            role: 'student',
+            roleCode: Role::STUDENT,
             emailPrefix: 'seeded.student'
         );
     }
 
     private function seedUsers(
         int $count,
-        string $userType,
-        string $role,
+        string $roleCode,
         string $emailPrefix
     ): void {
+        $roleId = Role::query()
+            ->where('code', strtoupper($roleCode))
+            ->value('id');
+
         for ($index = 1; $index <= $count; $index++) {
             $user = User::factory()->make([
-                'name' => sprintf('%s %02d', ucfirst(strtolower($userType)), $index),
+                'name' => sprintf('%s %02d', ucfirst(strtolower($roleCode)), $index),
                 'email' => sprintf('%s%02d@example.com', $emailPrefix, $index),
-                'user_type' => $userType,
                 'is_active' => true,
             ]);
 
@@ -51,12 +52,13 @@ class TutorStudentSeeder extends Seeder
                     'city' => $user->city,
                     'township' => $user->township,
                     'is_active' => true,
-                    'user_type' => $userType,
                     'password' => 'password',
                 ]
             );
 
-            $persistedUser->syncRoles([$role]);
+            if ($roleId !== null) {
+                $persistedUser->roles()->sync([$roleId]);
+            }
         }
     }
 }

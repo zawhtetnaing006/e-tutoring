@@ -2,26 +2,40 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 
 class RoleSeeder extends Seeder
 {
     /**
-     * Seed application roles.
+     * Run the database seeds.
      */
     public function run(): void
     {
-        $guardName = config('auth.defaults.guard', 'web');
-
         $roles = [
-            'admin',
-            'tutor',
-            'student',
+            [
+                'code' => Role::ADMIN,
+                'name' => 'Admin',
+            ],
+            [
+                'code' => Role::STAFF,
+                'name' => 'Staff',
+            ],
+            [
+                'code' => Role::TUTOR,
+                'name' => 'Tutor',
+            ],
+            [
+                'code' => Role::STUDENT,
+                'name' => 'Student',
+            ],
         ];
 
-        foreach ($roles as $roleName) {
-            Role::findOrCreate($roleName, $guardName);
+        foreach ($roles as $roleData) {
+            Role::updateOrCreate(
+                ['code' => $roleData['code']],
+                ['name' => $roleData['name']]
+            );
         }
     }
 }
