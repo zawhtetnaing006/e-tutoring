@@ -799,22 +799,100 @@ export function BlogsPage() {
                 <span className="mb-1 block text-lg font-medium text-slate-600">Content *</span>
                 <div className="rounded-lg border border-slate-200">
                   <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2 text-slate-500">
-                    <button type="button" className="rounded p-1 hover:bg-slate-100" aria-label="Undo">
+                    <button
+                      type="button"
+                      onClick={() => applyEditorCommand('undo')}
+                      className="rounded p-1 hover:bg-slate-100"
+                      aria-label="Undo"
+                    >
                       ↶
                     </button>
-                    <button type="button" className="rounded p-1 hover:bg-slate-100" aria-label="Redo">
+                    <button
+                      type="button"
+                      onClick={() => applyEditorCommand('redo')}
+                      className="rounded p-1 hover:bg-slate-100"
+                      aria-label="Redo"
+                    >
                       ↷
                     </button>
-                    <span className="mx-2 text-base">Normal text</span>
-                    <span className="text-base">B</span>
-                    <span className="text-base italic">I</span>
-                    <span className="text-base underline">U</span>
+                    <span className="mx-2 text-base">Rich text</span>
+                    <button
+                      type="button"
+                      onClick={() => applyEditorCommand('bold')}
+                      className="rounded px-2 py-1 text-base font-semibold hover:bg-slate-100"
+                      aria-label="Bold"
+                    >
+                      B
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyEditorCommand('italic')}
+                      className="rounded px-2 py-1 text-base italic hover:bg-slate-100"
+                      aria-label="Italic"
+                    >
+                      I
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyEditorCommand('underline')}
+                      className="rounded px-2 py-1 text-base underline hover:bg-slate-100"
+                      aria-label="Underline"
+                    >
+                      U
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyEditorCommand('insertUnorderedList')}
+                      className="rounded px-2 py-1 text-base hover:bg-slate-100"
+                      aria-label="Bulleted list"
+                    >
+                      • List
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyEditorCommand('insertOrderedList')}
+                      className="rounded px-2 py-1 text-base hover:bg-slate-100"
+                      aria-label="Numbered list"
+                    >
+                      1. List
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyEditorCommand('formatBlock', 'blockquote')}
+                      className="rounded px-2 py-1 text-base hover:bg-slate-100"
+                      aria-label="Quote"
+                    >
+                      Quote
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = window.prompt('Enter URL (https://...)')
+                        if (!url) return
+                        applyEditorCommand('createLink', url)
+                      }}
+                      className="rounded px-2 py-1 text-base hover:bg-slate-100"
+                      aria-label="Insert link"
+                    >
+                      Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyEditorCommand('removeFormat')}
+                      className="rounded px-2 py-1 text-base hover:bg-slate-100"
+                      aria-label="Clear formatting"
+                    >
+                      Clear
+                    </button>
                   </div>
-                  <textarea
-                    value={formContent}
-                    onChange={event => setFormContent(event.target.value)}
-                    rows={11}
-                    className="w-full resize-y rounded-b-lg px-3 py-2 text-xl text-slate-700 outline-none"
+                  <div
+                    ref={editorRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    onInput={event =>
+                      setFormContent((event.currentTarget as HTMLDivElement).innerHTML)
+                    }
+                    className="min-h-[260px] w-full rounded-b-lg px-3 py-2 text-xl text-slate-700 outline-none"
                   />
                 </div>
               </label>
@@ -892,9 +970,12 @@ export function BlogsPage() {
                   </span>
                 </div>
 
-                <article className="whitespace-pre-wrap text-2xl leading-9 text-slate-700">
-                  {detailBlog.content}
-                </article>
+                <article
+                  className="space-y-2 text-2xl leading-9 text-slate-700"
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeRichText(detailBlog.content),
+                  }}
+                />
 
                 <p className="text-2xl font-medium text-slate-600">
                   {detailBlog.hashtags.length > 0
