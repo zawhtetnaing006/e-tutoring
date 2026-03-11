@@ -12,18 +12,20 @@ type UseBlogsOptions = {
   page?: number
   perPage?: number
   search?: string
+  isActive?: boolean
 }
 
 export function useBlogs(options: UseBlogsOptions = {}) {
-  const { page = 1, perPage = 10, search = '' } = options
+  const { page = 1, perPage = 9, search = '', isActive } = options
 
   return useQuery<PaginatedResponse<Blog>>({
-    queryKey: ['blogs', page, perPage, search],
+    queryKey: ['blogs', page, perPage, search, isActive],
     queryFn: () =>
       getBlogs({
         page,
         perPage,
         search,
+        isActive,
       }),
   })
 }

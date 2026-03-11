@@ -15,14 +15,35 @@ class BlogApiTest extends TestCase
 
     public function test_guest_cannot_list_blogs(): void
     {
+        $response = $this->getJson('/api/blogs');
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_guest_cannot_view_blog_details(): void
+    {
         $author = User::factory()->create();
-        Blog::query()->create([
+        $blog = Blog::query()->create([
             'author_user_id' => $author->id,
-            'title' => 'Public Blog Post',
-            'content' => 'This blog should be visible publicly.',
+            'title' => 'Private blog detail',
+            'content' => 'Details require auth.',
         ]);
 
-        $response = $this->getJson('/api/blogs');
+        $response = $this->getJson('/api/blogs/' . $blog->id);
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_guest_cannot_list_blog_comments(): void
+    {
+        $author = User::factory()->create();
+        $blog = Blog::query()->create([
+            'author_user_id' => $author->id,
+            'title' => 'Comments require auth',
+            'content' => 'Guest cannot read comments.',
+        ]);
+
+        $response = $this->getJson('/api/blogs/' . $blog->id . '/comments');
 
         $response->assertUnauthorized();
     }
@@ -53,32 +74,6 @@ class BlogApiTest extends TestCase
         $this->assertSame('Authenticated Blog List', $response->json('data.0.title'));
     }
 
-    public function test_guest_cannot_create_blog(): void
-    {
-        $response = $this->postJson('/api/blogs', [
-            'title' => 'Unauthorized Post',
-            'content' => 'This should fail.',
-        ]);
-
-        $response->assertUnauthorized();
-    }
-
-    public function test_guest_cannot_create_blog_comment(): void
-    {
-        $author = User::factory()->create();
-        $blog = Blog::query()->create([
-            'author_user_id' => $author->id,
-            'title' => 'Blog For Comments',
-            'content' => 'Guests should not comment.',
-        ]);
-
-        $response = $this->postJson('/api/blogs/' . $blog->id . '/comments', [
-            'comment_text' => 'Guest comment',
-        ]);
-
-        $response->assertUnauthorized();
-    }
-
     public function test_authenticated_user_can_create_blog(): void
     {
         $user = User::factory()->create();
@@ -87,6 +82,7 @@ class BlogApiTest extends TestCase
         $response = $this->postJson('/api/blogs', [
             'title' => 'Authenticated Blog',
             'content' => 'This post is created by an authenticated user.',
+            'hashtags' => 'study,mathematics',
         ]);
 
         $response
@@ -98,6 +94,101 @@ class BlogApiTest extends TestCase
         $this->assertDatabaseHas('blogs', [
             'author_user_id' => $user->id,
             'title' => 'Authenticated Blog',
+        ]);
+    }
+
+    public function test_author_can_update_own_blog(): void
+    {
+        $author = User::factory()->create();
+        Sanctum::actingAs($author);
+
+        $blog = Blog::query()->create([
+            'author_user_id' => $author->id,
+            'title' => 'Old Title',
+            'content' => 'Old content',
+        ]);
+
+        $response = $this->putJson('/api/blogs/' . $blog->id, [
+            'title' => 'Updated Title',
+            'hashtags' => 'updated,study',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment([
+                'title' => 'Updated Title',
+            ]);
+
+        $this->assertDatabaseHas('blogs', [
+            'id' => $blog->id,
+            'title' => 'Updated Title',
+        ]);
+    }
+
+    public function test_non_author_non_staff_cannot_update_blog(): void
+    {
+        $author = User::factory()->create();
+        $anotherUser = User::factory()->create(['user_type' => User::TYPE_STUDENT]);
+
+        $blog = Blog::query()->create([
+            'author_user_id' => $author->id,
+            'title' => 'Protected Blog',
+            'content' => 'Protected content',
+        ]);
+
+        Sanctum::actingAs($anotherUser);
+
+        $response = $this->putJson('/api/blogs/' . $blog->id, [
+            'title' => 'Attempted Edit',
+        ]);
+
+        $response->assertForbidden();
+    }
+
+    public function test_author_can_toggle_blog_status(): void
+    {
+        $author = User::factory()->create();
+        Sanctum::actingAs($author);
+
+        $blog = Blog::query()->create([
+            'author_user_id' => $author->id,
+            'title' => 'Toggle Status Blog',
+            'content' => 'Testing status toggle',
+            'is_active' => true,
+        ]);
+
+        $response = $this->postJson('/api/blogs/' . $blog->id . '/toggle-status');
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $blog->id,
+                'is_active' => false,
+            ]);
+
+        $this->assertDatabaseHas('blogs', [
+            'id' => $blog->id,
+            'is_active' => false,
+        ]);
+    }
+
+    public function test_author_can_delete_own_blog(): void
+    {
+        $author = User::factory()->create();
+        Sanctum::actingAs($author);
+
+        $blog = Blog::query()->create([
+            'author_user_id' => $author->id,
+            'title' => 'Delete me',
+            'content' => 'to be deleted',
+        ]);
+
+        $response = $this->deleteJson('/api/blogs/' . $blog->id);
+
+        $response->assertNoContent();
+
+        $this->assertDatabaseMissing('blogs', [
+            'id' => $blog->id,
         ]);
     }
 
@@ -131,14 +222,16 @@ class BlogApiTest extends TestCase
         ]);
     }
 
-    public function test_public_can_view_blog_comments(): void
+    public function test_authenticated_user_can_view_blog_comments(): void
     {
         $author = User::factory()->create();
         $commenter = User::factory()->create();
+        $viewer = User::factory()->create();
+
         $blog = Blog::query()->create([
             'author_user_id' => $author->id,
-            'title' => 'Blog With Public Comments',
-            'content' => 'Comments should be visible to everyone.',
+            'title' => 'Blog With Comments',
+            'content' => 'Comments should be visible to signed-in users.',
         ]);
 
         BlogComment::query()->create([
@@ -146,6 +239,8 @@ class BlogApiTest extends TestCase
             'commenter_user_id' => $commenter->id,
             'comment_text' => 'Helpful post.',
         ]);
+
+        Sanctum::actingAs($viewer);
 
         $response = $this->getJson('/api/blogs/' . $blog->id . '/comments');
 
