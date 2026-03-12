@@ -19,10 +19,13 @@ return new class extends Migration
             $table->foreignId('user_id')
                 ->constrained('users')
                 ->cascadeOnDelete();
+            $table->unsignedBigInteger('last_seen_message_id')->nullable();
+            $table->timestamp('last_seen_at')->nullable();
             $table->timestamps();
 
             $table->unique(['conversation_id', 'user_id']);
             $table->index('user_id');
+            $table->index('last_seen_message_id');
         });
     }
 

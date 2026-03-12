@@ -20,6 +20,10 @@ services:
     command: ["sh", "-lc", "npm ci && npm run dev -- --host 0.0.0.0 --port 3000"]
     environment:
       VITE_API_BASE_URL: /api
+      VITE_REVERB_APP_KEY: kzyyacl1clioxgvntwbp
+      VITE_REVERB_HOST: localhost
+      VITE_REVERB_PORT: 8080
+      VITE_REVERB_SCHEME: http
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -54,6 +58,22 @@ services:
       - redis
     ports:
       - "8080:8080"
+    volumes:
+      - ./backend:/var/www
+      - ./backend/.env.local:/var/www/.env:ro
+    networks:
+      - app
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=1", "--timeout=60"]
+    depends_on:
+      - mysql
+      - redis
+      - mailhog
     volumes:
       - ./backend:/var/www
       - ./backend/.env.local:/var/www/.env:ro

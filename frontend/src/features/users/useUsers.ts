@@ -12,13 +12,13 @@ export function useUsers(
     page = 1,
     perPage = 15,
     name = '',
-    userType = '',
+    roleCode = '',
     enabled = true,
   } = options
 
   return useQuery<UsersResponse>({
-    queryKey: ['users', page, perPage, name, userType],
-    queryFn: () => getUsers({ page, perPage, name, userType }),
+    queryKey: ['users', page, perPage, name, roleCode],
+    queryFn: () => getUsers({ page, perPage, name, roleCode }),
     enabled,
   })
 }

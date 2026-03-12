@@ -28,6 +28,7 @@ import {
   updateBlog,
   type Blog,
 } from '@/features/blogs/api'
+import { getUserRole } from '@/features/auth/role-utils'
 import { useBlog, useBlogComments, useBlogs } from '@/features/blogs/useBlogs'
 import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { useDebouncedValue } from '@/hooks'
@@ -137,19 +138,20 @@ function hashtagsToInput(hashtags: string[] | undefined) {
   return (hashtags ?? []).join(', ')
 }
 
-function isStaff(userType: string | undefined) {
-  return (userType ?? '').toUpperCase() === 'STAFF'
-}
-
-function canManageBlog(blog: Blog, currentUserId: number | undefined, userType: string | undefined) {
+function canManageBlog(
+  blog: Blog,
+  currentUserId: number | undefined,
+  currentUserRole: 'staff' | 'tutor' | 'student'
+) {
   if (!currentUserId) return false
-  if (isStaff(userType)) return true
+  if (currentUserRole === 'staff') return true
   return currentUserId === blog.author_user_id
 }
 
 export function BlogsPage() {
   const queryClient = useQueryClient()
   const { data: currentUser } = useCurrentUser()
+  const currentUserRole = getUserRole(currentUser)
 
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -505,7 +507,7 @@ export function BlogsPage() {
           </div>
         ) : blogs.length > 0 ? (
           blogs.map(blog => {
-            const canManage = canManageBlog(blog, currentUser?.id, currentUser?.user_type)
+            const canManage = canManageBlog(blog, currentUser?.id, currentUserRole)
             const isSelected = selectedIds.includes(blog.id)
 
             return (

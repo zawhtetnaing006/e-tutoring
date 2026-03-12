@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Calendar, LoaderCircle, Plus, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { User } from '@/features/auth'
+import { getUserRoleLabel } from '@/features/auth'
 import {
   type Allocation,
   createAllocation,
@@ -30,7 +31,7 @@ type SingleUserPickerProps = UserPickerProps & {
 }
 
 function getUserLabel(user: User) {
-  return `${user.name} (${user.user_type})`
+  return `${user.name} (${getUserRoleLabel(user)})`
 }
 
 function SingleUserPicker({
@@ -243,13 +244,13 @@ export function CreateAllocationModal({
 
   const tutorsQuery = useUsers({
     perPage: 10,
-    userType: 'TUTOR',
+    roleCode: 'TUTOR',
     name: debouncedTutorSearch,
     enabled: isOpen,
   })
   const studentsQuery = useUsers({
     perPage: 10,
-    userType: 'STUDENT',
+    roleCode: 'STUDENT',
     name: debouncedStudentSearch,
     enabled: isOpen,
   })

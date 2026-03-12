@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Resources\ChatDocumentCommentResource;
 use App\Http\Resources\ChatDocumentResource;
+use App\Http\Resources\ChatSeenReceiptResource;
 use App\Http\Resources\ChatUserResource;
 use App\Http\Resources\ChatMessageResource;
 use App\Http\Resources\ChatConversationResource;
@@ -186,6 +187,23 @@ class ChatController
         $message = $this->chatService->sendMessage($request->user(), $conversation, $data['content']);
 
         return new ChatMessageResource($message);
+    }
+
+    #[Endpoint(title: 'Mark Conversation Seen')]
+    #[Response(
+        status: 200,
+        examples: [[
+            'conversation_id' => 12,
+            'user_id' => 5,
+            'last_seen_message_id' => 321,
+            'seen_at' => '2026-03-05T10:16:00.000000Z',
+        ]],
+    )]
+    public function markConversationSeen(Request $request, Conversation $conversation): ChatSeenReceiptResource
+    {
+        $receipt = $this->chatService->markConversationSeen($request->user(), $conversation);
+
+        return new ChatSeenReceiptResource($receipt);
     }
 
     #[Endpoint(title: 'List Shared Documents')]

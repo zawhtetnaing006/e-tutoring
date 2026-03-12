@@ -5,13 +5,13 @@ namespace App\Events;
 use App\Models\Document;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
 
-class DocumentShared implements ShouldBroadcastNow
+class DocumentShared implements ShouldBroadcast
 {
     use Dispatchable;
     use InteractsWithSockets;

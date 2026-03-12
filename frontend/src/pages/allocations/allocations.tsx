@@ -65,8 +65,8 @@ export function AllocationsPage() {
     perPage: 10,
     search: debouncedSearch,
   })
-  const tutorsQuery = useUsers({ perPage: 100, userType: 'TUTOR' })
-  const studentsQuery = useUsers({ perPage: 100, userType: 'STUDENT' })
+  const tutorsQuery = useUsers({ perPage: 100, roleCode: 'TUTOR' })
+  const studentsQuery = useUsers({ perPage: 100, roleCode: 'STUDENT' })
 
   const users = useMemo(
     () => [

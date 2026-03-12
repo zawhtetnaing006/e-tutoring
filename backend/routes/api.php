@@ -38,6 +38,7 @@ Route::middleware('auth:sanctum')
         Route::post('conversations', 'startConversation');
         Route::get('{conversation}/messages', 'listMessages');
         Route::post('{conversation}/messages', 'sendMessage');
+        Route::post('{conversation}/seen', 'markConversationSeen');
         Route::get('{conversation}/documents', 'listSharedDocuments');
         Route::post('{conversation}/documents', 'uploadSharedDocument');
         Route::get('documents/{document}/comments', 'listDocumentComments');

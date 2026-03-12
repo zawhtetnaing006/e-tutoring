@@ -6,7 +6,12 @@
  */
 export type AuthRole = 'student' | 'tutor' | 'staff'
 
-export type UserType = 'STUDENT' | 'TUTOR' | 'STAFF' | string
+export type UserRoleCode = 'ADMIN' | 'STAFF' | 'TUTOR' | 'STUDENT' | string
+
+export type UserRole = {
+  code: UserRoleCode
+  name: string
+}
 
 export type User = {
   id?: number
@@ -19,7 +24,7 @@ export type User = {
   city?: string | null
   township?: string | null
   is_active: boolean
-  user_type: UserType
+  roles: UserRole[]
   subjects?: string | null
   created_at: string
   updated_at: string

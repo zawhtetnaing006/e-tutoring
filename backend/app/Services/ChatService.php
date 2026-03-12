@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Events\DocumentCommentAdded;
 use App\Events\DocumentShared;
 use App\Events\MessageSent;
+use App\Events\MessageSeen;
 use App\Models\Conversation;
 use App\Models\ConversationMember;
 use App\Models\Document;
@@ -217,6 +218,43 @@ class ChatService
         return $commentModel;
     }
 
+    public function markConversationSeen(User $user, Conversation $conversation): ConversationMember
+    {
+        $member = $this->ensureConversationMember($user, $conversation);
+
+        $latestIncomingMessageId = Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('sender_user_id', '!=', $user->id)
+            ->max('id');
+
+        if (! is_numeric($latestIncomingMessageId)) {
+            return $member;
+        }
+
+        $latestIncomingMessageId = (int) $latestIncomingMessageId;
+        $currentLastSeenMessageId = (int) ($member->last_seen_message_id ?? 0);
+
+        if ($currentLastSeenMessageId >= $latestIncomingMessageId) {
+            return $member;
+        }
+
+        $member->forceFill([
+            'last_seen_message_id' => $latestIncomingMessageId,
+            'last_seen_at' => now(),
+        ])->save();
+
+        $member->refresh();
+
+        MessageSeen::dispatch(
+            (int) $conversation->id,
+            (int) $user->id,
+            (int) $member->last_seen_message_id,
+            $member->last_seen_at?->toISOString(),
+        );
+
+        return $member;
+    }
+
     private function allowedChatUserIds(User $user): ?array
     {
         if ($this->isStaffLike($user)) {
@@ -320,26 +358,28 @@ class ChatService
         ]);
     }
 
-    private function ensureConversationMember(User $user, Conversation $conversation): void
+    private function ensureConversationMember(User $user, Conversation $conversation): ConversationMember
     {
-        $this->ensureConversationIdMember($user, (int) $conversation->id);
+        return $this->ensureConversationIdMember($user, (int) $conversation->id);
     }
 
-    private function ensureDocumentConversationMember(User $user, Document $document): void
+    private function ensureDocumentConversationMember(User $user, Document $document): ConversationMember
     {
-        $this->ensureConversationIdMember($user, (int) $document->conversation_id);
+        return $this->ensureConversationIdMember($user, (int) $document->conversation_id);
     }
 
-    private function ensureConversationIdMember(User $user, int $conversationId): void
+    private function ensureConversationIdMember(User $user, int $conversationId): ConversationMember
     {
-        $isMember = ConversationMember::query()
+        $member = ConversationMember::query()
             ->where('conversation_id', $conversationId)
             ->where('user_id', $user->id)
-            ->exists();
+            ->first();
 
-        if (! $isMember) {
+        if (! $member instanceof ConversationMember) {
             throw new AccessDeniedHttpException('You are not a member of this conversation.');
         }
+
+        return $member;
     }
 
     private function buildDirectPairKey(int $firstUserId, int $secondUserId): string

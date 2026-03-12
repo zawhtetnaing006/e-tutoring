@@ -13,7 +13,7 @@ export type GetUsersParams = {
   page?: number
   perPage?: number
   name?: string
-  userType?: string
+  roleCode?: string
 }
 
 export type UpdateUserPayload = {
@@ -34,7 +34,7 @@ export async function getUsers(
   if (params.perPage != null)
     searchParams.set('per_page', String(params.perPage))
   if (params.name) searchParams.set('name', params.name)
-  if (params.userType) searchParams.set('user_type', params.userType)
+  if (params.roleCode) searchParams.set('role_code', params.roleCode)
 
   const path = searchParams.toString()
     ? `users?${searchParams.toString()}`
