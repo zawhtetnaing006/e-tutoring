@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Requests\ClassRoom;
+namespace App\Http\Requests\TutorAssignment;
 
 use Closure;
-use App\Models\ClassRoom;
+use App\Models\TutorAssignment;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
-class StoreClassRoomRequest extends FormRequest
+class StoreTutorAssignmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -51,7 +51,7 @@ class StoreClassRoomRequest extends FormRequest
                 return;
             }
 
-            $existingStudentIds = ClassRoom::query()
+            $existingStudentIds = TutorAssignment::query()
                 ->where('tutor_user_id', (int) $tutorUserId)
                 ->whereIn('student_user_id', $studentUserIds)
                 ->pluck('student_user_id')
@@ -68,7 +68,7 @@ class StoreClassRoomRequest extends FormRequest
 
                 $validator->errors()->add(
                     'student_user_ids',
-                    "Class already exists for {$tutorName} and {$studentName}."
+                    "Tutor assignment already exists for {$tutorName} and {$studentName}."
                 );
             }
         });

@@ -2,8 +2,8 @@
 
 namespace App\Http\Resources;
 
-use App\Models\ClassRoom;
-use App\Models\ClassRoomMessage;
+use App\Models\TutorAssignment;
+use App\Models\TutorAssignmentMessage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,7 +14,7 @@ class ChatConversationResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $lastMessage = $this->resource instanceof ClassRoom
+        $lastMessage = $this->resource instanceof TutorAssignment
             ? $this->resource->latestMessage
             : null;
 
@@ -32,7 +32,7 @@ class ChatConversationResource extends JsonResource
                 'id' => (int) $this->resource->student_user_id,
                 'name' => (string) ($this->resource->student?->name ?? ''),
             ],
-            'last_message' => $lastMessage instanceof ClassRoomMessage
+            'last_message' => $lastMessage instanceof TutorAssignmentMessage
                 ? new ChatMessageResource($lastMessage)
                 : null,
             'created_at' => $this->resource->created_at?->toISOString(),

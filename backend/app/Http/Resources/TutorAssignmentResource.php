@@ -6,9 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @property \App\Models\ClassRoom $resource
+ * @property \App\Models\TutorAssignment $resource
  */
-class ClassRoomResource extends JsonResource
+class TutorAssignmentResource extends JsonResource
 {
     /**
      * @return array<string, mixed>

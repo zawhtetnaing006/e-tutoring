@@ -18,15 +18,16 @@ return new class extends Migration
             $table->enum('type', ['virtual', 'physical']);
             $table->string('platform')->nullable();
             $table->string('link')->nullable();
+            $table->text('location')->nullable();
 
-            $table->foreignId('class_id')
+            $table->foreignId('tutor_assignment_id')
                 ->nullable()
-                ->constrained('classRoom')
+                ->constrained('tutor_assignments')
                 ->nullOnDelete();
 
             $table->timestamps();
 
-            $table->index(['class_id', 'type']);
+            $table->index(['tutor_assignment_id', 'type']);
         });
     }
 

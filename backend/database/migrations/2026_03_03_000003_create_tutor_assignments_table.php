@@ -11,23 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('classRoomMessages', function (Blueprint $table) {
+        Schema::create('tutor_assignments', function (Blueprint $table) {
             $table->id();
+            $table->date('start_date');
+            $table->date('end_date');
 
-            $table->foreignId('class_id')
-                ->nullable()
-                ->constrained('classRoom')
-                ->nullOnDelete();
-
-            $table->foreignId('sender_user_id')
+            $table->foreignId('tutor_user_id')
                 ->nullable()
                 ->constrained('users')
                 ->nullOnDelete();
 
-            $table->text('content')->nullable();
+            $table->foreignId('student_user_id')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
             $table->timestamps();
 
-            $table->index(['class_id', 'created_at']);
+            $table->unique(['tutor_user_id', 'student_user_id'], 'tutor_assignment_tutor_student_unique');
+            $table->index(['start_date', 'end_date']);
         });
     }
 
@@ -36,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('classRoomMessages');
+        Schema::dropIfExists('tutor_assignments');
     }
 };

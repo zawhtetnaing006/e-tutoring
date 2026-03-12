@@ -11,22 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('meeting_schedule', function (Blueprint $table) {
+        Schema::create('blog_comments', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('meeting_id')
+            $table->foreignId('blog_id')
+                ->constrained('blogs')
+                ->cascadeOnDelete();
+
+            $table->foreignId('commenter_user_id')
                 ->nullable()
-                ->constrained('meeting')
+                ->constrained('users')
                 ->nullOnDelete();
 
-            $table->date('date');
-            $table->time('start_time');
-            $table->time('end_time');
-            $table->text('note')->nullable();
-            $table->timestamp('cancel_at')->nullable();
+            $table->text('comment_text');
             $table->timestamps();
 
-            $table->index(['meeting_id', 'date', 'start_time']);
+            $table->index(['blog_id', 'created_at'], 'blog_comments_blog_id_created_at_index');
         });
     }
 
@@ -35,6 +35,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('meeting_schedule');
+        Schema::dropIfExists('blog_comments');
     }
 };

@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Http\Requests\ClassRoom;
+namespace App\Http\Requests\TutorAssignment;
 
 use Closure;
-use App\Models\ClassRoom;
+use App\Models\TutorAssignment;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
-class UpdateClassRoomRequest extends FormRequest
+class UpdateTutorAssignmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -42,26 +42,26 @@ class UpdateClassRoomRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            /** @var ClassRoom|null $classRoom */
-            $classRoom = $this->route('classRoom');
+            /** @var TutorAssignment|null $tutorAssignment */
+            $tutorAssignment = $this->route('tutorAssignment');
 
-            if ($classRoom === null) {
+            if ($tutorAssignment === null) {
                 return;
             }
 
-            $tutorUserId = (int) ($this->input('tutor_user_id', $classRoom->tutor_user_id));
-            $studentUserId = (int) ($this->input('student_user_id', $classRoom->student_user_id));
-            $fromDate = (string) ($this->input('from_date', $classRoom->start_date));
-            $toDate = (string) ($this->input('to_date', $classRoom->end_date));
+            $tutorUserId = (int) ($this->input('tutor_user_id', $tutorAssignment->tutor_user_id));
+            $studentUserId = (int) ($this->input('student_user_id', $tutorAssignment->student_user_id));
+            $fromDate = (string) ($this->input('from_date', $tutorAssignment->start_date));
+            $toDate = (string) ($this->input('to_date', $tutorAssignment->end_date));
 
             if ($fromDate !== '' && $toDate !== '' && strtotime($toDate) < strtotime($fromDate)) {
                 $validator->errors()->add('to_date', 'The to_date must be a date after or equal to from_date.');
             }
 
-            $exists = ClassRoom::query()
+            $exists = TutorAssignment::query()
                 ->where('tutor_user_id', $tutorUserId)
                 ->where('student_user_id', $studentUserId)
-                ->whereKeyNot($classRoom->id)
+                ->whereKeyNot($tutorAssignment->id)
                 ->exists();
 
             if ($exists) {
@@ -73,7 +73,7 @@ class UpdateClassRoomRequest extends FormRequest
 
                 $validator->errors()->add(
                     'student_user_id',
-                    "Class already exists for {$tutorName} and {$studentName}."
+                    "Tutor assignment already exists for {$tutorName} and {$studentName}."
                 );
             }
         });

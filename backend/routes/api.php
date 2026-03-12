@@ -1,12 +1,13 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\ChatController;
-use App\Http\Controllers\Api\ClassRoomController;
+use App\Http\Controllers\Api\TutorAssignmentController;
 use App\Http\Controllers\Api\MeetingAttendanceController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\MeetingScheduleController;
-use App\Http\Controllers\Api\NotiController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WorkScheduleController;
@@ -37,6 +38,20 @@ Route::middleware('auth:sanctum')
         Route::post('{conversation}/messages', 'sendMessage');
     });
 
+Route::prefix('blogs')
+    ->controller(BlogController::class)
+    ->middleware('auth:sanctum')
+    ->group(function () {
+        Route::get('/', 'index');
+        Route::get('{blog}', 'show');
+        Route::get('{blog}/comments', 'listComments');
+        Route::post('/', 'store');
+        Route::put('{blog}', 'update');
+        Route::post('{blog}/toggle-status', 'toggleStatus');
+        Route::delete('{blog}', 'destroy');
+        Route::post('{blog}/comments', 'storeComment');
+    });
+
 Route::middleware(['auth:sanctum', 'role:STAFF'])
     ->prefix('users')
     ->controller(UserController::class)
@@ -59,19 +74,19 @@ Route::middleware(['auth:sanctum', 'role:STAFF'])
         Route::delete('{subject}', 'destroy');
     });
 
-Route::prefix('class-rooms')
-    ->controller(ClassRoomController::class)
+Route::prefix('tutor-assignments')
+    ->controller(TutorAssignmentController::class)
     ->group(function () {
         Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR,STUDENT'])->group(function () {
             Route::get('/', 'index');
-            Route::get('{classRoom}', 'show');
+            Route::get('{tutorAssignment}', 'show');
         });
 
         Route::middleware(['auth:sanctum', 'role:STAFF'])->group(function () {
             Route::post('/', 'store');
             Route::delete('/', 'bulkDestroy');
-            Route::put('{classRoom}', 'update');
-            Route::delete('{classRoom}', 'destroy');
+            Route::put('{tutorAssignment}', 'update');
+            Route::delete('{tutorAssignment}', 'destroy');
         });
     });
 
@@ -117,8 +132,16 @@ Route::middleware(['auth:sanctum', 'role:STAFF'])
     });
 
 Route::middleware('auth:sanctum')
+    ->prefix('notifications')
+    ->controller(NotificationController::class)
+    ->group(function () {
+        Route::get('/', 'index');
+    });
+
+// Backward compatibility for older clients.
+Route::middleware('auth:sanctum')
     ->prefix('notis')
-    ->controller(NotiController::class)
+    ->controller(NotificationController::class)
     ->group(function () {
         Route::get('/', 'index');
     });
