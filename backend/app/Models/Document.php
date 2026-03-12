@@ -5,8 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Message extends Model
+class Document extends Model
 {
     use HasFactory;
 
@@ -15,8 +16,11 @@ class Message extends Model
      */
     protected $fillable = [
         'conversation_id',
-        'sender_user_id',
-        'content',
+        'uploaded_by_user_id',
+        'file_name',
+        'file_path',
+        'file_size_bytes',
+        'mime_type',
     ];
 
     public function conversation(): BelongsTo
@@ -24,8 +28,13 @@ class Message extends Model
         return $this->belongsTo(Conversation::class);
     }
 
-    public function sender(): BelongsTo
+    public function uploader(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'sender_user_id');
+        return $this->belongsTo(User::class, 'uploaded_by_user_id');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(DocumentComment::class);
     }
 }

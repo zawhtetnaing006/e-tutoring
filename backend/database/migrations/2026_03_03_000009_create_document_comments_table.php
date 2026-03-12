@@ -15,16 +15,15 @@ return new class extends Migration
             $table->id();
 
             $table->foreignId('document_id')
-                ->nullable()
                 ->constrained('documents')
-                ->nullOnDelete();
+                ->cascadeOnDelete();
 
             $table->foreignId('commenter_user_id')
                 ->nullable()
                 ->constrained('users')
                 ->nullOnDelete();
 
-            $table->text('comment_text');
+            $table->text('comment');
             $table->timestamps();
 
             $table->index(['document_id', 'created_at'], 'document_comments_document_id_created_at_index');

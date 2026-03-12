@@ -2,10 +2,23 @@
 
 namespace App\Services;
 
+use App\Events\DocumentCommentAdded;
+use App\Events\DocumentShared;
+use App\Events\MessageSent;
+use App\Models\Conversation;
+use App\Models\ConversationMember;
+use App\Models\Document;
+use App\Models\DocumentComment;
+use App\Models\Message;
+use App\Models\Role;
 use App\Models\TutorAssignment;
-use App\Models\TutorAssignmentMessage;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 class ChatService
 {
@@ -18,58 +31,322 @@ class ChatService
         return max(1, min(self::MAX_PER_PAGE, $perPage));
     }
 
-    public function listConversations(int $userId, int $perPage): LengthAwarePaginator
+    public function listConversations(User $user, int $perPage): LengthAwarePaginator
     {
         $perPage = $this->sanitizePerPage($perPage);
 
-        return TutorAssignment::query()
-            ->where(function ($query) use ($userId): void {
-                $query->where('tutor_user_id', $userId)
-                    ->orWhere('student_user_id', $userId);
+        return Conversation::query()
+            ->whereHas('members', function (Builder $query) use ($user): void {
+                $query->where('user_id', $user->id);
             })
             ->with([
-                'tutor:id,name',
-                'student:id,name',
+                'members.user:id,name,email',
+                'members.user.roles:id,code,name',
                 'latestMessage.sender:id,name',
             ])
-            ->latest('updated_at')
+            ->orderByRaw('COALESCE(last_message_at, created_at) DESC')
             ->paginate($perPage);
     }
 
-    public function listMessages(int $userId, TutorAssignment $conversation, int $perPage): LengthAwarePaginator
+    public function searchChatUsers(User $user, string $term, int $perPage): LengthAwarePaginator
     {
-        $this->ensureTutorAssignmentMember($userId, $conversation);
+        $perPage = $this->sanitizePerPage($perPage);
+        $term = trim($term);
+        $allowedUserIds = $this->allowedChatUserIds($user);
+
+        $query = User::query()
+            ->where('is_active', true)
+            ->whereKeyNot($user->id)
+            ->where(function (Builder $builder) use ($term): void {
+                $builder->where('name', 'like', "%{$term}%")
+                    ->orWhere('email', 'like', "%{$term}%");
+            })
+            ->with('roles:id,code,name');
+
+        if ($allowedUserIds !== null) {
+            if ($allowedUserIds === []) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereIn('id', $allowedUserIds);
+            }
+        }
+
+        return $query
+            ->orderBy('name')
+            ->paginate($perPage);
+    }
+
+    public function createOrGetConversation(User $user, User $target): Conversation
+    {
+        $this->ensureCanStartConversation($user, $target);
+
+        $pairKey = $this->buildDirectPairKey((int) $user->id, (int) $target->id);
+        $existingConversation = Conversation::query()
+            ->where('direct_pair_key', $pairKey)
+            ->first();
+
+        if ($existingConversation instanceof Conversation) {
+            $this->ensureDirectConversationMembers($existingConversation, $user, $target);
+
+            return $existingConversation->load([
+                'members.user.roles:id,code,name',
+                'latestMessage.sender:id,name',
+            ]);
+        }
+
+        return DB::transaction(function () use ($pairKey, $target, $user): Conversation {
+            $conversation = Conversation::query()->create([
+                'created_by_user_id' => $user->id,
+                'direct_pair_key' => $pairKey,
+            ]);
+
+            $conversation->members()->createMany([
+                ['user_id' => $user->id],
+                ['user_id' => $target->id],
+            ]);
+
+            return $conversation->load([
+                'members.user.roles:id,code,name',
+                'latestMessage.sender:id,name',
+            ]);
+        });
+    }
+
+    public function listMessages(User $user, Conversation $conversation, int $perPage): LengthAwarePaginator
+    {
+        $this->ensureConversationMember($user, $conversation);
 
         $perPage = $this->sanitizePerPage($perPage);
 
-        return TutorAssignmentMessage::query()
-            ->where('tutor_assignment_id', $conversation->id)
+        return Message::query()
+            ->where('conversation_id', $conversation->id)
             ->with('sender:id,name')
             ->latest('id')
             ->paginate($perPage);
     }
 
-    public function sendMessage(int $userId, TutorAssignment $conversation, string $content): TutorAssignmentMessage
+    public function sendMessage(User $user, Conversation $conversation, string $content): Message
     {
-        $this->ensureTutorAssignmentMember($userId, $conversation);
+        $this->ensureConversationMember($user, $conversation);
 
-        $message = TutorAssignmentMessage::create([
-            'tutor_assignment_id' => $conversation->id,
-            'sender_user_id' => $userId,
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_user_id' => $user->id,
             'content' => $content,
         ]);
 
-        $conversation->touch();
+        $conversation->update([
+            'last_message_at' => $message->created_at,
+        ]);
 
-        return $message->loadMissing('sender:id,name');
+        $message->loadMissing('sender:id,name');
+
+        MessageSent::dispatch($message);
+
+        return $message;
     }
 
-    private function ensureTutorAssignmentMember(int $userId, TutorAssignment $conversation): void
+    public function listSharedDocuments(User $user, Conversation $conversation, int $perPage): LengthAwarePaginator
     {
-        $isMember = $conversation->tutor_user_id === $userId || $conversation->student_user_id === $userId;
+        $this->ensureConversationMember($user, $conversation);
+
+        $perPage = $this->sanitizePerPage($perPage);
+
+        return Document::query()
+            ->where('conversation_id', $conversation->id)
+            ->with('uploader:id,name')
+            ->withCount('comments')
+            ->latest('id')
+            ->paginate($perPage);
+    }
+
+    public function uploadSharedDocument(User $user, Conversation $conversation, UploadedFile $file): Document
+    {
+        $this->ensureConversationMember($user, $conversation);
+
+        $filePath = $file->store('chat-documents', 'public');
+
+        $document = Document::query()->create([
+            'conversation_id' => $conversation->id,
+            'uploaded_by_user_id' => $user->id,
+            'file_name' => $file->getClientOriginalName(),
+            'file_path' => $filePath,
+            'file_size_bytes' => $file->getSize() ?? 0,
+            'mime_type' => $file->getClientMimeType() ?? 'application/octet-stream',
+        ]);
+
+        $document
+            ->loadMissing('uploader:id,name')
+            ->loadCount('comments');
+
+        DocumentShared::dispatch($document);
+
+        return $document;
+    }
+
+    public function listDocumentComments(User $user, Document $document, int $perPage): LengthAwarePaginator
+    {
+        $this->ensureDocumentConversationMember($user, $document);
+
+        $perPage = $this->sanitizePerPage($perPage);
+
+        return DocumentComment::query()
+            ->where('document_id', $document->id)
+            ->with('commenter:id,name')
+            ->oldest('id')
+            ->paginate($perPage);
+    }
+
+    public function addDocumentComment(User $user, Document $document, string $comment): DocumentComment
+    {
+        $this->ensureDocumentConversationMember($user, $document);
+
+        $commentModel = DocumentComment::query()->create([
+            'document_id' => $document->id,
+            'commenter_user_id' => $user->id,
+            'comment' => $comment,
+        ]);
+
+        $commentModel->loadMissing([
+            'commenter:id,name',
+            'document:id,conversation_id',
+        ]);
+
+        DocumentCommentAdded::dispatch($commentModel);
+
+        return $commentModel;
+    }
+
+    private function allowedChatUserIds(User $user): ?array
+    {
+        if ($this->isStaffLike($user)) {
+            return null;
+        }
+
+        if ($user->hasRole(Role::TUTOR)) {
+            $staffIds = User::query()
+                ->where('is_active', true)
+                ->whereHas('roles', function (Builder $query): void {
+                    $query->whereIn('code', [Role::ADMIN, Role::STAFF]);
+                })
+                ->pluck('id')
+                ->all();
+
+            $assignedStudentIds = TutorAssignment::query()
+                ->where('tutor_user_id', $user->id)
+                ->whereNotNull('student_user_id')
+                ->pluck('student_user_id')
+                ->all();
+
+            return array_values(array_unique([
+                ...$staffIds,
+                ...$assignedStudentIds,
+            ]));
+        }
+
+        if ($user->hasRole(Role::STUDENT)) {
+            return TutorAssignment::query()
+                ->where('student_user_id', $user->id)
+                ->whereNotNull('tutor_user_id')
+                ->pluck('tutor_user_id')
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        return [];
+    }
+
+    private function ensureCanStartConversation(User $user, User $target): void
+    {
+        if ((int) $user->id === (int) $target->id) {
+            throw new UnprocessableEntityHttpException('You cannot start a conversation with yourself.');
+        }
+
+        if (! $target->is_active) {
+            throw new AccessDeniedHttpException('You cannot start a conversation with this user.');
+        }
+
+        if (! $this->canStartConversation($user, $target)) {
+            throw new AccessDeniedHttpException('You cannot start a conversation with this user.');
+        }
+    }
+
+    private function canStartConversation(User $user, User $target): bool
+    {
+        if ($this->isStaffLike($user)) {
+            return true;
+        }
+
+        if ($user->hasRole(Role::TUTOR)) {
+            if ($this->isStaffLike($target)) {
+                return true;
+            }
+
+            return $target->hasRole(Role::STUDENT)
+                && $this->hasTutorAssignment((int) $user->id, (int) $target->id);
+        }
+
+        if ($user->hasRole(Role::STUDENT)) {
+            return $target->hasRole(Role::TUTOR)
+                && $this->hasTutorAssignment((int) $target->id, (int) $user->id);
+        }
+
+        return false;
+    }
+
+    private function hasTutorAssignment(int $tutorUserId, int $studentUserId): bool
+    {
+        return TutorAssignment::query()
+            ->where('tutor_user_id', $tutorUserId)
+            ->where('student_user_id', $studentUserId)
+            ->exists();
+    }
+
+    private function isStaffLike(User $user): bool
+    {
+        return $user->hasAnyRole([Role::ADMIN, Role::STAFF]);
+    }
+
+    private function ensureDirectConversationMembers(Conversation $conversation, User $user, User $target): void
+    {
+        ConversationMember::query()->firstOrCreate([
+            'conversation_id' => $conversation->id,
+            'user_id' => $user->id,
+        ]);
+        ConversationMember::query()->firstOrCreate([
+            'conversation_id' => $conversation->id,
+            'user_id' => $target->id,
+        ]);
+    }
+
+    private function ensureConversationMember(User $user, Conversation $conversation): void
+    {
+        $this->ensureConversationIdMember($user, (int) $conversation->id);
+    }
+
+    private function ensureDocumentConversationMember(User $user, Document $document): void
+    {
+        $this->ensureConversationIdMember($user, (int) $document->conversation_id);
+    }
+
+    private function ensureConversationIdMember(User $user, int $conversationId): void
+    {
+        $isMember = ConversationMember::query()
+            ->where('conversation_id', $conversationId)
+            ->where('user_id', $user->id)
+            ->exists();
 
         if (! $isMember) {
             throw new AccessDeniedHttpException('You are not a member of this conversation.');
         }
+    }
+
+    private function buildDirectPairKey(int $firstUserId, int $secondUserId): string
+    {
+        $orderedIds = [$firstUserId, $secondUserId];
+        sort($orderedIds, SORT_NUMERIC);
+
+        return sprintf('%d:%d', $orderedIds[0], $orderedIds[1]);
     }
 }

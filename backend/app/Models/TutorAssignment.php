@@ -2,12 +2,9 @@
 
 namespace App\Models;
 
-use App\Models\TutorAssignmentMessage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TutorAssignment extends Model
 {
@@ -33,15 +30,5 @@ class TutorAssignment extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(User::class, 'student_user_id');
-    }
-
-    public function messages(): HasMany
-    {
-        return $this->hasMany(TutorAssignmentMessage::class, 'tutor_assignment_id');
-    }
-
-    public function latestMessage(): HasOne
-    {
-        return $this->hasOne(TutorAssignmentMessage::class, 'tutor_assignment_id')->latestOfMany();
     }
 }

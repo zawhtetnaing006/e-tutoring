@@ -43,6 +43,23 @@ services:
     networks:
       - app
 
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: dev
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    depends_on:
+      - mysql
+      - redis
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/var/www
+      - ./backend/.env.local:/var/www/.env:ro
+    networks:
+      - app
+
   scheduler:
     build:
       context: .

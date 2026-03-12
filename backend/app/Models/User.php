@@ -78,6 +78,26 @@ class User extends Authenticatable
         return $this->hasMany(BlogComment::class, 'commenter_user_id');
     }
 
+    public function conversationMembers(): HasMany
+    {
+        return $this->hasMany(ConversationMember::class);
+    }
+
+    public function sentMessages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'sender_user_id');
+    }
+
+    public function uploadedDocuments(): HasMany
+    {
+        return $this->hasMany(Document::class, 'uploaded_by_user_id');
+    }
+
+    public function documentComments(): HasMany
+    {
+        return $this->hasMany(DocumentComment::class, 'commenter_user_id');
+    }
+
     public function resolveRouteBinding($value, $field = null): ?Model
     {
         if ($field !== null) {

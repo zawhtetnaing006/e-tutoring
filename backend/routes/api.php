@@ -34,8 +34,14 @@ Route::middleware('auth:sanctum')
     ->controller(ChatController::class)
     ->group(function () {
         Route::get('/', 'listConversations');
+        Route::get('search', 'searchChatUsers');
+        Route::post('conversations', 'startConversation');
         Route::get('{conversation}/messages', 'listMessages');
         Route::post('{conversation}/messages', 'sendMessage');
+        Route::get('{conversation}/documents', 'listSharedDocuments');
+        Route::post('{conversation}/documents', 'uploadSharedDocument');
+        Route::get('documents/{document}/comments', 'listDocumentComments');
+        Route::post('documents/{document}/comments', 'addDocumentComment');
     });
 
 Route::prefix('blogs')

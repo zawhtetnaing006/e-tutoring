@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -17,6 +18,8 @@ class BlogResource extends JsonResource
     public function toArray(Request $request): array
     {
         $coverImagePath = $this->resource->cover_image_path;
+        /** @var FilesystemAdapter $publicDisk */
+        $publicDisk = Storage::disk('public');
 
         return [
             'id' => $this->resource->id,
@@ -25,7 +28,7 @@ class BlogResource extends JsonResource
             'hashtags' => $this->resource->hashtags ?? [],
             'is_active' => (bool) $this->resource->is_active,
             'view_count' => (int) $this->resource->view_count,
-            'cover_image_url' => $coverImagePath ? Storage::disk('public')->url($coverImagePath) : null,
+            'cover_image_url' => $coverImagePath ? $publicDisk->url($coverImagePath) : null,
             'author_user_id' => $this->resource->author_user_id,
             'author' => $this->whenLoaded('author', fn (): ?array => $this->resource->author === null ? null : [
                 'id' => $this->resource->author->id,

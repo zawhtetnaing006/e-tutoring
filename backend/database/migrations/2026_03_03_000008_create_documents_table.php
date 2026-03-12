@@ -14,10 +14,9 @@ return new class extends Migration
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('tutor_assignment_id')
-                ->nullable()
-                ->constrained('tutor_assignments')
-                ->nullOnDelete();
+            $table->foreignId('conversation_id')
+                ->constrained('conversations')
+                ->cascadeOnDelete();
 
             $table->foreignId('uploaded_by_user_id')
                 ->nullable()
@@ -30,7 +29,7 @@ return new class extends Migration
             $table->string('mime_type');
             $table->timestamps();
 
-            $table->index(['tutor_assignment_id', 'created_at'], 'documents_tutor_assignment_id_created_at_index');
+            $table->index(['conversation_id', 'created_at'], 'documents_conversation_id_created_at_index');
         });
     }
 
