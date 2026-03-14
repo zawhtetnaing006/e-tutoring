@@ -26,7 +26,7 @@ class StoreMeetingAttendanceRequest extends FormRequest
                 Rule::unique('meeting_attendees', 'user_id')
                     ->where(fn ($query) => $query->where('meeting_id', $this->input('meeting_id'))),
             ],
-            'status' => ['required', Rule::in(['presence', 'onleave'])],
+            'status' => ['required', Rule::in(['presence', 'absence', 'onleave'])],
         ];
     }
 }

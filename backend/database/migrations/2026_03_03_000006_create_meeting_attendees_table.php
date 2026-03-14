@@ -24,7 +24,7 @@ return new class extends Migration
                 ->constrained('users')
                 ->nullOnDelete();
 
-            $table->enum('status', ['presence', 'onleave']);
+            $table->enum('status', ['presence', 'absence', 'onleave']);
             $table->timestamps();
 
             $table->unique(['meeting_id', 'user_id']);
