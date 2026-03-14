@@ -57,7 +57,9 @@ class TutorStudentSeeder extends Seeder
             );
 
             if ($roleId !== null) {
-                $persistedUser->roles()->sync([$roleId]);
+                $persistedUser->update([
+                    'role_id' => $roleId,
+                ]);
             }
         }
     }
