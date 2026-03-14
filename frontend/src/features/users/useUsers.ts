@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { getUsers, type GetUsersParams, type UsersResponse } from './api'
+import { getUsers, type GetUsersParams, type UsersListResponse } from './api'
 
 type UseUsersOptions = GetUsersParams & {
   enabled?: boolean
@@ -7,7 +7,7 @@ type UseUsersOptions = GetUsersParams & {
 
 export function useUsers(
   options: UseUsersOptions = {}
-): ReturnType<typeof useQuery<UsersResponse>> {
+): ReturnType<typeof useQuery<UsersListResponse>> {
   const {
     page = 1,
     perPage = 15,
@@ -16,7 +16,7 @@ export function useUsers(
     enabled = true,
   } = options
 
-  return useQuery<UsersResponse>({
+  return useQuery<UsersListResponse>({
     queryKey: ['users', page, perPage, name, roleCode],
     queryFn: () => getUsers({ page, perPage, name, roleCode }),
     enabled,

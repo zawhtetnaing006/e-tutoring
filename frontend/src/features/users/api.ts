@@ -37,7 +37,13 @@ export type UsersListResponse = {
 export type GetUsersParams = {
   page?: number
   per_page?: number
+  /** @deprecated Use per_page */
+  perPage?: number
   user_type?: 'STAFF' | 'STUDENT' | 'TUTOR'
+  name?: string
+  role_code?: string
+  /** @deprecated Use role_code */
+  roleCode?: string
 }
 
 export async function getUsers(
@@ -50,9 +56,12 @@ export async function getUsers(
 
   const searchParams = new URLSearchParams()
   if (params.page != null) searchParams.set('page', String(params.page))
-  if (params.per_page != null)
-    searchParams.set('per_page', String(params.per_page))
+  const perPage = params.per_page ?? params.perPage
+  if (perPage != null) searchParams.set('per_page', String(perPage))
   if (params.user_type) searchParams.set('user_type', params.user_type)
+  if (params.name) searchParams.set('name', params.name)
+  const roleCode = params.role_code ?? params.roleCode
+  if (roleCode) searchParams.set('role_code', roleCode)
 
   const path =
     searchParams.toString() !== ''
@@ -108,20 +117,6 @@ export async function createUser(
   })
 }
 
-export type UsersResponse = {
-  data: User[]
-  current_page: number
-  total_page: number
-  total_items: number
-}
-
-export type GetUsersParams = {
-  page?: number
-  perPage?: number
-  name?: string
-  roleCode?: string
-}
-
 export type UpdateUserPayload = {
   name?: string
   email?: string
@@ -134,31 +129,6 @@ export type UpdateUserPayload = {
   township?: string | null
   is_active?: boolean
   subject_ids?: number[]
-}
-
-export async function getUsers(
-  params: GetUsersParams = {}
-): Promise<UsersResponse> {
-  const session = getAuthSession()
-  if (!session?.token) {
-    throw new ApiError(401, 'Not authenticated')
-  }
-
-  const searchParams = new URLSearchParams()
-  if (params.page != null) searchParams.set('page', String(params.page))
-  if (params.perPage != null)
-    searchParams.set('per_page', String(params.perPage))
-  if (params.name) searchParams.set('name', params.name)
-  if (params.roleCode) searchParams.set('role_code', params.roleCode)
-
-  const path = searchParams.toString()
-    ? `users?${searchParams.toString()}`
-    : 'users'
-
-  return apiClient<UsersResponse>(path, {
-    method: 'GET',
-    token: session.token,
-  })
 }
 
 export async function updateUser(
