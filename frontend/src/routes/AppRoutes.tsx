@@ -10,6 +10,9 @@ import { DashboardPage } from '@/pages/dashboard'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
 import { PlaceholderPage } from '@/components/common/PlaceholderPage'
 import { ProfilePage } from '@/pages/profile'
+import { StaffsListPage } from '@/pages/staffs'
+import { StudentsListPage } from '@/pages/students'
+import { TutorsListPage } from '@/pages/tutors'
 
 /**
  * Routes: login (public); root is dashboard (protected, redirects to login if unauthenticated).
@@ -30,12 +33,9 @@ export function AppRoutes() {
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<DashboardLayout />}>
           <Route index element={<DashboardPage />} />
-          <Route path="staffs" element={<PlaceholderPage title="Staffs" />} />
-          <Route path="tutors" element={<PlaceholderPage title="Tutors" />} />
-          <Route
-            path="students"
-            element={<PlaceholderPage title="Students" />}
-          />
+          <Route path="staffs" element={<StaffsListPage />} />
+          <Route path="tutors" element={<TutorsListPage />} />
+          <Route path="students" element={<StudentsListPage />} />
           <Route
             path="subjects"
             element={<PlaceholderPage title="Subjects" />}
