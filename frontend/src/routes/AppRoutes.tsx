@@ -14,6 +14,7 @@ import { StudentsListPage } from '@/pages/students'
 import { TutorsListPage } from '@/pages/tutors'
 import { SubjectsListPage } from '@/pages/subjects'
 import { AllocationsPage } from '@/pages/allocations'
+import { MeetingManagerPage } from '@/pages/meetings'
 import { CommunicationHubPage } from '@/pages/communication-hub'
 import { BlogsPage } from '@/pages/blogs'
 import { PlaceholderPage } from '@/components/common/PlaceholderPage'
@@ -42,10 +43,7 @@ export function AppRoutes() {
           <Route path="students" element={<StudentsListPage />} />
           <Route path="subjects" element={<SubjectsListPage />} />
           <Route path="allocations" element={<AllocationsPage />} />
-          <Route
-            path="meeting-manager"
-            element={<PlaceholderPage title="Meeting Manager" />}
-          />
+          <Route path="meeting-manager" element={<MeetingManagerPage />} />
           <Route path="blogs" element={<BlogsPage />} />
           <Route path="communication-hub" element={<CommunicationHubPage />} />
           <Route
