@@ -12,15 +12,13 @@ class ChatUserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $roles = $this->relationLoaded('roles')
-            ? $this->roles->pluck('code')->values()->all()
-            : [];
+        $roleCode = $this->relationLoaded('role') ? $this->role?->code : null;
 
         return [
             'id' => $this->resource->id,
             'name' => (string) $this->resource->name,
             'email' => (string) $this->resource->email,
-            'roles' => $roles,
+            'role_code' => $roleCode,
         ];
     }
 }

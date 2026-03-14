@@ -1,5 +1,6 @@
 import { apiClient, ApiError } from '@/lib/api-client'
 import { getAuthSession } from '@/features/auth/storage'
+import type { UserRoleCode } from '@/features/auth/types'
 
 export type SubjectRef = {
   id: number
@@ -19,7 +20,8 @@ export type UserResource = {
   city: string | null
   township: string | null
   is_active: boolean
-  user_type: string
+  role_code: UserRoleCode | null
+  role_name: string | null
   subjects?: SubjectRef[]
   created_at: string
   updated_at: string
@@ -37,13 +39,9 @@ export type UsersListResponse = {
 export type GetUsersParams = {
   page?: number
   per_page?: number
-  /** @deprecated Use per_page */
   perPage?: number
-  user_type?: 'STAFF' | 'STUDENT' | 'TUTOR'
   name?: string
-  role_code?: string
-  /** @deprecated Use role_code */
-  roleCode?: string
+  role_code?: 'ADMIN' | 'STAFF' | 'STUDENT' | 'TUTOR'
 }
 
 export async function getUsers(
@@ -58,10 +56,8 @@ export async function getUsers(
   if (params.page != null) searchParams.set('page', String(params.page))
   const perPage = params.per_page ?? params.perPage
   if (perPage != null) searchParams.set('per_page', String(perPage))
-  if (params.user_type) searchParams.set('user_type', params.user_type)
   if (params.name) searchParams.set('name', params.name)
-  const roleCode = params.role_code ?? params.roleCode
-  if (roleCode) searchParams.set('role_code', roleCode)
+  if (params.role_code) searchParams.set('role_code', params.role_code)
 
   const path =
     searchParams.toString() !== ''
@@ -91,7 +87,7 @@ export async function getUser(
 export type CreateUserPayload = {
   name: string
   email: string
-  user_type: 'STAFF' | 'STUDENT' | 'TUTOR'
+  role_code: 'ADMIN' | 'STAFF' | 'STUDENT' | 'TUTOR'
   auto_generate_password?: boolean
   password?: string | null
   phone?: string | null
@@ -110,6 +106,7 @@ export async function createUser(
   if (!session?.token) {
     throw new ApiError(401, 'Not authenticated')
   }
+
   return apiClient<UserResource>('users', {
     method: 'POST',
     token: session.token,
@@ -129,6 +126,7 @@ export type UpdateUserPayload = {
   township?: string | null
   is_active?: boolean
   subject_ids?: number[]
+  role_code?: 'ADMIN' | 'STAFF' | 'STUDENT' | 'TUTOR'
 }
 
 export async function updateUser(

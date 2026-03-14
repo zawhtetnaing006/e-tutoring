@@ -5,7 +5,7 @@ export type BlogAuthor = {
   id: number
   uuid: string
   name: string
-  user_type: string
+  role_code: string | null
 }
 
 export type BlogComment = {

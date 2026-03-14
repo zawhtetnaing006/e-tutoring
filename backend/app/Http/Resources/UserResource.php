@@ -15,7 +15,8 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $this->resource->loadMissing('roles:id,code,name');
+        $this->resource->loadMissing('role:id,code,name');
+        $role = $this->resource->role;
 
         return [
             'id' => $this->resource->id,
@@ -28,12 +29,8 @@ class UserResource extends JsonResource
             'city' => $this->resource->city,
             'township' => $this->resource->township,
             'is_active' => $this->resource->is_active,
-            'roles' => $this->resource->roles
-                ->map(static fn ($role): array => [
-                    'code' => $role->code,
-                    'name' => $role->name,
-                ])
-                ->values(),
+            'role_code' => $role?->code,
+            'role_name' => $role?->name,
             'subjects' => $this->whenLoaded('subjects', fn () => $this->resource->subjects->map(
                 static fn ($subject): array => [
                     'id' => $subject->id,

@@ -42,10 +42,8 @@ class UserController
                 'city' => null,
                 'township' => null,
                 'is_active' => true,
-                'roles' => [[
-                    'code' => 'STAFF',
-                    'name' => 'Staff',
-                ]],
+                'role_code' => 'STAFF',
+                'role_name' => 'Staff',
                 'subjects' => [[
                     'id' => 1,
                     'name' => 'Mathematics',
@@ -72,12 +70,12 @@ class UserController
         $roleCode = strtoupper(trim((string) ($filters['role_code'] ?? '')));
 
         $users = User::query()
-            ->with(['subjects:id,name,description', 'roles:id,code,name'])
+            ->with(['subjects:id,name,description', 'role:id,code,name'])
             ->when($name !== '', function ($query) use ($name) {
                 $query->where('name', 'like', '%' . $name . '%');
             })
             ->when($roleCode !== '', function ($query) use ($roleCode) {
-                $query->whereHas('roles', function ($roleQuery) use ($roleCode): void {
+                $query->whereHas('role', function ($roleQuery) use ($roleCode): void {
                     $roleQuery->where('code', $roleCode);
                 });
             })
@@ -103,7 +101,7 @@ class UserController
     #[BodyParameter('city', required: false, example: 'New York')]
     #[BodyParameter('township', required: false, example: 'Manhattan')]
     #[BodyParameter('is_active', required: false, example: true)]
-    #[BodyParameter('role_codes', required: true, example: ['STUDENT'])]
+    #[BodyParameter('role_code', required: true, example: 'STUDENT')]
     #[BodyParameter('subject_ids', required: false, example: [1, 2])]
     #[Response(
         status: 201,
@@ -117,10 +115,8 @@ class UserController
             'city' => 'New York',
             'township' => 'Manhattan',
             'is_active' => true,
-            'roles' => [[
-                'code' => 'STUDENT',
-                'name' => 'Student',
-            ]],
+            'role_code' => 'STUDENT',
+            'role_name' => 'Student',
             'subjects' => [[
                 'id' => 1,
                 'name' => 'Mathematics',
@@ -134,19 +130,19 @@ class UserController
     {
         $validated = $request->validated();
         $subjectIds = $validated['subject_ids'] ?? [];
-        $roleCodes = $validated['role_codes'] ?? [];
+        $roleCode = $validated['role_code'] ?? null;
         $autoGeneratePassword = (bool) ($validated['auto_generate_password'] ?? false);
         $plainPassword = $autoGeneratePassword
             ? Str::random(12)
             : (string) ($validated['password'] ?? '');
 
-        unset($validated['subject_ids'], $validated['role_codes'], $validated['auto_generate_password']);
+        unset($validated['subject_ids'], $validated['role_code'], $validated['auto_generate_password']);
 
         $validated['password'] = Hash::make($plainPassword);
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
         $user = User::create($validated);
-        $this->syncUserRoles($user, $roleCodes);
+        $this->assignUserRole($user, $roleCode);
         $user->subjects()->sync($subjectIds);
 
         if ($autoGeneratePassword) {
@@ -169,10 +165,8 @@ class UserController
             'city' => null,
             'township' => null,
             'is_active' => true,
-            'roles' => [[
-                'code' => 'STAFF',
-                'name' => 'Staff',
-            ]],
+            'role_code' => 'STAFF',
+            'role_name' => 'Staff',
             'subjects' => [[
                 'id' => 1,
                 'name' => 'Mathematics',
@@ -198,7 +192,7 @@ class UserController
     #[BodyParameter('city', required: false, example: 'San Francisco')]
     #[BodyParameter('township', required: false, example: 'SOMA')]
     #[BodyParameter('is_active', required: false, example: true)]
-    #[BodyParameter('role_codes', required: false, example: ['TUTOR'])]
+    #[BodyParameter('role_code', required: false, example: 'TUTOR')]
     #[BodyParameter('subject_ids', required: false, example: [1, 3])]
     #[Response(
         status: 200,
@@ -212,10 +206,8 @@ class UserController
             'city' => 'San Francisco',
             'township' => 'SOMA',
             'is_active' => true,
-            'roles' => [[
-                'code' => 'TUTOR',
-                'name' => 'Tutor',
-            ]],
+            'role_code' => 'TUTOR',
+            'role_name' => 'Tutor',
             'subjects' => [[
                 'id' => 1,
                 'name' => 'Mathematics',
@@ -230,10 +222,10 @@ class UserController
         $validated = $request->validated();
         $hasSubjectIds = array_key_exists('subject_ids', $validated);
         $subjectIds = $validated['subject_ids'] ?? [];
-        $hasRoleCodes = array_key_exists('role_codes', $validated);
-        $roleCodes = $validated['role_codes'] ?? [];
+        $hasRoleCode = array_key_exists('role_code', $validated);
+        $roleCode = $validated['role_code'] ?? null;
 
-        unset($validated['subject_ids'], $validated['role_codes']);
+        unset($validated['subject_ids'], $validated['role_code']);
 
         if (array_key_exists('password', $validated)) {
             $validated['password'] = Hash::make((string) $validated['password']);
@@ -241,8 +233,8 @@ class UserController
 
         $user->update($validated);
 
-        if ($hasRoleCodes) {
-            $this->syncUserRoles($user, $roleCodes);
+        if ($hasRoleCode) {
+            $this->assignUserRole($user, $roleCode);
         }
 
         if ($hasSubjectIds) {
@@ -262,27 +254,26 @@ class UserController
     }
 
     /**
-     * @param  list<string>  $roleCodes
      */
-    private function syncUserRoles(User $user, array $roleCodes): void
+    private function assignUserRole(User $user, ?string $roleCode): void
     {
-        $normalizedRoleCodes = collect($roleCodes)
-            ->map(fn (string $roleCode): string => strtoupper(trim($roleCode)))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        $roleCode = $roleCode === null
+            ? null
+            : strtoupper(trim($roleCode));
 
-        $roleIds = Role::query()
-            ->whereIn('code', $normalizedRoleCodes)
-            ->pluck('id')
-            ->all();
+        $roleId = $roleCode === null || $roleCode === ''
+            ? null
+            : Role::query()
+                ->where('code', $roleCode)
+                ->value('id');
 
-        $user->roles()->sync($roleIds);
+        $user->update([
+            'role_id' => $roleId,
+        ]);
     }
 
     private function loadUserRelations(User $user): User
     {
-        return $user->load(['subjects:id,name,description', 'roles:id,code,name']);
+        return $user->load(['subjects:id,name,description', 'role:id,code,name']);
     }
 }

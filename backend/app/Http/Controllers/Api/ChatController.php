@@ -43,12 +43,12 @@ class ChatController
                     'id' => 2,
                     'name' => 'Jane Tutor',
                     'email' => 'jane@example.com',
-                    'roles' => ['TUTOR'],
+                    'role_code' => 'TUTOR',
                 ], [
                     'id' => 5,
                     'name' => 'John Student',
                     'email' => 'john@example.com',
-                    'roles' => ['STUDENT'],
+                    'role_code' => 'STUDENT',
                 ]],
                 'last_message' => [
                     'id' => 321,

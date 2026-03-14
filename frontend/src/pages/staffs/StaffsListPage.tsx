@@ -4,7 +4,7 @@ export function StaffsListPage() {
   return (
     <UserListPage
       title="Staffs"
-      subtitle="Manage staff members and their roles"
+      subtitle="Manage staff members and their role assignments"
       userType="STAFF"
       addLabel="Add Staff"
       viewModalTitle="Detail Staff"

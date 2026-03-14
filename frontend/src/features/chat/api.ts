@@ -5,7 +5,7 @@ export type ChatUser = {
   id: number
   name: string
   email: string
-  roles: string[]
+  role_code: string | null
 }
 
 export type ChatMessage = {

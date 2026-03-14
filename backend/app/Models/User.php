@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Concerns\HasUuid;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
@@ -30,6 +31,7 @@ class User extends Authenticatable
         'country',
         'city',
         'township',
+        'role_id',
         'is_active',
         'password',
     ];
@@ -116,9 +118,9 @@ class User extends Authenticatable
         return $query->where('uuid', (string) $value)->first();
     }
 
-    public function roles(): BelongsToMany
+    public function role(): BelongsTo
     {
-        return $this->belongsToMany(Role::class)->withTimestamps();
+        return $this->belongsTo(Role::class);
     }
 
     public function hasRole(string $code): bool
@@ -129,13 +131,11 @@ class User extends Authenticatable
             return false;
         }
 
-        if ($this->relationLoaded('roles')) {
-            return $this->roles->contains(
-                fn (Role $role): bool => strtoupper((string) $role->code) === $normalizedCode
-            );
+        if ($this->relationLoaded('role')) {
+            return strtoupper((string) $this->role?->code) === $normalizedCode;
         }
 
-        return $this->roles()->where('code', $normalizedCode)->exists();
+        return strtoupper((string) $this->role()->value('code')) === $normalizedCode;
     }
 
     /**
@@ -149,16 +149,15 @@ class User extends Authenticatable
             return false;
         }
 
-        if ($this->relationLoaded('roles')) {
-            $assignedCodes = $this->roles
-                ->pluck('code')
-                ->map(fn ($code): string => strtoupper((string) $code))
-                ->all();
+        if ($this->relationLoaded('role')) {
+            $assignedCode = self::normalizeRoleCode((string) $this->role?->code);
 
-            return count(array_intersect($normalizedCodes, $assignedCodes)) > 0;
+            return $assignedCode !== null && in_array($assignedCode, $normalizedCodes, true);
         }
 
-        return $this->roles()->whereIn('code', $normalizedCodes)->exists();
+        $assignedCode = self::normalizeRoleCode((string) $this->role()->value('code'));
+
+        return $assignedCode !== null && in_array($assignedCode, $normalizedCodes, true);
     }
 
     private static function normalizeRoleCode(string $code): ?string

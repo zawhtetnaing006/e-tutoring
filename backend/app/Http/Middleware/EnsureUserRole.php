@@ -22,10 +22,10 @@ class EnsureUserRole
             ->values()
             ->all();
 
-        $currentRoles = $user?->roles()
-            ->pluck('code')
-            ->map(static fn ($code): string => strtoupper((string) $code))
-            ->all() ?? [];
+        $currentRole = $user?->role?->code;
+        $currentRoles = $currentRole === null
+            ? []
+            : [strtoupper((string) $currentRole)];
 
         if ($user === null || ! $user->hasAnyRole($normalizedAllowedRoles)) {
             return response()->json([

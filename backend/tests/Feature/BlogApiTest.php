@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Blog;
 use App\Models\BlogComment;
+use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -12,6 +14,13 @@ use Tests\TestCase;
 class BlogApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(RoleSeeder::class);
+    }
 
     public function test_guest_cannot_list_blogs(): void
     {
@@ -128,7 +137,9 @@ class BlogApiTest extends TestCase
     public function test_non_author_non_staff_cannot_update_blog(): void
     {
         $author = User::factory()->create();
-        $anotherUser = User::factory()->create(['user_type' => User::TYPE_STUDENT]);
+        $anotherUser = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::STUDENT)->value('id'),
+        ]);
 
         $blog = Blog::query()->create([
             'author_user_id' => $author->id,

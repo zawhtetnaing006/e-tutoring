@@ -15,7 +15,7 @@ export function useUsersList(
 
   return useQuery<UsersListResponse>({
     queryKey: ['users', 'list', page, perPage, userType],
-    queryFn: () => getUsers({ page, per_page: perPage, user_type: userType }),
+    queryFn: () => getUsers({ page, per_page: perPage, role_code: userType }),
     enabled,
   })
 }

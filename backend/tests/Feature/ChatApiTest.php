@@ -178,9 +178,11 @@ class ChatApiTest extends TestCase
             ->where('code', $roleCode)
             ->value('id');
 
-        $user->roles()->sync([$roleId]);
+        $user->update([
+            'role_id' => $roleId,
+        ]);
 
-        return $user->load('roles');
+        return $user->load('role');
     }
 
     private function createConversation(User $firstUser, User $secondUser): Conversation

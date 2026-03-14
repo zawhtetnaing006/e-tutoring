@@ -21,6 +21,7 @@ import {
 import { useQueryClient, useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useUsersList } from '@/features/users/useUsersList'
+import { getUserRoleLabel } from '@/features/auth/role-utils'
 import {
   getUser,
   createUser,
@@ -36,17 +37,20 @@ import { createClassRooms } from '@/features/class-rooms/api'
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100]
 
-function formatRole(userType: string): string {
-  if (userType === 'STAFF') return 'Staff'
-  if (userType === 'TUTOR') return 'Tutor'
-  if (userType === 'STUDENT') return 'Student'
-  return userType
-}
-
 function formatAddress(u: ListUser): string {
   const parts = [u.country, u.city, u.township].filter(Boolean) as string[]
   if (u.address) parts.unshift(u.address)
   return parts.length > 0 ? parts.join(', ') : '—'
+}
+
+function getRoleLabel(
+  user:
+    | Pick<UserResource, 'role_code' | 'role_name'>
+    | Pick<ListUser, 'role_code' | 'role_name'>
+    | null
+    | undefined
+): string {
+  return getUserRoleLabel(user)
 }
 
 function truncate(str: string, max: number): string {
@@ -95,7 +99,7 @@ function ViewUserModal({
     variant === 'tutor' ? 'Subject' : variant === 'student' ? 'Subject' : 'Role'
   const subjectValue =
     variant === 'staff'
-      ? formatRole(user?.name ?? '')
+      ? getRoleLabel(user)
       : user?.subjects?.length
         ? user.subjects.map(s => s.name).join(', ')
         : '—'
@@ -241,7 +245,7 @@ function ViewUserModal({
               </div>
               <div>
                 <dt className="text-muted-foreground">Role</dt>
-                <dd className="text-foreground">{user.name}</dd>
+                <dd className="text-foreground">{getRoleLabel(user)}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Status</dt>
@@ -300,7 +304,7 @@ function AddUserModal({
   const [form, setForm] = useState<CreateUserPayload>({
     name: '',
     email: '',
-    user_type: userType,
+    role_code: userType,
     auto_generate_password: true,
     phone: '',
     address: '',
@@ -564,14 +568,11 @@ function AddUserModal({
                       Choose Role *
                       <select
                         required
-                        value={form.user_type}
+                        value={form.role_code ?? userType}
                         onChange={e =>
                           setForm(f => ({
                             ...f,
-                            user_type: e.target.value as
-                              | 'STAFF'
-                              | 'STUDENT'
-                              | 'TUTOR',
+                            role_code: e.target.value as 'STAFF' | 'STUDENT' | 'TUTOR',
                           }))
                         }
                         className="mt-1 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
@@ -1424,7 +1425,7 @@ function EditUserModal({
                     <label className="block text-sm font-medium text-foreground">
                       Choose Role *
                       <select
-                        value={user.name}
+                        value="STAFF"
                         className="mt-1 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
                         disabled
                       >
@@ -2137,7 +2138,7 @@ export function UserListPage({
                       <span className="break-words">{row.name}</span>
                     </td>
                     <td className="whitespace-nowrap p-2 text-muted-foreground sm:p-3">
-                      {truncate(formatRole(row.name), 18)}
+                      {truncate(getRoleLabel(row), 18)}
                     </td>
                     <td className="min-w-[140px] p-2 text-muted-foreground sm:p-3">
                       <span

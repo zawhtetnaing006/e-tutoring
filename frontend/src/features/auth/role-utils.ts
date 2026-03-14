@@ -1,26 +1,37 @@
-import type { AuthRole, User, UserRole } from './types'
+import type { AuthRole, User, UserRoleCode } from './types'
 
 function normalizeRoleCode(code: string | undefined): string {
   return (code ?? '').trim().toUpperCase()
 }
 
-export function getAuthRoleFromRoles(roles: UserRole[] | undefined): AuthRole {
-  const codes = (roles ?? []).map(role => normalizeRoleCode(role.code))
+export function getAuthRoleFromRoleCode(
+  roleCode: UserRoleCode | null | undefined
+): AuthRole {
+  const normalizedRoleCode = normalizeRoleCode(roleCode)
 
-  if (codes.includes('ADMIN') || codes.includes('STAFF')) return 'staff'
-  if (codes.includes('TUTOR')) return 'tutor'
-  if (codes.includes('STUDENT')) return 'student'
+  if (normalizedRoleCode === 'ADMIN' || normalizedRoleCode === 'STAFF') {
+    return 'staff'
+  }
+
+  if (normalizedRoleCode === 'TUTOR') return 'tutor'
+  if (normalizedRoleCode === 'STUDENT') return 'student'
 
   return 'student'
 }
 
-export function getUserRole(user: Pick<User, 'roles'> | null | undefined): AuthRole {
-  return getAuthRoleFromRoles(user?.roles)
+export function getUserRole(
+  user: Pick<User, 'role_code'> | null | undefined
+): AuthRole {
+  return getAuthRoleFromRoleCode(user?.role_code)
 }
 
 export function getUserRoleLabel(
-  user: Pick<User, 'roles'> | null | undefined
+  user: Pick<User, 'role_code' | 'role_name'> | null | undefined
 ): string {
+  if (user?.role_name) {
+    return user.role_name
+  }
+
   switch (getUserRole(user)) {
     case 'staff':
       return 'Staff'

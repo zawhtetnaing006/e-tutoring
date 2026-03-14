@@ -24,7 +24,7 @@ class BlogCommentResource extends JsonResource
                 'id' => $this->resource->commenter->id,
                 'uuid' => $this->resource->commenter->uuid,
                 'name' => $this->resource->commenter->name,
-                'user_type' => $this->resource->commenter->user_type,
+                'role_code' => $this->resource->commenter->role?->code,
             ]),
             'created_at' => $this->resource->created_at?->toISOString(),
             'updated_at' => $this->resource->updated_at?->toISOString(),

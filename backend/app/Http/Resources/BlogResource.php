@@ -34,7 +34,7 @@ class BlogResource extends JsonResource
                 'id' => $this->resource->author->id,
                 'uuid' => $this->resource->author->uuid,
                 'name' => $this->resource->author->name,
-                'user_type' => $this->resource->author->user_type,
+                'role_code' => $this->resource->author->role?->code,
             ]),
             'comment_count' => $this->whenCounted('comments'),
             'comments' => $this->whenLoaded(

@@ -9,6 +9,7 @@ use App\Http\Resources\BlogCommentResource;
 use App\Http\Resources\BlogResource;
 use App\Models\Blog;
 use App\Models\BlogComment;
+use App\Models\Role;
 use App\Models\User;
 use App\Traits\FormatsListingResponse;
 use Dedoc\Scramble\Attributes\BodyParameter;
@@ -238,9 +239,7 @@ class BlogController
 
         abort_if($user === null, 401, 'Unauthenticated.');
 
-        $userType = strtoupper((string) $user->user_type);
-
-        if ($userType === User::TYPE_STAFF || (int) $user->id === (int) $blog->author_user_id) {
+        if ($user->hasAnyRole([Role::ADMIN, Role::STAFF]) || (int) $user->id === (int) $blog->author_user_id) {
             return;
         }
 

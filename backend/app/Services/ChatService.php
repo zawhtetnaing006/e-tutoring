@@ -42,7 +42,7 @@ class ChatService
             })
             ->with([
                 'members.user:id,name,email',
-                'members.user.roles:id,code,name',
+                'members.user.role:id,code,name',
                 'latestMessage.sender:id,name',
             ])
             ->orderByRaw('COALESCE(last_message_at, created_at) DESC')
@@ -62,7 +62,7 @@ class ChatService
                 $builder->where('name', 'like', "%{$term}%")
                     ->orWhere('email', 'like', "%{$term}%");
             })
-            ->with('roles:id,code,name');
+            ->with('role:id,code,name');
 
         if ($allowedUserIds !== null) {
             if ($allowedUserIds === []) {
@@ -90,7 +90,7 @@ class ChatService
             $this->ensureDirectConversationMembers($existingConversation, $user, $target);
 
             return $existingConversation->load([
-                'members.user.roles:id,code,name',
+                'members.user.role:id,code,name',
                 'latestMessage.sender:id,name',
             ]);
         }
@@ -107,7 +107,7 @@ class ChatService
             ]);
 
             return $conversation->load([
-                'members.user.roles:id,code,name',
+                'members.user.role:id,code,name',
                 'latestMessage.sender:id,name',
             ]);
         });
@@ -264,7 +264,7 @@ class ChatService
         if ($user->hasRole(Role::TUTOR)) {
             $staffIds = User::query()
                 ->where('is_active', true)
-                ->whereHas('roles', function (Builder $query): void {
+                ->whereHas('role', function (Builder $query): void {
                     $query->whereIn('code', [Role::ADMIN, Role::STAFF]);
                 })
                 ->pluck('id')

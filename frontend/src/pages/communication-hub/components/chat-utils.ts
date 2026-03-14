@@ -33,7 +33,7 @@ export function getConversationPeer(
     id: -1,
     name: 'Unknown user',
     email: '',
-    roles: [],
+    role_code: null,
   }
 
   if (conversation.members.length === 0) return fallbackPeer
@@ -81,18 +81,18 @@ export function formatFileSize(value: number) {
   return `${size.toFixed(precision)} ${units.at(unitIndex) ?? 'B'}`
 }
 
-export function getChatUserRoleLabel(user: Pick<ChatUser, 'roles'>) {
-  const normalizedRoles = user.roles.map(role => role.trim().toUpperCase())
+export function getChatUserRoleLabel(user: Pick<ChatUser, 'role_code'>) {
+  const normalizedRole = (user.role_code ?? '').trim().toUpperCase()
 
-  if (normalizedRoles.includes('ADMIN') || normalizedRoles.includes('STAFF')) {
+  if (normalizedRole === 'ADMIN' || normalizedRole === 'STAFF') {
     return 'Staff'
   }
 
-  if (normalizedRoles.includes('TUTOR')) {
+  if (normalizedRole === 'TUTOR') {
     return 'Tutor'
   }
 
-  if (normalizedRoles.includes('STUDENT')) {
+  if (normalizedRole === 'STUDENT') {
     return 'Student'
   }
 
