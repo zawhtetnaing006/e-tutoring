@@ -16,6 +16,7 @@ class Subject extends Model
     protected $fillable = [
         'name',
         'description',
+        'is_active',
     ];
 
     public function users(): BelongsToMany

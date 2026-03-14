@@ -50,6 +50,7 @@ function formatAddress(u: ListUser): string {
 }
 
 function truncate(str: string, max: number): string {
+  if (!str) return ''
   if (str.length <= max) return str
   return str.slice(0, max) + '...'
 }
@@ -94,7 +95,7 @@ function ViewUserModal({
     variant === 'tutor' ? 'Subject' : variant === 'student' ? 'Subject' : 'Role'
   const subjectValue =
     variant === 'staff'
-      ? formatRole(user?.user_type ?? '')
+      ? formatRole(user?.name ?? '')
       : user?.subjects?.length
         ? user.subjects.map(s => s.name).join(', ')
         : '—'
@@ -240,7 +241,7 @@ function ViewUserModal({
               </div>
               <div>
                 <dt className="text-muted-foreground">Role</dt>
-                <dd className="text-foreground">{user.user_type}</dd>
+                <dd className="text-foreground">{user.name}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Status</dt>
@@ -1423,7 +1424,7 @@ function EditUserModal({
                     <label className="block text-sm font-medium text-foreground">
                       Choose Role *
                       <select
-                        value={user.user_type}
+                        value={user.name}
                         className="mt-1 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
                         disabled
                       >
@@ -2136,7 +2137,7 @@ export function UserListPage({
                       <span className="break-words">{row.name}</span>
                     </td>
                     <td className="whitespace-nowrap p-2 text-muted-foreground sm:p-3">
-                      {truncate(formatRole(row.user_type), 18)}
+                      {truncate(formatRole(row.name), 18)}
                     </td>
                     <td className="min-w-[140px] p-2 text-muted-foreground sm:p-3">
                       <span

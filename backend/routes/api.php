@@ -78,6 +78,7 @@ Route::middleware(['auth:sanctum', 'role:STAFF'])
         Route::post('/', 'store');
         Route::get('{subject}', 'show');
         Route::put('{subject}', 'update');
+        Route::post('{subject}/toggle-status', 'toggleStatus');
         Route::delete('{subject}', 'destroy');
     });
 

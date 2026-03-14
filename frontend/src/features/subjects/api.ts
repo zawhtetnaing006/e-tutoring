@@ -5,6 +5,7 @@ export type Subject = {
   id: number
   name: string
   description: string
+  is_active: boolean
   created_at: string
   updated_at: string
 }
@@ -16,8 +17,10 @@ export type SubjectsResponse = {
   total_items: number
 }
 
-type GetSubjectsParams = {
+export type GetSubjectsParams = {
   page?: number
+  per_page?: number
+  /** @deprecated Use per_page */
   perPage?: number
 }
 
@@ -31,8 +34,8 @@ export async function getSubjects(
 
   const searchParams = new URLSearchParams()
   if (params.page != null) searchParams.set('page', String(params.page))
-  if (params.perPage != null)
-    searchParams.set('per_page', String(params.perPage))
+  const perPage = params.per_page ?? params.perPage
+  if (perPage != null) searchParams.set('per_page', String(perPage))
 
   const path = searchParams.toString()
     ? `subjects?${searchParams.toString()}`
@@ -40,6 +43,82 @@ export async function getSubjects(
 
   return apiClient<SubjectsResponse>(path, {
     method: 'GET',
+    token: session.token,
+  })
+}
+
+export async function getSubject(subjectId: number): Promise<Subject> {
+  const session = getAuthSession()
+  if (!session?.token) {
+    throw new ApiError(401, 'Not authenticated')
+  }
+  return apiClient<Subject>(`subjects/${subjectId}`, {
+    method: 'GET',
+    token: session.token,
+  })
+}
+
+export type CreateSubjectPayload = {
+  name: string
+  description?: string | null
+}
+
+export async function createSubject(
+  payload: CreateSubjectPayload
+): Promise<Subject> {
+  const session = getAuthSession()
+  if (!session?.token) {
+    throw new ApiError(401, 'Not authenticated')
+  }
+  return apiClient<Subject>('subjects', {
+    method: 'POST',
+    token: session.token,
+    body: payload as Record<string, unknown>,
+  })
+}
+
+export type UpdateSubjectPayload = {
+  name: string
+  description?: string | null
+}
+
+export async function updateSubject(
+  subjectId: number,
+  payload: UpdateSubjectPayload
+): Promise<Subject> {
+  const session = getAuthSession()
+  if (!session?.token) {
+    throw new ApiError(401, 'Not authenticated')
+  }
+  return apiClient<Subject>(`subjects/${subjectId}`, {
+    method: 'PUT',
+    token: session.token,
+    body: payload as Record<string, unknown>,
+  })
+}
+
+export async function toggleSubjectStatus(
+  subjectId: number,
+  isActive: boolean
+): Promise<Subject> {
+  const session = getAuthSession()
+  if (!session?.token) {
+    throw new ApiError(401, 'Not authenticated')
+  }
+  return apiClient<Subject>(`subjects/${subjectId}/toggle-status`, {
+    method: 'POST',
+    token: session.token,
+    body: { is_active: isActive } as Record<string, unknown>,
+  })
+}
+
+export async function deleteSubject(subjectId: number): Promise<void> {
+  const session = getAuthSession()
+  if (!session?.token) {
+    throw new ApiError(401, 'Not authenticated')
+  }
+  await apiClient<null>(`subjects/${subjectId}`, {
+    method: 'DELETE',
     token: session.token,
   })
 }

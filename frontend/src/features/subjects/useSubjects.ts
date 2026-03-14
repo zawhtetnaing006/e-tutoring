@@ -3,6 +3,8 @@ import { getSubjects, type SubjectsResponse } from './api'
 
 type UseSubjectsOptions = {
   page?: number
+  per_page?: number
+  /** @deprecated Use per_page */
   perPage?: number
   enabled?: boolean
 }
@@ -10,11 +12,12 @@ type UseSubjectsOptions = {
 export function useSubjects(
   options: UseSubjectsOptions = {}
 ): ReturnType<typeof useQuery<SubjectsResponse>> {
-  const { page = 1, perPage = 15, enabled = true } = options
+  const { page = 1, enabled = true } = options
+  const perPage = options.per_page ?? options.perPage ?? 15
 
   return useQuery<SubjectsResponse>({
     queryKey: ['subjects', page, perPage],
-    queryFn: () => getSubjects({ page, perPage }),
+    queryFn: () => getSubjects({ page, per_page: perPage }),
     enabled,
   })
 }

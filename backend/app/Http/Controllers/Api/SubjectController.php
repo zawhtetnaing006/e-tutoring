@@ -111,6 +111,30 @@ class SubjectController
         return response()->json(new SubjectResource($subject->fresh()));
     }
 
+    #[Endpoint(title: 'Toggle Subject Status')]
+    #[BodyParameter('is_active', required: true, example: true)]
+    #[Response(
+        status: 200,
+        examples: [[
+            'id' => 1,
+            'name' => 'Mathematics',
+            'description' => 'Core mathematics topics and problem-solving.',
+            'is_active' => false,
+            'created_at' => '2026-02-05T00:00:00.000000Z',
+            'updated_at' => '2026-02-06T00:00:00.000000Z',
+        ]],
+    )]
+    public function toggleStatus(Request $request, Subject $subject): JsonResponse
+    {
+        $validated = $request->validate([
+            'is_active' => ['required', 'boolean'],
+        ]);
+
+        $subject->update(['is_active' => $validated['is_active']]);
+
+        return response()->json(new SubjectResource($subject->fresh()));
+    }
+
     #[Endpoint(title: 'Delete Subject')]
     #[Response(status: 204, examples: [[null]])]
     public function destroy(Subject $subject): JsonResponse
