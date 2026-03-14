@@ -25,7 +25,7 @@ class StoreMeetingRequest extends FormRequest
             'platform' => ['nullable', 'string', 'max:255'],
             'link' => ['nullable', 'string', 'max:1000'],
             'location' => ['nullable', 'string'],
-            'class_id' => ['required', 'integer', 'exists:classRoom,id'],
+            'tutor_assignment_id' => ['required', 'integer', 'exists:tutor_assignments,id'],
             'meeting_schedules' => ['required', 'array', 'min:1'],
             'meeting_schedules.*.date' => ['required', 'date'],
             'meeting_schedules.*.start_time' => ['required', 'date_format:H:i'],

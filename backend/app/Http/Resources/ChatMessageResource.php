@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Models\ClassRoomMessage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,7 +14,7 @@ class ChatMessageResource extends JsonResource
     {
         return [
             'id' => $this->resource->id,
-            'conversation_id' => $this->resource->class_id,
+            'conversation_id' => $this->resource->conversation_id,
             'sender_id' => $this->resource->sender_user_id,
             'sender_name' => (string) ($this->resource->sender?->name ?? ''),
             'content' => $this->resource->content,

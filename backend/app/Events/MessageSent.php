@@ -3,26 +3,27 @@
 namespace App\Events;
 
 use App\Models\Message;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MessageSent implements ShouldBroadcastNow
+class MessageSent implements ShouldBroadcast
 {
     use Dispatchable;
     use InteractsWithSockets;
     use SerializesModels;
 
-    public function __construct(public Message $message)
-    {
+    public function __construct(
+        public Message $message,
+    ) {
+        $this->message->loadMissing('sender:id,name');
     }
 
-    public function broadcastOn(): Channel
+    public function broadcastOn(): PrivateChannel
     {
-        return new PrivateChannel("conversation.{$this->message->conversation_id}");
+        return new PrivateChannel('conversation.' . $this->message->conversation_id);
     }
 
     public function broadcastAs(): string
@@ -30,14 +31,17 @@ class MessageSent implements ShouldBroadcastNow
         return 'message.sent';
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function broadcastWith(): array
     {
         return [
             'id' => $this->message->id,
             'conversation_id' => $this->message->conversation_id,
-            'sender_id' => $this->message->sender_id,
-            'body' => $this->message->body,
-            'edited_at' => $this->message->edited_at?->toISOString(),
+            'sender_id' => $this->message->sender_user_id,
+            'sender_name' => (string) ($this->message->sender?->name ?? ''),
+            'content' => $this->message->content,
             'created_at' => $this->message->created_at?->toISOString(),
             'updated_at' => $this->message->updated_at?->toISOString(),
         ];

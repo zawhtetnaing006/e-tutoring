@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { useZodForm } from '@/hooks/useZodForm'
 import { useCurrentUser } from '@/features/auth/useCurrentUser'
+import { getUserRole, getUserRoleLabel } from '@/features/auth/role-utils'
 import type { User } from '@/features/auth'
 import { useSubjects } from '@/features/subjects/useSubjects'
 import { updateUser } from '@/features/users/api'
@@ -63,7 +64,7 @@ function userToProfileValues(user: User): ProfileFormValues {
 export function ProfilePage() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
   const { data: user, isLoading } = useCurrentUser()
-  const normalizedRole = user?.user_type?.toLowerCase() ?? ''
+  const normalizedRole = getUserRole(user)
   const shouldShowSubject =
     normalizedRole === 'tutor' || normalizedRole === 'student'
 
@@ -140,21 +141,7 @@ export function ProfilePage() {
     passwordForm.reset()
   }
 
-  let roleLabel = user?.user_type || 'User'
-
-  switch (normalizedRole) {
-    case 'staff':
-      roleLabel = 'Staff'
-      break
-    case 'tutor':
-      roleLabel = 'Tutor'
-      break
-    case 'student':
-      roleLabel = 'Student'
-      break
-    default:
-      break
-  }
+  const roleLabel = getUserRoleLabel(user)
 
   const { data: subjectsData, isLoading: isSubjectsLoading } = useSubjects({
     enabled: shouldShowSubject,

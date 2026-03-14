@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\User;
 
-use App\Models\User;
+use App\Models\Role;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\RequiredIf;
@@ -35,7 +35,8 @@ class StoreUserRequest extends FormRequest
             'city' => ['nullable', 'string', 'max:255'],
             'township' => ['nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
-            'user_type' => ['required', Rule::in(User::TYPES)],
+            'role_codes' => ['required', 'array', 'min:1'],
+            'role_codes.*' => ['required', 'string', 'distinct', Rule::in(Role::CODES)],
             'subject_ids' => ['sometimes', 'array'],
             'subject_ids.*' => ['integer', 'distinct', 'exists:subjects,id'],
         ];

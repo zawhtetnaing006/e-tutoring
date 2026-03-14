@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Conversation;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,8 +16,8 @@ class ConversationMember extends Model
     protected $fillable = [
         'conversation_id',
         'user_id',
-        'joined_at',
-        'left_at',
+        'last_seen_message_id',
+        'last_seen_at',
     ];
 
     /**
@@ -28,8 +26,7 @@ class ConversationMember extends Model
     protected function casts(): array
     {
         return [
-            'joined_at' => 'datetime',
-            'left_at' => 'datetime',
+            'last_seen_at' => 'datetime',
         ];
     }
 
@@ -41,5 +38,10 @@ class ConversationMember extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function lastSeenMessage(): BelongsTo
+    {
+        return $this->belongsTo(Message::class, 'last_seen_message_id');
     }
 }

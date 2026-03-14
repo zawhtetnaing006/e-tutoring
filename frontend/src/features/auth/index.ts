@@ -1,4 +1,5 @@
 export * from './types'
+export * from './role-utils'
 export { useRole } from './useRole'
 export { useIsAuthenticated } from './useIsAuthenticated'
 export { useCurrentUser } from './useCurrentUser'

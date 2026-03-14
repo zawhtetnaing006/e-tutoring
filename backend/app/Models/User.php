@@ -11,22 +11,11 @@ use App\Models\Concerns\HasUuid;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, HasUuid, Notifiable, HasRoles;
-
-    public const TYPE_STAFF = 'STAFF';
-    public const TYPE_STUDENT = 'STUDENT';
-    public const TYPE_TUTOR = 'TUTOR';
-
-    public const TYPES = [
-        self::TYPE_STAFF,
-        self::TYPE_STUDENT,
-        self::TYPE_TUTOR,
-    ];
+    use HasApiTokens, HasFactory, HasUuid, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -42,7 +31,6 @@ class User extends Authenticatable
         'city',
         'township',
         'is_active',
-        'user_type',
         'password',
     ];
 
@@ -80,6 +68,36 @@ class User extends Authenticatable
         return $this->hasMany(WorkSchedule::class);
     }
 
+    public function blogs(): HasMany
+    {
+        return $this->hasMany(Blog::class, 'author_user_id');
+    }
+
+    public function blogComments(): HasMany
+    {
+        return $this->hasMany(BlogComment::class, 'commenter_user_id');
+    }
+
+    public function conversationMembers(): HasMany
+    {
+        return $this->hasMany(ConversationMember::class);
+    }
+
+    public function sentMessages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'sender_user_id');
+    }
+
+    public function uploadedDocuments(): HasMany
+    {
+        return $this->hasMany(Document::class, 'uploaded_by_user_id');
+    }
+
+    public function documentComments(): HasMany
+    {
+        return $this->hasMany(DocumentComment::class, 'commenter_user_id');
+    }
+
     public function resolveRouteBinding($value, $field = null): ?Model
     {
         if ($field !== null) {
@@ -96,5 +114,76 @@ class User extends Authenticatable
         }
 
         return $query->where('uuid', (string) $value)->first();
+    }
+
+    public function roles(): BelongsToMany
+    {
+        return $this->belongsToMany(Role::class)->withTimestamps();
+    }
+
+    public function hasRole(string $code): bool
+    {
+        $normalizedCode = self::normalizeRoleCode($code);
+
+        if ($normalizedCode === null) {
+            return false;
+        }
+
+        if ($this->relationLoaded('roles')) {
+            return $this->roles->contains(
+                fn (Role $role): bool => strtoupper((string) $role->code) === $normalizedCode
+            );
+        }
+
+        return $this->roles()->where('code', $normalizedCode)->exists();
+    }
+
+    /**
+     * @param  iterable<string>  $codes
+     */
+    public function hasAnyRole(iterable $codes): bool
+    {
+        $normalizedCodes = self::normalizeRoleCodes($codes);
+
+        if ($normalizedCodes === []) {
+            return false;
+        }
+
+        if ($this->relationLoaded('roles')) {
+            $assignedCodes = $this->roles
+                ->pluck('code')
+                ->map(fn ($code): string => strtoupper((string) $code))
+                ->all();
+
+            return count(array_intersect($normalizedCodes, $assignedCodes)) > 0;
+        }
+
+        return $this->roles()->whereIn('code', $normalizedCodes)->exists();
+    }
+
+    private static function normalizeRoleCode(string $code): ?string
+    {
+        $normalizedCode = strtoupper(trim($code));
+
+        return $normalizedCode === '' ? null : $normalizedCode;
+    }
+
+    /**
+     * @param  iterable<string>  $codes
+     * @return list<string>
+     */
+    private static function normalizeRoleCodes(iterable $codes): array
+    {
+        $normalizedCodes = [];
+
+        foreach ($codes as $code) {
+            $normalizedCode = self::normalizeRoleCode((string) $code);
+
+            if ($normalizedCode !== null) {
+                $normalizedCodes[] = $normalizedCode;
+            }
+        }
+
+        return array_values(array_unique($normalizedCodes));
     }
 }
