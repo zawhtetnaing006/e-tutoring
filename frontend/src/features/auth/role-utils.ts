@@ -1,6 +1,6 @@
 import type { AuthRole, User, UserRoleCode } from './types'
 
-function normalizeRoleCode(code: string | undefined): string {
+function normalizeRoleCode(code: string | null | undefined): string {
   return (code ?? '').trim().toUpperCase()
 }
 

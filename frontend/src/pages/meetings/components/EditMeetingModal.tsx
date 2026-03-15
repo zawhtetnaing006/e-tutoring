@@ -30,8 +30,8 @@ export function EditMeetingModal({
   const [location, setLocation] = useState(meeting.location || '')
 
   const allocationsQuery = useAllocations({ perPage: 1000 })
-  const tutorsQuery = useUsers({ perPage: 100, roleCode: 'TUTOR' })
-  const studentsQuery = useUsers({ perPage: 100, roleCode: 'STUDENT' })
+  const tutorsQuery = useUsers({ perPage: 100, role_code: 'TUTOR' })
+  const studentsQuery = useUsers({ perPage: 100, role_code: 'STUDENT' })
 
   const selectedAllocation = useMemo(() => {
     return allocationsQuery.data?.data.find(

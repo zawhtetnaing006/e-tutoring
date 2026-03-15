@@ -53,7 +53,9 @@ function userToProfileValues(user: User): ProfileFormValues {
     name: user.name,
     email: user.email,
     phoneNumber: user.phone ?? '',
-    subject: user.subjects ?? '',
+    subject: Array.isArray(user.subjects)
+      ? user.subjects.map(s => s.name).join(', ')
+      : '',
     country: user.country ?? '',
     city: user.city ?? '',
     township: user.township ?? '',

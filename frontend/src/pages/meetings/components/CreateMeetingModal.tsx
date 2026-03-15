@@ -50,8 +50,8 @@ export function CreateMeetingModal({
   const [weeklyEndTime, setWeeklyEndTime] = useState('')
 
   const allocationsQuery = useAllocations({ perPage: 1000 })
-  const tutorsQuery = useUsers({ perPage: 100, roleCode: 'TUTOR' })
-  const studentsQuery = useUsers({ perPage: 100, roleCode: 'STUDENT' })
+  const tutorsQuery = useUsers({ perPage: 100, role_code: 'TUTOR' })
+  const studentsQuery = useUsers({ perPage: 100, role_code: 'STUDENT' })
 
   const selectedAllocation = useMemo(() => {
     if (!tutorAssignmentId) return null

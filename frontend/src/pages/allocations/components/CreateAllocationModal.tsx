@@ -244,13 +244,13 @@ export function CreateAllocationModal({
 
   const tutorsQuery = useUsers({
     perPage: 10,
-    roleCode: 'TUTOR',
+    role_code: 'TUTOR',
     name: debouncedTutorSearch,
     enabled: isOpen,
   })
   const studentsQuery = useUsers({
     perPage: 10,
-    roleCode: 'STUDENT',
+    role_code: 'STUDENT',
     name: debouncedStudentSearch,
     enabled: isOpen,
   })

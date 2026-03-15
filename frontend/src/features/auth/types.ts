@@ -8,6 +8,12 @@ export type AuthRole = 'student' | 'tutor' | 'staff'
 
 export type UserRoleCode = 'ADMIN' | 'STAFF' | 'TUTOR' | 'STUDENT' | string
 
+export type SubjectRef = {
+  id: number
+  name: string
+  description: string
+}
+
 export type User = {
   id?: number
   uuid: string
@@ -21,7 +27,7 @@ export type User = {
   is_active: boolean
   role_code: UserRoleCode | null
   role_name?: string | null
-  subjects?: string | null
+  subjects?: SubjectRef[]
   created_at: string
   updated_at: string
 }
