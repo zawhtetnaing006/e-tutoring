@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Role;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -27,7 +28,24 @@ class EnsureUserRole
             ? []
             : [strtoupper((string) $currentRole)];
 
-        if ($user === null || ! $user->hasAnyRole($normalizedAllowedRoles)) {
+        if ($user === null) {
+            return response()->json([
+                'message' => 'Access denied for your role.',
+                'error' => [
+                    'code' => 'ROLE_FORBIDDEN',
+                    'details' => [
+                        'current_roles' => $currentRoles,
+                        'allowed_roles' => $normalizedAllowedRoles,
+                    ],
+                ],
+            ], 403);
+        }
+
+        if ($user->hasRole(Role::ADMIN)) {
+            return $next($request);
+        }
+
+        if (! $user->hasAnyRole($normalizedAllowedRoles)) {
             return response()->json([
                 'message' => 'Access denied for your role.',
                 'error' => [
