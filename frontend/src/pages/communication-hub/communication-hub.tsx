@@ -271,9 +271,10 @@ export function CommunicationHubPage() {
     [documentsQuery.data?.pages]
   )
   const activeDocumentId =
-    documents.find(document => document.id === selectedDocumentId)?.id ??
-    documents[0]?.id ??
-    null
+    selectedDocumentId != null &&
+    documents.some(document => document.id === selectedDocumentId)
+      ? selectedDocumentId
+      : null
   const commentsQuery = useDocumentComments(activeDocumentId)
   const documentComments = useMemo(
     () => (commentsQuery.data?.pages ?? []).flatMap(page => page.data),
@@ -554,9 +555,15 @@ export function CommunicationHubPage() {
     }) => addDocumentComment(documentId, comment),
     onSuccess: comment => {
       setCommentDraft('')
-      void queryClient.invalidateQueries({
-        queryKey: ['chat', 'documents', comment.conversation_id],
-      })
+      const conversationId =
+        comment.conversation_id ?? activeConversationId
+
+      if (conversationId != null) {
+        void queryClient.invalidateQueries({
+          queryKey: ['chat', 'documents', conversationId],
+        })
+      }
+
       void queryClient.invalidateQueries({
         queryKey: ['chat', 'document-comments', comment.document_id],
       })

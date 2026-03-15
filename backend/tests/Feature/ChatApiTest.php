@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Events\MessageSeen;
 use App\Models\Conversation;
 use App\Models\ConversationMember;
+use App\Models\Document;
 use App\Models\Message;
 use App\Models\Role;
 use App\Models\User;
@@ -157,6 +158,27 @@ class ChatApiTest extends TestCase
             ->assertJsonPath('data.0.other_user_last_seen_message_id', $studentReply->id);
     }
 
+    public function test_add_document_comment_response_includes_conversation_id(): void
+    {
+        [$tutor, $student] = $this->createTutorStudentPair();
+        $conversation = $this->createConversation($tutor, $student);
+        $document = $this->createDocument($conversation, $tutor);
+
+        Sanctum::actingAs($student);
+
+        $response = $this->postJson('/api/chat/documents/' . $document->id . '/comments', [
+            'comment' => 'Please update the exercise notes.',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonFragment([
+                'document_id' => $document->id,
+                'conversation_id' => $conversation->id,
+                'comment' => 'Please update the exercise notes.',
+            ]);
+    }
+
     /**
      * @return array{0: User, 1: User}
      */
@@ -198,6 +220,18 @@ class ChatApiTest extends TestCase
         ]);
 
         return $conversation;
+    }
+
+    private function createDocument(Conversation $conversation, User $uploader): Document
+    {
+        return Document::query()->create([
+            'conversation_id' => $conversation->id,
+            'uploaded_by_user_id' => $uploader->id,
+            'file_name' => 'lesson-notes.pdf',
+            'file_path' => 'chat-documents/lesson-notes.pdf',
+            'file_size_bytes' => 1024,
+            'mime_type' => 'application/pdf',
+        ]);
     }
 
     private function buildDirectPairKey(int $firstUserId, int $secondUserId): string
