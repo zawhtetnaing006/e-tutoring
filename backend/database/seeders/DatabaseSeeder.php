@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             BlogCommentSeeder::class,
             ConversationSeeder::class,
             MessageSeeder::class,
+            NotificationSeeder::class,
         ]);
     }
 }

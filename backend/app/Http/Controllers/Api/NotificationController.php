@@ -28,6 +28,11 @@ class NotificationController
                 'user_id' => 10,
                 'status' => 'SENT',
                 'is_read' => false,
+                'payload' => [
+                    'title' => 'New meeting scheduled',
+                    'description' => 'You have meeting with Mg Mg',
+                    'redirectLink' => 'https://www.google.com'
+                ],
                 'sent_at' => '2026-02-23T10:10:00.000000Z',
                 'created_at' => '2026-02-23T10:09:00.000000Z',
             ]],
@@ -47,7 +52,7 @@ class NotificationController
             ->paginate($perPage, ['*'], 'page', $page);
 
         $data = $notifications->getCollection()
-            ->map(fn (Notification $notification) => (new NotificationResource($notification))->toArray($request))
+            ->map(fn(Notification $notification) => (new NotificationResource($notification))->toArray($request))
             ->values()
             ->all();
 

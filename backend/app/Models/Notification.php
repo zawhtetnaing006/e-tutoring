@@ -27,6 +27,7 @@ class Notification extends Model
         'user_id',
         'status',
         'is_read',
+        'payload',
         'sent_at',
     ];
 
@@ -39,6 +40,7 @@ class Notification extends Model
     {
         return [
             'is_read' => 'boolean',
+            'payload' => 'array',
             'sent_at' => 'datetime',
             'created_at' => 'datetime',
         ];
