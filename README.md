@@ -54,7 +54,6 @@ For production deployment:
 
 ```bash
 bash deploy
-bash deploy --migrate
 ```
 
 4) Open the app:
