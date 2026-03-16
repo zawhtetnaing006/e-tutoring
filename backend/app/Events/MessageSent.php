@@ -40,7 +40,7 @@ class MessageSent implements ShouldBroadcast
             'id' => $this->message->id,
             'conversation_id' => $this->message->conversation_id,
             'sender_id' => $this->message->sender_user_id,
-            'sender_name' => (string) ($this->message->sender?->name ?? ''),
+            'sender_name' => (string) ($this->message->sender?->name ?? 'System'),
             'content' => $this->message->content,
             'created_at' => $this->message->created_at?->toISOString(),
             'updated_at' => $this->message->updated_at?->toISOString(),

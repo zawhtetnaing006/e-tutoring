@@ -7,6 +7,7 @@ export type Allocation = {
   student_user_id: number
   from_date: string
   to_date: string
+  status: 'ACTIVE' | 'INACTIVE' | null
   created_at: string
   updated_at: string
 }
@@ -29,6 +30,7 @@ export type CreateAllocationPayload = {
   student_user_ids: number[]
   from_date: string
   to_date: string
+  status?: 'ACTIVE' | 'INACTIVE' | null
 }
 
 export type UpdateAllocationPayload = {
@@ -36,6 +38,7 @@ export type UpdateAllocationPayload = {
   student_user_id: number
   from_date: string
   to_date: string
+  status?: 'ACTIVE' | 'INACTIVE' | null
 }
 
 function getToken() {

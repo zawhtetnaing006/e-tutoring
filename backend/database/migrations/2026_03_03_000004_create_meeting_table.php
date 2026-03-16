@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('description')->nullable();
-            $table->enum('type', ['virtual', 'physical']);
+            $table->enum('type', ['VIRTUAL', 'PHYSICAL']);
             $table->string('platform')->nullable();
             $table->string('link')->nullable();
             $table->text('location')->nullable();

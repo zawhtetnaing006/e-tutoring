@@ -20,7 +20,7 @@ type MeetingDetailModalProps = {
   onEdit: () => void
 }
 
-type AttendanceStatus = 'presence' | 'absence' | 'onleave'
+type AttendanceStatus = 'PRESENCE' | 'ABSENCE' | 'ON_LEAVE'
 
 export function MeetingDetailModal({
   meeting,
@@ -154,7 +154,7 @@ export function MeetingDetailModal({
               <div>
                 <div className="text-muted-foreground">Meet</div>
                 <div className="mt-1">
-                  {meeting.type === 'virtual' && meeting.link ? (
+                  {meeting.type === 'VIRTUAL' && meeting.link ? (
                     <a
                       href={meeting.link}
                       target="_blank"
@@ -236,23 +236,23 @@ export function MeetingDetailModal({
             <div className="grid grid-cols-3 gap-3">
               <button
                 type="button"
-                onClick={() => setSelectedAttendance('presence')}
+                onClick={() => setSelectedAttendance('PRESENCE')}
                 className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                  selectedAttendance === 'presence'
+                  selectedAttendance === 'PRESENCE'
                     ? 'border-green-500 bg-green-500/10'
                     : 'border-border bg-background hover:bg-muted'
                 }`}
               >
                 <CheckCircle
                   className={`h-6 w-6 ${
-                    selectedAttendance === 'presence'
+                    selectedAttendance === 'PRESENCE'
                       ? 'text-green-600'
                       : 'text-muted-foreground'
                   }`}
                 />
                 <span
                   className={`text-sm font-medium ${
-                    selectedAttendance === 'presence'
+                    selectedAttendance === 'PRESENCE'
                       ? 'text-green-600'
                       : 'text-foreground'
                   }`}
@@ -263,23 +263,23 @@ export function MeetingDetailModal({
 
               <button
                 type="button"
-                onClick={() => setSelectedAttendance('absence')}
+                onClick={() => setSelectedAttendance('ABSENCE')}
                 className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                  selectedAttendance === 'absence'
+                  selectedAttendance === 'ABSENCE'
                     ? 'border-red-500 bg-red-500/10'
                     : 'border-border bg-background hover:bg-muted'
                 }`}
               >
                 <XCircle
                   className={`h-6 w-6 ${
-                    selectedAttendance === 'absence'
+                    selectedAttendance === 'ABSENCE'
                       ? 'text-red-600'
                       : 'text-muted-foreground'
                   }`}
                 />
                 <span
                   className={`text-sm font-medium ${
-                    selectedAttendance === 'absence'
+                    selectedAttendance === 'ABSENCE'
                       ? 'text-red-600'
                       : 'text-foreground'
                   }`}
@@ -290,23 +290,23 @@ export function MeetingDetailModal({
 
               <button
                 type="button"
-                onClick={() => setSelectedAttendance('onleave')}
+                onClick={() => setSelectedAttendance('ON_LEAVE')}
                 className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                  selectedAttendance === 'onleave'
+                  selectedAttendance === 'ON_LEAVE'
                     ? 'border-orange-500 bg-orange-500/10'
                     : 'border-border bg-background hover:bg-muted'
                 }`}
               >
                 <MinusCircle
                   className={`h-6 w-6 ${
-                    selectedAttendance === 'onleave'
+                    selectedAttendance === 'ON_LEAVE'
                       ? 'text-orange-600'
                       : 'text-muted-foreground'
                   }`}
                 />
                 <span
                   className={`text-sm font-medium ${
-                    selectedAttendance === 'onleave'
+                    selectedAttendance === 'ON_LEAVE'
                       ? 'text-orange-600'
                       : 'text-foreground'
                   }`}

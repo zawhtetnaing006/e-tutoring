@@ -8,12 +8,14 @@ use App\Http\Resources\TutorAssignmentResource;
 use App\Models\TutorAssignment;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\ChatService;
 use App\Traits\FormatsListingResponse;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +24,11 @@ use Illuminate\Support\Facades\DB;
 class TutorAssignmentController
 {
     use FormatsListingResponse;
+
+    public function __construct(
+        private readonly ChatService $chatService,
+    ) {
+    }
 
     #[Endpoint(title: 'List Tutor Assignments')]
     #[QueryParameter('only_mine', required: false, example: true)]
@@ -35,6 +42,7 @@ class TutorAssignmentController
             'student_user_id' => 5,
             'from_date' => '2026-03-01',
             'to_date' => '2026-03-30',
+            'status' => 'ACTIVE',
             'created_at' => '2026-03-01T00:00:00.000000Z',
             'updated_at' => '2026-03-01T00:00:00.000000Z',
         ]],
@@ -112,6 +120,7 @@ class TutorAssignmentController
     #[BodyParameter('student_user_ids', required: true, example: [5, 9])]
     #[BodyParameter('from_date', required: true, example: '2026-03-01')]
     #[BodyParameter('to_date', required: true, example: '2026-03-30')]
+    #[BodyParameter('status', required: false, example: 'ACTIVE')]
     #[Response(status: 201, examples: [[
         [
             'id' => 1,
@@ -119,6 +128,7 @@ class TutorAssignmentController
             'student_user_id' => 5,
             'from_date' => '2026-03-01',
             'to_date' => '2026-03-30',
+            'status' => 'ACTIVE',
             'created_at' => '2026-03-01T00:00:00.000000Z',
             'updated_at' => '2026-03-01T00:00:00.000000Z',
         ],
@@ -128,6 +138,7 @@ class TutorAssignmentController
             'student_user_id' => 9,
             'from_date' => '2026-03-01',
             'to_date' => '2026-03-30',
+            'status' => 'ACTIVE',
             'created_at' => '2026-03-01T00:00:00.000000Z',
             'updated_at' => '2026-03-01T00:00:00.000000Z',
         ],
@@ -140,8 +151,14 @@ class TutorAssignmentController
         $studentUserIds = $validated['student_user_ids'];
         $fromDate = (string) $validated['from_date'];
         $toDate = (string) $validated['to_date'];
+        $status = $validated['status'] ?? null;
 
-        $created = DB::transaction(function () use ($tutorUserId, $studentUserIds, $fromDate, $toDate): array {
+        // If no status is provided, determine it from the current date window.
+        if ($status === null) {
+            $status = TutorAssignment::resolveStatusForDate($fromDate, $toDate);
+        }
+
+        $created = DB::transaction(function () use ($tutorUserId, $studentUserIds, $fromDate, $toDate, $status): array {
             $records = [];
 
             foreach ($studentUserIds as $studentUserId) {
@@ -150,11 +167,18 @@ class TutorAssignmentController
                     'student_user_id' => (int) $studentUserId,
                     'start_date' => $fromDate,
                     'end_date' => $toDate,
+                    'status' => $status,
                 ]);
             }
 
             return $records;
         });
+
+        if ($status === TutorAssignment::STATUS_ACTIVE) {
+            foreach ($created as $assignment) {
+                $this->chatService->ensureAssignmentWelcomeConversation($assignment);
+            }
+        }
 
         return TutorAssignmentResource::collection(collect($created))
             ->response()
@@ -168,6 +192,7 @@ class TutorAssignmentController
         'student_user_id' => 5,
         'from_date' => '2026-03-01',
         'to_date' => '2026-03-30',
+        'status' => 'ACTIVE',
         'created_at' => '2026-03-01T00:00:00.000000Z',
         'updated_at' => '2026-03-01T00:00:00.000000Z',
     ]])]
@@ -181,18 +206,21 @@ class TutorAssignmentController
     #[BodyParameter('student_user_id', required: false, example: 7)]
     #[BodyParameter('from_date', required: false, example: '2026-03-05')]
     #[BodyParameter('to_date', required: false, example: '2026-03-31')]
+    #[BodyParameter('status', required: false, example: 'INACTIVE')]
     #[Response(status: 200, examples: [[
         'id' => 1,
         'tutor_user_id' => 2,
         'student_user_id' => 7,
         'from_date' => '2026-03-05',
         'to_date' => '2026-03-31',
+        'status' => 'INACTIVE',
         'created_at' => '2026-03-01T00:00:00.000000Z',
         'updated_at' => '2026-03-02T00:00:00.000000Z',
     ]])]
     public function update(UpdateTutorAssignmentRequest $request, TutorAssignment $tutorAssignment): JsonResponse
     {
         $validated = $request->validated();
+        $previousStatus = $tutorAssignment->status;
 
         $payload = [];
 
@@ -212,9 +240,27 @@ class TutorAssignmentController
             $payload['end_date'] = $validated['to_date'];
         }
 
+        if (array_key_exists('status', $validated)) {
+            $payload['status'] = $validated['status'];
+        } elseif (array_key_exists('from_date', $validated) || array_key_exists('to_date', $validated)) {
+            $payload['status'] = TutorAssignment::resolveStatusForDate(
+                $validated['from_date'] ?? Carbon::parse($tutorAssignment->start_date),
+                $validated['to_date'] ?? Carbon::parse($tutorAssignment->end_date),
+            );
+        }
+
         $tutorAssignment->update($payload);
 
-        return response()->json(new TutorAssignmentResource($tutorAssignment->fresh()));
+        $freshAssignment = $tutorAssignment->fresh();
+
+        if (
+            $freshAssignment->status === TutorAssignment::STATUS_ACTIVE
+            && in_array($previousStatus, [null, TutorAssignment::STATUS_INACTIVE], true)
+        ) {
+            $this->chatService->ensureAssignmentWelcomeConversation($freshAssignment);
+        }
+
+        return response()->json(new TutorAssignmentResource($freshAssignment));
     }
 
     #[Endpoint(title: 'Delete Tutor Assignment')]

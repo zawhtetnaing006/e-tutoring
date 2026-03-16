@@ -36,6 +36,7 @@ class UpdateTutorAssignmentRequest extends FormRequest
             ],
             'from_date' => ['sometimes', 'date'],
             'to_date' => ['sometimes', 'date'],
+            'status' => ['sometimes', 'nullable', 'in:ACTIVE,INACTIVE'],
         ];
     }
 

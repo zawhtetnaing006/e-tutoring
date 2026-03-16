@@ -38,6 +38,7 @@ class StoreTutorAssignmentRequest extends FormRequest
             ],
             'from_date' => ['required', 'date'],
             'to_date' => ['required', 'date', 'after_or_equal:from_date'],
+            'status' => ['nullable', 'in:ACTIVE,INACTIVE'],
         ];
     }
 

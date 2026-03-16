@@ -29,7 +29,7 @@ class MeetingController
             'id' => 1,
             'title' => 'Math Session',
             'description' => 'Weekly tutoring',
-            'type' => 'virtual',
+            'type' => 'VIRTUAL',
             'platform' => 'Google Meet',
             'link' => 'https://meet.example.com/abc',
             'location' => null,
@@ -72,7 +72,7 @@ class MeetingController
     #[Endpoint(title: 'Create Meeting')]
     #[BodyParameter('title', required: true, example: 'Math Session')]
     #[BodyParameter('description', required: false, example: 'Weekly tutoring')]
-    #[BodyParameter('type', required: true, example: 'virtual')]
+    #[BodyParameter('type', required: true, example: 'VIRTUAL')]
     #[BodyParameter('platform', required: false, example: 'Google Meet')]
     #[BodyParameter('link', required: false, example: 'https://meet.example.com/abc')]
     #[BodyParameter('location', required: false, example: null)]
@@ -85,7 +85,7 @@ class MeetingController
         'id' => 1,
         'title' => 'Math Session',
         'description' => 'Weekly tutoring',
-        'type' => 'virtual',
+        'type' => 'VIRTUAL',
         'platform' => 'Google Meet',
         'link' => 'https://meet.example.com/abc',
         'location' => null,
@@ -141,7 +141,7 @@ class MeetingController
         'id' => 1,
         'title' => 'Math Session',
         'description' => 'Weekly tutoring',
-        'type' => 'virtual',
+        'type' => 'VIRTUAL',
         'platform' => 'Google Meet',
         'link' => 'https://meet.example.com/abc',
         'location' => null,
@@ -169,7 +169,7 @@ class MeetingController
     #[Endpoint(title: 'Update Meeting')]
     #[BodyParameter('title', required: false, example: 'Math Session - Updated')]
     #[BodyParameter('description', required: false, example: 'Updated detail')]
-    #[BodyParameter('type', required: false, example: 'physical')]
+    #[BodyParameter('type', required: false, example: 'PHYSICAL')]
     #[BodyParameter('platform', required: false, example: 'Campus Room A')]
     #[BodyParameter('link', required: false, example: null)]
     #[BodyParameter('location', required: false, example: 'Building A, Room 203')]
@@ -177,7 +177,7 @@ class MeetingController
         'id' => 1,
         'title' => 'Math Session - Updated',
         'description' => 'Updated detail',
-        'type' => 'physical',
+        'type' => 'PHYSICAL',
         'platform' => 'Campus Room A',
         'link' => null,
         'location' => 'Building A, Room 203',

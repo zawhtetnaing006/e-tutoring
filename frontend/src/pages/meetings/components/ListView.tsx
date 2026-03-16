@@ -110,12 +110,12 @@ export function ListView({
               <div className="flex items-start gap-4">
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${
-                    meeting.type === 'virtual'
+                    meeting.type === 'VIRTUAL'
                       ? 'bg-blue-500/10 text-blue-600'
                       : 'bg-green-500/10 text-green-600'
                   }`}
                 >
-                  {meeting.type === 'virtual' ? (
+                  {meeting.type === 'VIRTUAL' ? (
                     <Video className="h-6 w-6" />
                   ) : (
                     <MapPin className="h-6 w-6" />
@@ -185,13 +185,13 @@ export function ListView({
                           {nextSchedule.end_time.substring(0, 5)}
                         </span>
                       </div>
-                      {meeting.type === 'virtual' && meeting.platform && (
+                      {meeting.type === 'VIRTUAL' && meeting.platform && (
                         <div className="flex items-center gap-1.5 text-muted-foreground">
                           <Video className="h-4 w-4" />
                           <span>{meeting.platform}</span>
                         </div>
                       )}
-                      {meeting.type === 'physical' && meeting.location && (
+                      {meeting.type === 'PHYSICAL' && meeting.location && (
                         <div className="flex items-center gap-1.5 text-muted-foreground">
                           <MapPin className="h-4 w-4" />
                           <span>{meeting.location}</span>
