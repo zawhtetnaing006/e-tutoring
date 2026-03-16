@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->date('start_date');
             $table->date('end_date');
+            $table->enum('status', ['ACTIVE', 'INACTIVE'])->nullable();
 
             $table->foreignId('tutor_user_id')
                 ->nullable()
@@ -30,6 +31,7 @@ return new class extends Migration
 
             $table->unique(['tutor_user_id', 'student_user_id'], 'tutor_assignment_tutor_student_unique');
             $table->index(['start_date', 'end_date']);
+            $table->index('status');
         });
     }
 

@@ -21,6 +21,7 @@ class TutorAssignmentResource extends JsonResource
             'student_user_id' => $this->resource->student_user_id,
             'from_date' => $this->resource->start_date,
             'to_date' => $this->resource->end_date,
+            'status' => $this->resource->status,
             'created_at' => $this->resource->created_at?->toISOString(),
             'updated_at' => $this->resource->updated_at?->toISOString(),
         ];

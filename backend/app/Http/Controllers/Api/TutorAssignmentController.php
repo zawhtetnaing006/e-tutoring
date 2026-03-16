@@ -35,6 +35,7 @@ class TutorAssignmentController
             'student_user_id' => 5,
             'from_date' => '2026-03-01',
             'to_date' => '2026-03-30',
+            'status' => 'ACTIVE',
             'created_at' => '2026-03-01T00:00:00.000000Z',
             'updated_at' => '2026-03-01T00:00:00.000000Z',
         ]],
@@ -112,6 +113,7 @@ class TutorAssignmentController
     #[BodyParameter('student_user_ids', required: true, example: [5, 9])]
     #[BodyParameter('from_date', required: true, example: '2026-03-01')]
     #[BodyParameter('to_date', required: true, example: '2026-03-30')]
+    #[BodyParameter('status', required: false, example: 'ACTIVE')]
     #[Response(status: 201, examples: [[
         [
             'id' => 1,
@@ -119,6 +121,7 @@ class TutorAssignmentController
             'student_user_id' => 5,
             'from_date' => '2026-03-01',
             'to_date' => '2026-03-30',
+            'status' => 'ACTIVE',
             'created_at' => '2026-03-01T00:00:00.000000Z',
             'updated_at' => '2026-03-01T00:00:00.000000Z',
         ],
@@ -128,6 +131,7 @@ class TutorAssignmentController
             'student_user_id' => 9,
             'from_date' => '2026-03-01',
             'to_date' => '2026-03-30',
+            'status' => 'ACTIVE',
             'created_at' => '2026-03-01T00:00:00.000000Z',
             'updated_at' => '2026-03-01T00:00:00.000000Z',
         ],
@@ -140,8 +144,21 @@ class TutorAssignmentController
         $studentUserIds = $validated['student_user_ids'];
         $fromDate = (string) $validated['from_date'];
         $toDate = (string) $validated['to_date'];
+        $status = $validated['status'] ?? null;
 
-        $created = DB::transaction(function () use ($tutorUserId, $studentUserIds, $fromDate, $toDate): array {
+        // If no status is provided, determine based on start_date
+        if ($status === null) {
+            $today = now()->startOfDay();
+            $startDate = \Carbon\Carbon::parse($fromDate)->startOfDay();
+
+            if ($today->greaterThanOrEqualTo($startDate)) {
+                $status = 'ACTIVE';
+            } else {
+                $status = 'INACTIVE';
+            }
+        }
+
+        $created = DB::transaction(function () use ($tutorUserId, $studentUserIds, $fromDate, $toDate, $status): array {
             $records = [];
 
             foreach ($studentUserIds as $studentUserId) {
@@ -150,6 +167,7 @@ class TutorAssignmentController
                     'student_user_id' => (int) $studentUserId,
                     'start_date' => $fromDate,
                     'end_date' => $toDate,
+                    'status' => $status,
                 ]);
             }
 
@@ -168,6 +186,7 @@ class TutorAssignmentController
         'student_user_id' => 5,
         'from_date' => '2026-03-01',
         'to_date' => '2026-03-30',
+        'status' => 'ACTIVE',
         'created_at' => '2026-03-01T00:00:00.000000Z',
         'updated_at' => '2026-03-01T00:00:00.000000Z',
     ]])]
@@ -181,12 +200,14 @@ class TutorAssignmentController
     #[BodyParameter('student_user_id', required: false, example: 7)]
     #[BodyParameter('from_date', required: false, example: '2026-03-05')]
     #[BodyParameter('to_date', required: false, example: '2026-03-31')]
+    #[BodyParameter('status', required: false, example: 'INACTIVE')]
     #[Response(status: 200, examples: [[
         'id' => 1,
         'tutor_user_id' => 2,
         'student_user_id' => 7,
         'from_date' => '2026-03-05',
         'to_date' => '2026-03-31',
+        'status' => 'INACTIVE',
         'created_at' => '2026-03-01T00:00:00.000000Z',
         'updated_at' => '2026-03-02T00:00:00.000000Z',
     ]])]
@@ -210,6 +231,10 @@ class TutorAssignmentController
 
         if (array_key_exists('to_date', $validated)) {
             $payload['end_date'] = $validated['to_date'];
+        }
+
+        if (array_key_exists('status', $validated)) {
+            $payload['status'] = $validated['status'];
         }
 
         $tutorAssignment->update($payload);

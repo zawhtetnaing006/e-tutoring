@@ -20,6 +20,7 @@ class TutorAssignment extends Model
         'student_user_id',
         'start_date',
         'end_date',
+        'status',
     ];
 
     public function tutor(): BelongsTo
