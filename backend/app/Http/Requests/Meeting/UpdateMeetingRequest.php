@@ -21,7 +21,7 @@ class UpdateMeetingRequest extends FormRequest
         return [
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
-            'type' => ['sometimes', Rule::in(['virtual', 'physical'])],
+            'type' => ['sometimes', Rule::in(['VIRTUAL', 'PHYSICAL'])],
             'platform' => ['sometimes', 'nullable', 'string', 'max:255'],
             'link' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'location' => ['sometimes', 'nullable', 'string'],
@@ -36,20 +36,20 @@ class UpdateMeetingRequest extends FormRequest
             $link = $this->input('link', $meeting?->link);
             $location = $this->input('location', $meeting?->location);
 
-            if ($type === 'virtual' && (! is_string($link) || trim($link) === '')) {
-                $validator->errors()->add('link', 'The link field is required when type is virtual.');
+            if ($type === 'VIRTUAL' && (! is_string($link) || trim($link) === '')) {
+                $validator->errors()->add('link', 'The link field is required when type is VIRTUAL.');
             }
 
-            if ($type === 'physical' && $link !== null && trim((string) $link) !== '') {
-                $validator->errors()->add('link', 'The link must be null/empty when type is physical.');
+            if ($type === 'PHYSICAL' && $link !== null && trim((string) $link) !== '') {
+                $validator->errors()->add('link', 'The link must be null/empty when type is PHYSICAL.');
             }
 
-            if ($type === 'physical' && (! is_string($location) || trim($location) === '')) {
-                $validator->errors()->add('location', 'The location field is required when type is physical.');
+            if ($type === 'PHYSICAL' && (! is_string($location) || trim($location) === '')) {
+                $validator->errors()->add('location', 'The location field is required when type is PHYSICAL.');
             }
 
-            if ($type === 'virtual' && $location !== null && trim((string) $location) !== '') {
-                $validator->errors()->add('location', 'The location must be null/empty when type is virtual.');
+            if ($type === 'VIRTUAL' && $location !== null && trim((string) $location) !== '') {
+                $validator->errors()->add('location', 'The location must be null/empty when type is VIRTUAL.');
             }
         });
     }

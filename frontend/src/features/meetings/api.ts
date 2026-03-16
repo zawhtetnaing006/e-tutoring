@@ -17,7 +17,7 @@ export type Meeting = {
   id: number
   title: string
   description: string | null
-  type: 'virtual' | 'physical'
+  type: 'VIRTUAL' | 'PHYSICAL'
   platform: string | null
   link: string | null
   location: string | null
@@ -48,7 +48,7 @@ export type CreateMeetingScheduleInput = {
 export type CreateMeetingPayload = {
   title: string
   description?: string | null
-  type: 'virtual' | 'physical'
+  type: 'VIRTUAL' | 'PHYSICAL'
   platform?: string | null
   link?: string | null
   location?: string | null
@@ -59,7 +59,7 @@ export type CreateMeetingPayload = {
 export type UpdateMeetingPayload = {
   title?: string
   description?: string | null
-  type?: 'virtual' | 'physical'
+  type?: 'VIRTUAL' | 'PHYSICAL'
   platform?: string | null
   link?: string | null
   location?: string | null
@@ -75,7 +75,7 @@ export type UpdateMeetingSchedulePayload = {
 export type CreateMeetingAttendancePayload = {
   meeting_id: number
   user_id: number
-  status: 'presence' | 'absence' | 'onleave'
+  status: 'PRESENCE' | 'ABSENCE' | 'ON_LEAVE'
 }
 
 function getToken() {

@@ -30,7 +30,7 @@ export function CreateMeetingModal({
 }: CreateMeetingModalProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [type, setType] = useState<'virtual' | 'physical'>('physical')
+  const [type, setType] = useState<'VIRTUAL' | 'PHYSICAL'>('PHYSICAL')
   const [platform, setPlatform] = useState('')
   const [link, setLink] = useState('')
   const [location, setLocation] = useState('')
@@ -147,9 +147,9 @@ export function CreateMeetingModal({
       title: title.trim(),
       description: description.trim() || null,
       type,
-      platform: type === 'virtual' ? platform.trim() || null : null,
-      link: type === 'virtual' ? link.trim() || null : null,
-      location: type === 'physical' ? location.trim() || null : null,
+      platform: type === 'VIRTUAL' ? platform.trim() || null : null,
+      link: type === 'VIRTUAL' ? link.trim() || null : null,
+      location: type === 'PHYSICAL' ? location.trim() || null : null,
       tutor_assignment_id: tutorAssignmentId,
       meeting_schedules: meetingSchedules,
     }
@@ -288,38 +288,38 @@ export function CreateMeetingModal({
               >
                 <button
                   type="button"
-                  onClick={() => setType('virtual')}
+                  onClick={() => setType('VIRTUAL')}
                   className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                    type === 'virtual'
+                    type === 'VIRTUAL'
                       ? 'border-primary bg-primary/5'
                       : 'border-border bg-background hover:bg-muted'
                   }`}
-                  aria-pressed={type === 'virtual'}
+                  aria-pressed={type === 'VIRTUAL'}
                 >
                   <Video
-                    className={`h-6 w-6 ${type === 'virtual' ? 'text-primary' : 'text-muted-foreground'}`}
+                    className={`h-6 w-6 ${type === 'VIRTUAL' ? 'text-primary' : 'text-muted-foreground'}`}
                   />
                   <span
-                    className={`text-sm font-medium ${type === 'virtual' ? 'text-primary' : 'text-foreground'}`}
+                    className={`text-sm font-medium ${type === 'VIRTUAL' ? 'text-primary' : 'text-foreground'}`}
                   >
                     Virtual Meeting
                   </span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setType('physical')}
+                  onClick={() => setType('PHYSICAL')}
                   className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                    type === 'physical'
+                    type === 'PHYSICAL'
                       ? 'border-primary bg-primary/5'
                       : 'border-border bg-background hover:bg-muted'
                   }`}
-                  aria-pressed={type === 'physical'}
+                  aria-pressed={type === 'PHYSICAL'}
                 >
                   <MapPin
-                    className={`h-6 w-6 ${type === 'physical' ? 'text-primary' : 'text-muted-foreground'}`}
+                    className={`h-6 w-6 ${type === 'PHYSICAL' ? 'text-primary' : 'text-muted-foreground'}`}
                   />
                   <span
-                    className={`text-sm font-medium ${type === 'physical' ? 'text-primary' : 'text-foreground'}`}
+                    className={`text-sm font-medium ${type === 'PHYSICAL' ? 'text-primary' : 'text-foreground'}`}
                   >
                     Physical Meeting
                   </span>
@@ -327,7 +327,7 @@ export function CreateMeetingModal({
               </div>
             </div>
 
-            {type === 'virtual' && (
+            {type === 'VIRTUAL' && (
               <>
                 <div>
                   <label
@@ -372,7 +372,7 @@ export function CreateMeetingModal({
               </>
             )}
 
-            {type === 'physical' && (
+            {type === 'PHYSICAL' && (
               <div>
                 <label
                   htmlFor="meeting-location"

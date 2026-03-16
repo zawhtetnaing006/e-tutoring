@@ -17,12 +17,12 @@ class MeetingAttendanceController
     #[Endpoint(title: 'Create Meeting Attendance')]
     #[BodyParameter('meeting_id', required: true, example: 1)]
     #[BodyParameter('user_id', required: true, example: 5)]
-    #[BodyParameter('status', required: true, example: 'presence')]
+    #[BodyParameter('status', required: true, example: 'PRESENCE')]
     #[Response(status: 201, examples: [[
         'id' => 1,
         'meeting_id' => 1,
         'user_id' => 5,
-        'status' => 'presence',
+        'status' => 'PRESENCE',
         'created_at' => '2026-03-03T00:00:00.000000Z',
         'updated_at' => '2026-03-03T00:00:00.000000Z',
     ]])]

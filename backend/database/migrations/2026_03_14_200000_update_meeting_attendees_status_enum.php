@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         // For MySQL, we need to alter the enum column
-        DB::statement("ALTER TABLE meeting_attendees MODIFY COLUMN status ENUM('presence', 'absence', 'onleave') NOT NULL");
+        DB::statement("ALTER TABLE meeting_attendees MODIFY COLUMN status ENUM('PRESENCE', 'ABSENCE', 'ON_LEAVE') NOT NULL");
     }
 
     /**
@@ -21,6 +21,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE meeting_attendees MODIFY COLUMN status ENUM('presence', 'onleave') NOT NULL");
+        DB::statement("ALTER TABLE meeting_attendees MODIFY COLUMN status ENUM('PRESENCE', 'ON_LEAVE') NOT NULL");
     }
 };
