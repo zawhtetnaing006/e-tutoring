@@ -45,6 +45,27 @@ services:
       - app
     restart: unless-stopped
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+      args:
+        APP_DIR: backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend/.env.prod:/var/www/.env:ro
+      - app_storage:/var/www/storage
+      - app_bootstrap_cache:/var/www/bootstrap/cache
+    command: ["php", "artisan", "schedule:work"]
+    networks:
+      - app
+    restart: unless-stopped
+
   mysql:
     image: mysql:8.0
     command: --default-authentication-plugin=mysql_native_password

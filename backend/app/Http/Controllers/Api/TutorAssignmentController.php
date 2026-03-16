@@ -14,6 +14,7 @@ use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -146,16 +147,9 @@ class TutorAssignmentController
         $toDate = (string) $validated['to_date'];
         $status = $validated['status'] ?? null;
 
-        // If no status is provided, determine based on start_date
+        // If no status is provided, determine it from the current date window.
         if ($status === null) {
-            $today = now()->startOfDay();
-            $startDate = \Carbon\Carbon::parse($fromDate)->startOfDay();
-
-            if ($today->greaterThanOrEqualTo($startDate)) {
-                $status = 'ACTIVE';
-            } else {
-                $status = 'INACTIVE';
-            }
+            $status = TutorAssignment::resolveStatusForDate($fromDate, $toDate);
         }
 
         $created = DB::transaction(function () use ($tutorUserId, $studentUserIds, $fromDate, $toDate, $status): array {
@@ -235,6 +229,11 @@ class TutorAssignmentController
 
         if (array_key_exists('status', $validated)) {
             $payload['status'] = $validated['status'];
+        } elseif (array_key_exists('from_date', $validated) || array_key_exists('to_date', $validated)) {
+            $payload['status'] = TutorAssignment::resolveStatusForDate(
+                $validated['from_date'] ?? Carbon::parse($tutorAssignment->start_date),
+                $validated['to_date'] ?? Carbon::parse($tutorAssignment->end_date),
+            );
         }
 
         $tutorAssignment->update($payload);
