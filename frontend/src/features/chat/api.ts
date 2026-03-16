@@ -11,7 +11,7 @@ export type ChatUser = {
 export type ChatMessage = {
   id: number
   conversation_id: number
-  sender_id: number
+  sender_id: number | null
   sender_name: string
   content: string
   created_at: string

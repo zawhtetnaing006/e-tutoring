@@ -27,6 +27,8 @@ class ChatService
 
     public const MAX_PER_PAGE = 100;
 
+    public const DEFAULT_ASSIGNMENT_WELCOME_MESSAGE = 'Welcome! This conversation has been created for your tutor assignment. Feel free to introduce yourselves and plan your first session.';
+
     public function sanitizePerPage(int $perPage): int
     {
         return max(1, min(self::MAX_PER_PAGE, $perPage));
@@ -81,36 +83,45 @@ class ChatService
     {
         $this->ensureCanStartConversation($user, $target);
 
-        $pairKey = $this->buildDirectPairKey((int) $user->id, (int) $target->id);
-        $existingConversation = Conversation::query()
-            ->where('direct_pair_key', $pairKey)
-            ->first();
+        return $this->createOrGetDirectConversation($user, $target, $user);
+    }
 
-        if ($existingConversation instanceof Conversation) {
-            $this->ensureDirectConversationMembers($existingConversation, $user, $target);
+    public function createOrGetDirectConversation(
+        User $firstUser,
+        User $secondUser,
+        ?User $creator = null
+    ): Conversation {
+        return $this->createOrGetDirectConversationByIds(
+            (int) $firstUser->id,
+            (int) $secondUser->id,
+            $creator?->id ?? $firstUser->id,
+        );
+    }
 
-            return $existingConversation->load([
-                'members.user.role:id,code,name',
-                'latestMessage.sender:id,name',
-            ]);
+    public function ensureAssignmentWelcomeConversation(TutorAssignment $assignment): bool
+    {
+        $assignment->loadMissing([
+            'tutor:id',
+            'student:id',
+        ]);
+
+        if (! $assignment->tutor instanceof User || ! $assignment->student instanceof User) {
+            return false;
         }
 
-        return DB::transaction(function () use ($pairKey, $target, $user): Conversation {
-            $conversation = Conversation::query()->create([
-                'created_by_user_id' => $user->id,
-                'direct_pair_key' => $pairKey,
-            ]);
+        $conversation = $this->createOrGetDirectConversation(
+            $assignment->tutor,
+            $assignment->student,
+            $assignment->tutor,
+        );
 
-            $conversation->members()->createMany([
-                ['user_id' => $user->id],
-                ['user_id' => $target->id],
-            ]);
+        if ($conversation->messages()->exists()) {
+            return false;
+        }
 
-            return $conversation->load([
-                'members.user.role:id,code,name',
-                'latestMessage.sender:id,name',
-            ]);
-        });
+        $this->sendSystemMessage($conversation, self::DEFAULT_ASSIGNMENT_WELCOME_MESSAGE);
+
+        return true;
     }
 
     public function listMessages(User $user, Conversation $conversation, int $perPage): LengthAwarePaginator
@@ -141,6 +152,23 @@ class ChatService
         ]);
 
         $message->loadMissing('sender:id,name');
+
+        MessageSent::dispatch($message);
+
+        return $message;
+    }
+
+    public function sendSystemMessage(Conversation $conversation, string $content): Message
+    {
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'sender_user_id' => null,
+            'content' => $content,
+        ]);
+
+        $conversation->update([
+            'last_message_at' => $message->created_at,
+        ]);
 
         MessageSent::dispatch($message);
 
@@ -348,13 +376,25 @@ class ChatService
 
     private function ensureDirectConversationMembers(Conversation $conversation, User $user, User $target): void
     {
+        $this->ensureDirectConversationMembersByIds(
+            $conversation,
+            (int) $user->id,
+            (int) $target->id,
+        );
+    }
+
+    private function ensureDirectConversationMembersByIds(
+        Conversation $conversation,
+        int $firstUserId,
+        int $secondUserId
+    ): void {
         ConversationMember::query()->firstOrCreate([
             'conversation_id' => $conversation->id,
-            'user_id' => $user->id,
+            'user_id' => $firstUserId,
         ]);
         ConversationMember::query()->firstOrCreate([
             'conversation_id' => $conversation->id,
-            'user_id' => $target->id,
+            'user_id' => $secondUserId,
         ]);
     }
 
@@ -388,5 +428,46 @@ class ChatService
         sort($orderedIds, SORT_NUMERIC);
 
         return sprintf('%d:%d', $orderedIds[0], $orderedIds[1]);
+    }
+
+    private function createOrGetDirectConversationByIds(
+        int $firstUserId,
+        int $secondUserId,
+        int $creatorUserId
+    ): Conversation {
+        $pairKey = $this->buildDirectPairKey($firstUserId, $secondUserId);
+        $existingConversation = Conversation::query()
+            ->where('direct_pair_key', $pairKey)
+            ->first();
+
+        if ($existingConversation instanceof Conversation) {
+            $this->ensureDirectConversationMembersByIds(
+                $existingConversation,
+                $firstUserId,
+                $secondUserId,
+            );
+
+            return $existingConversation->load([
+                'members.user.role:id,code,name',
+                'latestMessage.sender:id,name',
+            ]);
+        }
+
+        return DB::transaction(function () use ($creatorUserId, $firstUserId, $pairKey, $secondUserId): Conversation {
+            $conversation = Conversation::query()->create([
+                'created_by_user_id' => $creatorUserId,
+                'direct_pair_key' => $pairKey,
+            ]);
+
+            $conversation->members()->createMany([
+                ['user_id' => $firstUserId],
+                ['user_id' => $secondUserId],
+            ]);
+
+            return $conversation->load([
+                'members.user.role:id,code,name',
+                'latestMessage.sender:id,name',
+            ]);
+        });
     }
 }

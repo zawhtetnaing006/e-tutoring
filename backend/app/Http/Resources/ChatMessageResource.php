@@ -16,7 +16,7 @@ class ChatMessageResource extends JsonResource
             'id' => $this->resource->id,
             'conversation_id' => $this->resource->conversation_id,
             'sender_id' => $this->resource->sender_user_id,
-            'sender_name' => (string) ($this->resource->sender?->name ?? ''),
+            'sender_name' => (string) ($this->resource->sender?->name ?? 'System'),
             'content' => $this->resource->content,
             'created_at' => $this->resource->created_at?->toISOString(),
             'updated_at' => $this->resource->updated_at?->toISOString(),

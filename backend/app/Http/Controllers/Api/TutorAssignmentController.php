@@ -8,6 +8,7 @@ use App\Http\Resources\TutorAssignmentResource;
 use App\Models\TutorAssignment;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\ChatService;
 use App\Traits\FormatsListingResponse;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
@@ -23,6 +24,11 @@ use Illuminate\Support\Facades\DB;
 class TutorAssignmentController
 {
     use FormatsListingResponse;
+
+    public function __construct(
+        private readonly ChatService $chatService,
+    ) {
+    }
 
     #[Endpoint(title: 'List Tutor Assignments')]
     #[QueryParameter('only_mine', required: false, example: true)]
@@ -168,6 +174,12 @@ class TutorAssignmentController
             return $records;
         });
 
+        if ($status === TutorAssignment::STATUS_ACTIVE) {
+            foreach ($created as $assignment) {
+                $this->chatService->ensureAssignmentWelcomeConversation($assignment);
+            }
+        }
+
         return TutorAssignmentResource::collection(collect($created))
             ->response()
             ->setStatusCode(201);
@@ -208,6 +220,7 @@ class TutorAssignmentController
     public function update(UpdateTutorAssignmentRequest $request, TutorAssignment $tutorAssignment): JsonResponse
     {
         $validated = $request->validated();
+        $previousStatus = $tutorAssignment->status;
 
         $payload = [];
 
@@ -238,7 +251,16 @@ class TutorAssignmentController
 
         $tutorAssignment->update($payload);
 
-        return response()->json(new TutorAssignmentResource($tutorAssignment->fresh()));
+        $freshAssignment = $tutorAssignment->fresh();
+
+        if (
+            $freshAssignment->status === TutorAssignment::STATUS_ACTIVE
+            && in_array($previousStatus, [null, TutorAssignment::STATUS_INACTIVE], true)
+        ) {
+            $this->chatService->ensureAssignmentWelcomeConversation($freshAssignment);
+        }
+
+        return response()->json(new TutorAssignmentResource($freshAssignment));
     }
 
     #[Endpoint(title: 'Delete Tutor Assignment')]
