@@ -6,6 +6,8 @@ use App\Http\Requests\Meeting\StoreMeetingRequest;
 use App\Http\Requests\Meeting\UpdateMeetingRequest;
 use App\Http\Resources\MeetingResource;
 use App\Models\Meeting;
+use App\Models\User;
+use App\Notifications\NewScheduleAssigned;
 use App\Traits\FormatsListingResponse;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
@@ -130,8 +132,22 @@ class MeetingController
             return $meeting;
         });
 
+        $meeting->load([
+            'schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time'),
+            'tutorAssignment.tutor',
+            'tutorAssignment.student',
+        ]);
+
+        collect([
+            $meeting->tutorAssignment?->tutor,
+            $meeting->tutorAssignment?->student,
+        ])
+            ->filter()
+            ->unique(fn (User $recipient): int => (int) $recipient->id)
+            ->each(fn (User $recipient) => $recipient->notify(new NewScheduleAssigned($meeting)));
+
         return response()->json(
-            new MeetingResource($meeting->load(['schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time')])),
+            new MeetingResource($meeting),
             201
         );
     }
