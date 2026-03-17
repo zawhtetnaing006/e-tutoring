@@ -14,6 +14,7 @@ use App\Models\Message;
 use App\Models\Role;
 use App\Models\TutorAssignment;
 use App\Models\User;
+use App\Notifications\NewMessage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -152,6 +153,7 @@ class ChatService
         ]);
 
         $message->loadMissing('sender:id,name');
+        $this->notifyConversationRecipients($conversation, $user, $message);
 
         MessageSent::dispatch($message);
 
@@ -420,6 +422,17 @@ class ChatService
         }
 
         return $member;
+    }
+
+    private function notifyConversationRecipients(Conversation $conversation, User $sender, Message $message): void
+    {
+        User::query()
+            ->whereHas('conversationMembers', function (Builder $query) use ($conversation): void {
+                $query->where('conversation_id', $conversation->id);
+            })
+            ->whereKeyNot($sender->id)
+            ->get()
+            ->each(fn(User $recipient) => $recipient->notify(new NewMessage($message)));
     }
 
     private function buildDirectPairKey(int $firstUserId, int $secondUserId): string

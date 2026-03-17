@@ -4,6 +4,7 @@ import {
   useQueryClient,
   type InfiniteData,
 } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import type {
@@ -187,9 +188,20 @@ function updateConversationSeenState(
   }
 }
 
+function parseConversationParam(value: string | null): number | null {
+  if (value == null) {
+    return null
+  }
+
+  const parsed = Number(value)
+
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
 export function CommunicationHubPage() {
   const queryClient = useQueryClient()
   const { data: currentUser } = useCurrentUser()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [draft, setDraft] = useState('')
   const [commentDraft, setCommentDraft] = useState('')
@@ -203,6 +215,9 @@ export function CommunicationHubPage() {
   const [optimisticConversation, setOptimisticConversation] =
     useState<ChatConversation | null>(null)
   const debouncedSearch = useDebouncedValue(search.trim(), 350)
+  const requestedConversationId = parseConversationParam(
+    searchParams.get('conversation')
+  )
 
   const conversationListRef = useRef<HTMLDivElement | null>(null)
   const messagesListRef = useRef<HTMLDivElement | null>(null)
@@ -241,6 +256,42 @@ export function CommunicationHubPage() {
       })()
     )
   }, [conversations, currentUser?.id, search])
+
+  useEffect(() => {
+    if (requestedConversationId == null) {
+      return
+    }
+
+    const hasRequestedConversation =
+      conversations.some(conversation => conversation.id === requestedConversationId) ||
+      optimisticConversation?.id === requestedConversationId
+
+    if (!hasRequestedConversation) {
+      if (hasNextConversationPage && !isFetchingNextConversationPage) {
+        void fetchNextConversationsPage()
+      }
+
+      return
+    }
+
+    if (selectedConversationId === requestedConversationId) {
+      return
+    }
+
+    setSelectedConversationId(requestedConversationId)
+    setSearch('')
+    setSelectedDocumentId(null)
+    setCommentDraft('')
+    setActiveTab('chat')
+  }, [
+    conversations,
+    fetchNextConversationsPage,
+    hasNextConversationPage,
+    isFetchingNextConversationPage,
+    optimisticConversation?.id,
+    requestedConversationId,
+    selectedConversationId,
+  ])
 
   const optimisticConversationId =
     optimisticConversation &&
@@ -508,6 +559,7 @@ export function CommunicationHubPage() {
     onSuccess: conversation => {
       setOptimisticConversation(conversation)
       setSelectedConversationId(conversation.id)
+      setSearchParams({ conversation: String(conversation.id) }, { replace: true })
       setSearch('')
       setSelectedDocumentId(null)
       setCommentDraft('')
@@ -646,6 +698,7 @@ export function CommunicationHubPage() {
 
   const handleSelectConversation = (conversationId: number) => {
     setSelectedConversationId(conversationId)
+    setSearchParams({ conversation: String(conversationId) }, { replace: true })
     setSearch('')
     setSelectedDocumentId(null)
     setCommentDraft('')

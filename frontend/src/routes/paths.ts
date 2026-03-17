@@ -7,6 +7,8 @@ export const paths = {
   },
   dashboard: '/',
   allocations: '/allocations',
+  communicationHub: '/communication-hub',
+  notifications: '/notifications',
 } as const
 
 export type PathKey = keyof typeof paths

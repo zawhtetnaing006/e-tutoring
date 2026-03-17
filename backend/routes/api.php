@@ -144,12 +144,7 @@ Route::middleware('auth:sanctum')
     ->controller(NotificationController::class)
     ->group(function () {
         Route::get('/', 'index');
-    });
-
-// Backward compatibility for older clients.
-Route::middleware('auth:sanctum')
-    ->prefix('notis')
-    ->controller(NotificationController::class)
-    ->group(function () {
-        Route::get('/', 'index');
+        Route::get('unread-count', 'unreadCount');
+        Route::post('read-all', 'markAllAsRead');
+        Route::post('{notificationId}/read', 'markAsRead');
     });

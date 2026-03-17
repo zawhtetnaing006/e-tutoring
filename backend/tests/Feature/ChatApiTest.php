@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Events\MessageSent;
 use App\Events\MessageSeen;
 use App\Models\Conversation;
 use App\Models\ConversationMember;
@@ -12,6 +13,7 @@ use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Notifications\Events\BroadcastNotificationCreated;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -177,6 +179,38 @@ class ChatApiTest extends TestCase
                 'conversation_id' => $conversation->id,
                 'comment' => 'Please update the exercise notes.',
             ]);
+    }
+
+    public function test_sending_message_creates_new_message_notification_for_other_member(): void
+    {
+        [$tutor, $student] = $this->createTutorStudentPair();
+        $conversation = $this->createConversation($tutor, $student);
+
+        Event::fake([BroadcastNotificationCreated::class, MessageSent::class]);
+        Sanctum::actingAs($student);
+
+        $response = $this->postJson('/api/chat/' . $conversation->id . '/messages', [
+            'content' => 'Hello tutor, are you free tomorrow?',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment([
+                'conversation_id' => $conversation->id,
+                'sender_id' => $student->id,
+            ]);
+
+        $this->assertDatabaseCount('notifications', 1);
+
+        $notification = $tutor->fresh()->notifications()->firstOrFail();
+
+        $this->assertSame(\App\Notifications\NewMessage::class, $notification->type);
+        $this->assertSame('New Message', $notification->data['title'] ?? null);
+        $this->assertSame($conversation->id, $notification->data['conversation_id'] ?? null);
+        $this->assertSame($student->name . ' sent you a message.', $notification->data['body'] ?? null);
+        $this->assertSame(0, $student->fresh()->notifications()->count());
+
+        Event::assertDispatched(BroadcastNotificationCreated::class);
     }
 
     /**

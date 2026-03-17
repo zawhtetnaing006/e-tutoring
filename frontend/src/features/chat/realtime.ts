@@ -58,12 +58,12 @@ function createEcho(token: string) {
   })
 }
 
-export function getChatEcho() {
+export function getRealtimeEcho() {
   if (typeof window === 'undefined') return null
 
   const session = getAuthSession()
   if (!session?.token) {
-    disconnectChatEcho()
+    disconnectRealtimeEcho()
     return null
   }
 
@@ -71,14 +71,14 @@ export function getChatEcho() {
     return echoInstance
   }
 
-  disconnectChatEcho()
+  disconnectRealtimeEcho()
   echoToken = session.token
   echoInstance = createEcho(session.token)
 
   return echoInstance
 }
 
-export function disconnectChatEcho() {
+export function disconnectRealtimeEcho() {
   if (echoInstance) {
     echoInstance.disconnect()
   }
@@ -86,3 +86,6 @@ export function disconnectChatEcho() {
   echoInstance = null
   echoToken = null
 }
+
+export const getChatEcho = getRealtimeEcho
+export const disconnectChatEcho = disconnectRealtimeEcho

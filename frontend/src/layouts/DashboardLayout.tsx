@@ -2,6 +2,7 @@ import { Link, Outlet } from 'react-router-dom'
 import { paths } from '@/routes/index'
 import { getSidebarNavigation } from '@/static_data/navigation'
 import { useRole } from '@/features/auth/useRole'
+import { useNotificationsRealtime } from '@/features/notifications/useNotificationsRealtime'
 import { PanelRightOpen } from 'lucide-react'
 import { SidebarUserSection } from '@/components/dashboard/SidebarUserSection'
 
@@ -11,6 +12,8 @@ import { SidebarUserSection } from '@/components/dashboard/SidebarUserSection'
 export function DashboardLayout() {
   const role = useRole()
   const sections = getSidebarNavigation(role)
+
+  useNotificationsRealtime()
 
   return (
     <div className="flex min-h-screen bg-background font-sans">
