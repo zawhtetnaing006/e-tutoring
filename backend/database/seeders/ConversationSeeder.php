@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Conversation;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -13,69 +14,72 @@ class ConversationSeeder extends Seeder
      */
     public function run(): void
     {
-        $conversationPairs = [
-            [
-                'first_user_email' => UserSeeder::LINKED_TUTOR_EMAIL,
-                'second_user_email' => UserSeeder::LINKED_STUDENT_EMAIL,
-                'creator_email' => UserSeeder::LINKED_TUTOR_EMAIL,
-            ],
-            [
-                'first_user_email' => UserSeeder::LINKED_STAFF_EMAIL,
-                'second_user_email' => UserSeeder::LINKED_TUTOR_EMAIL,
-                'creator_email' => UserSeeder::LINKED_STAFF_EMAIL,
-            ],
-            [
-                'first_user_email' => 'alicia.morgan@greenwich.ac.uk',
-                'second_user_email' => 'ava.collins@greenwich.ac.uk',
-                'creator_email' => 'alicia.morgan@greenwich.ac.uk',
-            ],
-            [
-                'first_user_email' => 'daniel.hsu@greenwich.ac.uk',
-                'second_user_email' => 'benjamin.scott@greenwich.ac.uk',
-                'creator_email' => 'daniel.hsu@greenwich.ac.uk',
-            ],
-            [
-                'first_user_email' => 'mei.chen@greenwich.ac.uk',
-                'second_user_email' => 'ethan.parker@greenwich.ac.uk',
-                'creator_email' => 'ethan.parker@greenwich.ac.uk',
-            ],
-            [
-                'first_user_email' => 'priya.nair@greenwich.ac.uk',
-                'second_user_email' => 'fatima.ali@greenwich.ac.uk',
-                'creator_email' => 'priya.nair@greenwich.ac.uk',
-            ],
-            [
-                'first_user_email' => UserSeeder::LINKED_STAFF_EMAIL,
-                'second_user_email' => 'alicia.morgan@greenwich.ac.uk',
-                'creator_email' => UserSeeder::LINKED_STAFF_EMAIL,
-            ],
-        ];
+        $staffUsers = User::query()
+            ->whereHas('role', fn ($query) => $query->where('code', Role::STAFF))
+            ->orderBy('id')
+            ->get()
+            ->values();
 
-        $usersByEmail = User::whereIn(
-            'email',
-            collect($conversationPairs)
-                ->flatMap(fn (array $pair): array => [
-                    $pair['first_user_email'],
-                    $pair['second_user_email'],
-                    $pair['creator_email'],
-                ])
-                ->unique()
-                ->values()
-                ->all()
-        )->get()->keyBy('email');
+        $tutorUsers = User::query()
+            ->whereHas('role', fn ($query) => $query->where('code', Role::TUTOR))
+            ->orderBy('id')
+            ->get()
+            ->values();
 
-        foreach ($conversationPairs as $pair) {
-            $firstUser = $usersByEmail[$pair['first_user_email']] ?? null;
-            $secondUser = $usersByEmail[$pair['second_user_email']] ?? null;
-            $creator = $usersByEmail[$pair['creator_email']] ?? null;
+        $studentUsers = User::query()
+            ->whereHas('role', fn ($query) => $query->where('code', Role::STUDENT))
+            ->orderBy('id')
+            ->get()
+            ->values();
 
-            if (
-                $firstUser instanceof User
-                && $secondUser instanceof User
-                && $creator instanceof User
-            ) {
-                $this->seedDirectConversation($firstUser, $secondUser, $creator);
-            }
+        $pairs = [];
+        $seenPairKeys = [];
+
+        $fixedStaff = $staffUsers->firstWhere('email', UserSeeder::STAFF_EMAIL);
+        $fixedTutor = $tutorUsers->firstWhere('email', UserSeeder::TUTOR_EMAIL);
+        $fixedStudent = $studentUsers->firstWhere('email', UserSeeder::STUDENT_EMAIL);
+
+        $this->addConversationPair($pairs, $seenPairKeys, $fixedTutor, $fixedStudent, $fixedTutor);
+        $this->addConversationPair($pairs, $seenPairKeys, $fixedStaff, $fixedTutor, $fixedStaff);
+
+        $otherTutors = $tutorUsers
+            ->reject(fn (User $user): bool => $user->email === UserSeeder::TUTOR_EMAIL)
+            ->values();
+
+        $otherStudents = $studentUsers
+            ->reject(fn (User $user): bool => $user->email === UserSeeder::STUDENT_EMAIL)
+            ->values();
+
+        $otherStaff = $staffUsers
+            ->reject(fn (User $user): bool => $user->email === UserSeeder::STAFF_EMAIL)
+            ->values();
+
+        $extraTutorStudentCount = min(4, $otherTutors->count(), $otherStudents->count());
+
+        for ($index = 0; $index < $extraTutorStudentCount; $index++) {
+            $this->addConversationPair(
+                $pairs,
+                $seenPairKeys,
+                $otherTutors[$index],
+                $otherStudents[$index],
+                $otherTutors[$index]
+            );
+        }
+
+        $extraStaffTutorCount = min(2, $otherStaff->count(), $tutorUsers->count());
+
+        for ($index = 0; $index < $extraStaffTutorCount; $index++) {
+            $this->addConversationPair(
+                $pairs,
+                $seenPairKeys,
+                $otherStaff[$index],
+                $tutorUsers[$index % $tutorUsers->count()],
+                $otherStaff[$index]
+            );
+        }
+
+        foreach ($pairs as [$firstUser, $secondUser, $creator]) {
+            $this->seedDirectConversation($firstUser, $secondUser, $creator);
         }
     }
 
@@ -95,6 +99,31 @@ class ConversationSeeder extends Seeder
         $conversation->members()->create([
             'user_id' => $secondUser->id,
         ]);
+    }
+
+    /**
+     * @param  array<int, array{0: User, 1: User, 2: User}>  $pairs
+     * @param  array<string, bool>  $seenPairKeys
+     */
+    private function addConversationPair(
+        array &$pairs,
+        array &$seenPairKeys,
+        ?User $firstUser,
+        ?User $secondUser,
+        ?User $creator
+    ): void {
+        if (! $firstUser instanceof User || ! $secondUser instanceof User || ! $creator instanceof User) {
+            return;
+        }
+
+        $pairKey = $this->buildDirectPairKey($firstUser->id, $secondUser->id);
+
+        if (isset($seenPairKeys[$pairKey])) {
+            return;
+        }
+
+        $pairs[] = [$firstUser, $secondUser, $creator];
+        $seenPairKeys[$pairKey] = true;
     }
 
     private function buildDirectPairKey(int $firstUserId, int $secondUserId): string

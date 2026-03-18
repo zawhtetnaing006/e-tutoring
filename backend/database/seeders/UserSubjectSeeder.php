@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -14,22 +15,8 @@ class UserSubjectSeeder extends Seeder
     public function run(): void
     {
         $subjectAssignments = [
-            UserSeeder::LINKED_TUTOR_EMAIL => ['Computer Science', 'Mathematics', 'Software Engineering'],
-            UserSeeder::LINKED_STUDENT_EMAIL => ['Mathematics'],
-            'alicia.morgan@greenwich.ac.uk' => ['Academic English', 'English Literature'],
-            'daniel.hsu@greenwich.ac.uk' => ['Computer Science', 'Data Science', 'Statistics'],
-            'mei.chen@greenwich.ac.uk' => ['Mathematics', 'Engineering Mathematics', 'Physics'],
-            'oliver.grant@greenwich.ac.uk' => ['Business Management', 'International Business', 'Project Management'],
-            'priya.nair@greenwich.ac.uk' => ['Cyber Security', 'Computer Science', 'Software Engineering'],
-            'samuel.brooks@greenwich.ac.uk' => ['Business Management', 'Project Management'],
-            'ava.collins@greenwich.ac.uk' => ['Academic English', 'English Literature'],
-            'benjamin.scott@greenwich.ac.uk' => ['Data Science', 'Statistics'],
-            'chloe.turner@greenwich.ac.uk' => ['Business Management', 'Project Management'],
-            'ethan.parker@greenwich.ac.uk' => ['Engineering Mathematics', 'Mathematics', 'Physics'],
-            'fatima.ali@greenwich.ac.uk' => ['Cyber Security', 'Computer Science'],
-            'hannah.reed@greenwich.ac.uk' => ['Business Management', 'Economics'],
-            'isaac.foster@greenwich.ac.uk' => ['Graphic Design', 'Media Studies'],
-            'jasmine.lee@greenwich.ac.uk' => ['Law', 'Psychology'],
+            UserSeeder::TUTOR_EMAIL => ['Computer Science', 'Mathematics', 'Software Engineering'],
+            UserSeeder::STUDENT_EMAIL => ['Mathematics'],
         ];
 
         $usersByEmail = User::whereIn('email', array_keys($subjectAssignments))
@@ -60,5 +47,46 @@ class UserSubjectSeeder extends Seeder
 
             $user->subjects()->sync($subjectIds);
         }
+
+        $dynamicUsers = User::query()
+            ->whereHas('role', fn ($query) => $query->whereIn('code', [Role::TUTOR, Role::STUDENT]))
+            ->whereNotIn('email', array_keys($subjectAssignments))
+            ->with('role')
+            ->orderBy('id')
+            ->get();
+
+        $activeSubjectIds = Subject::query()
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->pluck('id')
+            ->all();
+
+        foreach ($dynamicUsers as $user) {
+            $subjectCount = $user->hasRole(Role::TUTOR) ? 3 : 2;
+
+            $user->subjects()->sync(
+                $this->pickSubjectIds($activeSubjectIds, $subjectCount, $user->id)
+            );
+        }
+    }
+
+    /**
+     * @param  list<int>  $subjectIds
+     * @return list<int>
+     */
+    private function pickSubjectIds(array $subjectIds, int $count, int $offset): array
+    {
+        if ($subjectIds === []) {
+            return [];
+        }
+
+        $pickedSubjectIds = [];
+        $limit = min($count, count($subjectIds));
+
+        for ($index = 0; $index < $limit; $index++) {
+            $pickedSubjectIds[] = $subjectIds[($offset + $index) % count($subjectIds)];
+        }
+
+        return $pickedSubjectIds;
     }
 }

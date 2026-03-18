@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
 use App\Models\TutorAssignment;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -13,70 +14,65 @@ class TutorAssignmentSeeder extends Seeder
      */
     public function run(): void
     {
-        $assignments = [
-            [
-                'tutor_email' => UserSeeder::LINKED_TUTOR_EMAIL,
-                'student_email' => UserSeeder::LINKED_STUDENT_EMAIL,
-                'start_date' => '2026-03-01',
-                'end_date' => '2026-06-30',
-            ],
-            [
-                'tutor_email' => 'alicia.morgan@greenwich.ac.uk',
-                'student_email' => 'ava.collins@greenwich.ac.uk',
-                'start_date' => '2026-03-03',
-                'end_date' => '2026-06-20',
-            ],
-            [
-                'tutor_email' => 'daniel.hsu@greenwich.ac.uk',
-                'student_email' => 'benjamin.scott@greenwich.ac.uk',
-                'start_date' => '2026-03-04',
-                'end_date' => '2026-06-18',
-            ],
-            [
-                'tutor_email' => 'mei.chen@greenwich.ac.uk',
-                'student_email' => 'ethan.parker@greenwich.ac.uk',
-                'start_date' => '2026-03-05',
-                'end_date' => '2026-06-25',
-            ],
-            [
-                'tutor_email' => 'priya.nair@greenwich.ac.uk',
-                'student_email' => 'fatima.ali@greenwich.ac.uk',
-                'start_date' => '2026-03-10',
-                'end_date' => '2026-06-28',
-            ],
-            [
-                'tutor_email' => 'oliver.grant@greenwich.ac.uk',
-                'student_email' => 'hannah.reed@greenwich.ac.uk',
-                'start_date' => '2026-03-12',
-                'end_date' => '2026-06-26',
-            ],
-        ];
+        $tutors = User::query()
+            ->whereHas('role', fn ($query) => $query->where('code', Role::TUTOR))
+            ->orderBy('id')
+            ->get()
+            ->values();
 
-        $usersByEmail = User::whereIn(
-            'email',
-            collect($assignments)
-                ->flatMap(fn (array $assignment): array => [
-                    $assignment['tutor_email'],
-                    $assignment['student_email'],
-                ])
-                ->unique()
-                ->values()
-                ->all()
-        )->get()->keyBy('email');
+        $students = User::query()
+            ->whereHas('role', fn ($query) => $query->where('code', Role::STUDENT))
+            ->orderBy('id')
+            ->get()
+            ->values();
 
-        foreach ($assignments as $assignmentData) {
-            $tutor = $usersByEmail[$assignmentData['tutor_email']] ?? null;
-            $student = $usersByEmail[$assignmentData['student_email']] ?? null;
+        $pairs = [];
+        $seenPairs = [];
 
-            if (! $tutor instanceof User || ! $student instanceof User) {
+        $fixedTutor = $tutors->firstWhere('email', UserSeeder::TUTOR_EMAIL);
+        $fixedStudent = $students->firstWhere('email', UserSeeder::STUDENT_EMAIL);
+
+        if ($fixedTutor instanceof User && $fixedStudent instanceof User) {
+            $pairKey = sprintf('%d:%d', $fixedTutor->id, $fixedStudent->id);
+            $pairs[] = [$fixedTutor, $fixedStudent];
+            $seenPairs[$pairKey] = true;
+        }
+
+        $otherTutors = $tutors
+            ->reject(fn (User $user): bool => $user->email === UserSeeder::TUTOR_EMAIL)
+            ->values();
+
+        $otherStudents = $students
+            ->reject(fn (User $user): bool => $user->email === UserSeeder::STUDENT_EMAIL)
+            ->values();
+
+        $extraPairCount = min(8, $otherTutors->count(), $otherStudents->count());
+
+        for ($index = 0; $index < $extraPairCount; $index++) {
+            $tutor = $otherTutors[$index];
+            $student = $otherStudents[$index];
+            $pairKey = sprintf('%d:%d', $tutor->id, $student->id);
+
+            if (isset($seenPairs[$pairKey])) {
                 continue;
             }
+
+            $pairs[] = [$tutor, $student];
+            $seenPairs[$pairKey] = true;
+        }
+
+        $baseStartDate = today()->subWeeks(2);
+
+        foreach ($pairs as $index => [$tutor, $student]) {
+            $startDate = $baseStartDate->copy()->addDays($index * 3);
+            $endDate = $startDate->copy()->addMonths(4);
 
             TutorAssignment::create([
                 'tutor_user_id' => $tutor->id,
                 'student_user_id' => $student->id,
-                'start_date' => $assignmentData['start_date'],
-                'end_date' => $assignmentData['end_date'],
+                'start_date' => $startDate->toDateString(),
+                'end_date' => $endDate->toDateString(),
+                'status' => TutorAssignment::resolveStatusForDate($startDate, $endDate),
             ]);
         }
     }
