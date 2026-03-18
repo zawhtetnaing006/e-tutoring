@@ -44,7 +44,7 @@ class UserSeeder extends Seeder
         $roleIdsByCode = Role::pluck('id', 'code')->all();
 
         foreach ($fixedUsers as $userData) {
-            User::create([
+            User::factory()->create([
                 'name' => $userData['name'],
                 'email' => $userData['email'],
                 'role_id' => $roleIdsByCode[$userData['role_code']] ?? null,

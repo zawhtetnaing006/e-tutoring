@@ -42,18 +42,9 @@ class TutorStudentSeeder extends Seeder
                 'is_active' => true,
             ]);
 
-            User::create([
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'address' => $user->address,
-                'country' => $user->country,
-                'city' => $user->city,
-                'township' => $user->township,
-                'role_id' => $roleId,
-                'is_active' => true,
-                'password' => 'password',
-            ]);
+            $user->role_id = $roleId;
+            $user->password = 'password';
+            $user->save();
         }
     }
 }
