@@ -8,6 +8,7 @@ use App\Http\Resources\TutorAssignmentResource;
 use App\Models\TutorAssignment;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\AuditLogService;
 use App\Services\ChatService;
 use App\Traits\FormatsListingResponse;
 use Dedoc\Scramble\Attributes\BodyParameter;
@@ -27,6 +28,7 @@ class TutorAssignmentController
 
     public function __construct(
         private readonly ChatService $chatService,
+        private readonly AuditLogService $auditLogService,
     ) {
     }
 
@@ -180,6 +182,46 @@ class TutorAssignmentController
             }
         }
 
+        $loadedAssignments = collect($created)
+            ->map(fn (TutorAssignment $assignment): TutorAssignment => $this->loadTutorAssignmentRelations($assignment))
+            ->values();
+
+        if ($loadedAssignments->count() === 1) {
+            /** @var TutorAssignment $assignment */
+            $assignment = $loadedAssignments->first();
+            $targetLabel = $this->tutorAssignmentTargetLabel($assignment);
+
+            $this->auditLogService->log(
+                request: $request,
+                description: 'tutor_assignment.created',
+                subject: $assignment,
+                properties: [
+                    'meta' => [
+                        'action_label' => 'CREATE_TUTOR_ASSIGNMENT',
+                        'target_label' => $targetLabel,
+                        'description' => sprintf('Created %s.', $targetLabel),
+                    ],
+                ],
+                event: 'created',
+            );
+        } else {
+            $this->auditLogService->log(
+                request: $request,
+                description: 'tutor_assignment.bulk_created',
+                properties: [
+                    'meta' => [
+                        'action_label' => 'BULK_CREATE_TUTOR_ASSIGNMENT',
+                        'target_label' => 'Tutor Assignments',
+                        'description' => sprintf(
+                            'Created %d tutor assignments.',
+                            $loadedAssignments->count(),
+                        ),
+                    ],
+                ],
+                event: 'created',
+            );
+        }
+
         return TutorAssignmentResource::collection(collect($created))
             ->response()
             ->setStatusCode(201);
@@ -220,6 +262,7 @@ class TutorAssignmentController
     public function update(UpdateTutorAssignmentRequest $request, TutorAssignment $tutorAssignment): JsonResponse
     {
         $validated = $request->validated();
+        $before = $this->tutorAssignmentAuditAttributes($this->loadTutorAssignmentRelations($tutorAssignment));
         $previousStatus = $tutorAssignment->status;
 
         $payload = [];
@@ -260,14 +303,53 @@ class TutorAssignmentController
             $this->chatService->ensureAssignmentWelcomeConversation($freshAssignment);
         }
 
+        $loadedAssignment = $this->loadTutorAssignmentRelations($freshAssignment);
+        $changes = $this->auditLogService->diff($before, $this->tutorAssignmentAuditAttributes($loadedAssignment));
+
+        if ($changes['old'] !== [] || $changes['attributes'] !== []) {
+            $targetLabel = $this->tutorAssignmentTargetLabel($loadedAssignment);
+
+            $this->auditLogService->log(
+                request: $request,
+                description: 'tutor_assignment.updated',
+                subject: $loadedAssignment,
+                properties: [
+                    'old' => $changes['old'],
+                    'attributes' => $changes['attributes'],
+                    'meta' => [
+                        'action_label' => 'UPDATE_TUTOR_ASSIGNMENT',
+                        'target_label' => $targetLabel,
+                        'description' => $this->tutorAssignmentUpdatedDescription($targetLabel, $changes),
+                    ],
+                ],
+                event: 'updated',
+            );
+        }
+
         return response()->json(new TutorAssignmentResource($freshAssignment));
     }
 
     #[Endpoint(title: 'Delete Tutor Assignment')]
     #[Response(status: 204, examples: [[null]])]
-    public function destroy(TutorAssignment $tutorAssignment): JsonResponse
+    public function destroy(Request $request, TutorAssignment $tutorAssignment): JsonResponse
     {
+        $loadedAssignment = $this->loadTutorAssignmentRelations($tutorAssignment);
+        $targetLabel = $this->tutorAssignmentTargetLabel($loadedAssignment);
         $tutorAssignment->delete();
+
+        $this->auditLogService->log(
+            request: $request,
+            description: 'tutor_assignment.deleted',
+            subject: $tutorAssignment,
+            properties: [
+                'meta' => [
+                    'action_label' => 'DELETE_TUTOR_ASSIGNMENT',
+                    'target_label' => $targetLabel,
+                    'description' => sprintf('Deleted %s.', $targetLabel),
+                ],
+            ],
+            event: 'deleted',
+        );
 
         return response()->json(null, 204);
     }
@@ -282,10 +364,95 @@ class TutorAssignmentController
             'tutor_assignment_ids.*' => ['required', 'integer', 'distinct', 'exists:tutor_assignments,id'],
         ]);
 
+        $assignments = TutorAssignment::query()
+            ->with([
+                'tutor:id,name',
+                'student:id,name',
+            ])
+            ->whereIn('id', $validated['tutor_assignment_ids'])
+            ->orderBy('id')
+            ->get();
+
+        $assignmentSnapshots = $assignments
+            ->map(fn (TutorAssignment $assignment): array => $this->tutorAssignmentAuditAttributes($assignment))
+            ->values()
+            ->all();
+
         TutorAssignment::query()
             ->whereIn('id', $validated['tutor_assignment_ids'])
             ->delete();
 
+        $this->auditLogService->log(
+            request: $request,
+            description: 'tutor_assignment.bulk_deleted',
+            properties: [
+                'meta' => [
+                    'action_label' => 'BULK_DELETE_TUTOR_ASSIGNMENT',
+                    'target_label' => 'Tutor Assignments',
+                    'description' => sprintf(
+                        'Deleted %d tutor assignments.',
+                        count($assignmentSnapshots),
+                    ),
+                ],
+            ],
+            event: 'deleted',
+        );
+
         return response()->json(null, 204);
+    }
+
+    private function loadTutorAssignmentRelations(TutorAssignment $tutorAssignment): TutorAssignment
+    {
+        return $tutorAssignment->loadMissing([
+            'tutor:id,name',
+            'student:id,name',
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function tutorAssignmentAuditAttributes(TutorAssignment $tutorAssignment): array
+    {
+        $loadedAssignment = $this->loadTutorAssignmentRelations($tutorAssignment);
+
+        return [
+            'tutor_user_id' => $loadedAssignment->tutor_user_id,
+            'student_user_id' => $loadedAssignment->student_user_id,
+            'from_date' => $loadedAssignment->start_date,
+            'to_date' => $loadedAssignment->end_date,
+            'status' => $loadedAssignment->status,
+        ];
+    }
+
+    private function tutorAssignmentTargetLabel(TutorAssignment $tutorAssignment): string
+    {
+        return sprintf('Tutor Assignment#%d', (int) $tutorAssignment->id);
+    }
+
+    /**
+     * @param  array{old: array<string, mixed>, attributes: array<string, mixed>}  $changes
+     */
+    private function tutorAssignmentUpdatedDescription(string $targetLabel, array $changes): string
+    {
+        $fields = array_values(array_unique([
+            ...array_keys($changes['old']),
+            ...array_keys($changes['attributes']),
+        ]));
+
+        if ($fields === []) {
+            return sprintf('Updated %s.', $targetLabel);
+        }
+
+        $labels = array_map(
+            static fn (string $field): string => match ($field) {
+                'tutor_user_id' => 'tutor',
+                'student_user_id' => 'student',
+                default => strtolower(str_replace('_', ' ', $field)),
+            },
+            $fields,
+        );
+
+        return sprintf('Updated %s: %s.', $targetLabel, implode(', ', $labels));
     }
 }

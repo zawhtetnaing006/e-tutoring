@@ -9,6 +9,7 @@ use App\Http\Resources\UserResource;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\UserGeneratedPasswordNotification;
+use App\Services\AuditLogService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
@@ -23,6 +24,12 @@ use Illuminate\Support\Str;
 class UserController
 {
     use FormatsListingResponse;
+
+    public function __construct(
+        private readonly AuditLogService $auditLogService
+    )
+    {
+    }
 
     #[Endpoint(title: 'List Users')]
     #[QueryParameter('name', required: false, example: 'Jane')]
@@ -149,7 +156,24 @@ class UserController
             $user->notify(new UserGeneratedPasswordNotification($plainPassword));
         }
 
-        return response()->json(new UserResource($this->loadUserRelations($user)), 201);
+        $loadedUser = $this->loadUserRelations($user->fresh());
+        $targetLabel = $this->userTargetLabel($loadedUser);
+
+        $this->auditLogService->log(
+            request: $request,
+            description: 'user.created',
+            subject: $loadedUser,
+            properties: [
+                'meta' => [
+                    'action_label' => 'CREATE_USER',
+                    'target_label' => $targetLabel,
+                    'description' => sprintf('Created %s.', $targetLabel),
+                ],
+            ],
+            event: 'created',
+        );
+
+        return response()->json(new UserResource($loadedUser), 201);
     }
 
     #[Endpoint(title: 'Get User')]
@@ -220,10 +244,12 @@ class UserController
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
         $validated = $request->validated();
+        $before = $this->userAuditAttributes($user);
         $hasSubjectIds = array_key_exists('subject_ids', $validated);
         $subjectIds = $validated['subject_ids'] ?? [];
         $hasRoleCode = array_key_exists('role_code', $validated);
         $roleCode = $validated['role_code'] ?? null;
+        $passwordChanged = array_key_exists('password', $validated);
 
         unset($validated['subject_ids'], $validated['role_code']);
 
@@ -241,14 +267,52 @@ class UserController
             $user->subjects()->sync($subjectIds);
         }
 
-        return response()->json(new UserResource($this->loadUserRelations($user->fresh())));
+        $loadedUser = $this->loadUserRelations($user->fresh());
+        $changes = $this->auditLogService->diff($before, $this->userAuditAttributes($loadedUser));
+
+        if ($changes['old'] !== [] || $changes['attributes'] !== [] || $passwordChanged) {
+            $targetLabel = $this->userTargetLabel($loadedUser);
+
+            $this->auditLogService->log(
+                request: $request,
+                description: 'user.updated',
+                subject: $loadedUser,
+                properties: array_filter([
+                    'old' => $changes['old'],
+                    'attributes' => $changes['attributes'],
+                    'meta' => [
+                        'action_label' => 'UPDATE_USER',
+                        'target_label' => $targetLabel,
+                        'description' => $this->userUpdatedDescription($targetLabel, $changes, $passwordChanged),
+                    ],
+                ], static fn (mixed $value): bool => $value !== []),
+                event: 'updated',
+            );
+        }
+
+        return response()->json(new UserResource($loadedUser));
     }
 
     #[Endpoint(title: 'Delete User')]
     #[Response(status: 204, examples: [[null]])]
-    public function destroy(User $user): JsonResponse
+    public function destroy(Request $request, User $user): JsonResponse
     {
+        $targetLabel = $this->userTargetLabel($user);
         $user->delete();
+
+        $this->auditLogService->log(
+            request: $request,
+            description: 'user.deleted',
+            subject: $user,
+            properties: [
+                'meta' => [
+                    'action_label' => 'DELETE_USER',
+                    'target_label' => $targetLabel,
+                    'description' => sprintf('Deleted %s.', $targetLabel),
+                ],
+            ],
+            event: 'deleted',
+        );
 
         return response()->json(null, 204);
     }
@@ -275,5 +339,69 @@ class UserController
     private function loadUserRelations(User $user): User
     {
         return $user->load(['subjects:id,name,description', 'role:id,code,name']);
+    }
+
+    private function userTargetLabel(User $user): string
+    {
+        return sprintf('User#%d', (int) $user->id);
+    }
+
+    /**
+     * @param  array{old: array<string, mixed>, attributes: array<string, mixed>}  $changes
+     */
+    private function userUpdatedDescription(string $targetLabel, array $changes, bool $passwordChanged): string
+    {
+        $fields = array_values(array_unique([
+            ...array_map(
+                fn (string $field): string => $this->userFieldLabel($field),
+                array_values(array_unique([
+                    ...array_keys($changes['old']),
+                    ...array_keys($changes['attributes']),
+                ])),
+            ),
+            ...($passwordChanged ? ['password'] : []),
+        ]));
+
+        if ($fields === []) {
+            return sprintf('Updated %s.', $targetLabel);
+        }
+
+        return sprintf('Updated %s: %s.', $targetLabel, implode(', ', $fields));
+    }
+
+    private function userFieldLabel(string $field): string
+    {
+        return match ($field) {
+            'role_code' => 'role',
+            'subject_ids' => 'subjects',
+            'is_active' => 'status',
+            default => strtolower(str_replace('_', ' ', $field)),
+        };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function userAuditAttributes(User $user): array
+    {
+        $loadedUser = $this->loadUserRelations($user);
+
+        return [
+            'uuid' => $loadedUser->uuid,
+            'name' => $loadedUser->name,
+            'email' => $loadedUser->email,
+            'phone' => $loadedUser->phone,
+            'address' => $loadedUser->address,
+            'country' => $loadedUser->country,
+            'city' => $loadedUser->city,
+            'township' => $loadedUser->township,
+            'is_active' => $loadedUser->is_active,
+            'role_code' => $loadedUser->role?->code,
+            'subject_ids' => $loadedUser->subjects
+                ->pluck('id')
+                ->sort()
+                ->values()
+                ->all(),
+        ];
     }
 }

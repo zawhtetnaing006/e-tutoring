@@ -11,6 +11,7 @@ use App\Models\Blog;
 use App\Models\BlogComment;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\AuditLogService;
 use App\Traits\FormatsListingResponse;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
@@ -25,6 +26,12 @@ use Illuminate\Support\Facades\Storage;
 class BlogController
 {
     use FormatsListingResponse;
+
+    public function __construct(
+        private readonly AuditLogService $auditLogService
+    )
+    {
+    }
 
     #[Endpoint(title: 'List Blogs')]
     #[QueryParameter('search', required: false, example: 'mathematics')]
@@ -96,6 +103,21 @@ class BlogController
 
         $blog->loadMissing('author');
         $blog->loadCount('comments');
+        $targetLabel = $this->blogTargetLabel($blog);
+
+        $this->auditLogService->log(
+            request: $request,
+            description: 'blog.created',
+            subject: $blog,
+            properties: [
+                'meta' => [
+                    'action_label' => 'CREATE_BLOG',
+                    'target_label' => $targetLabel,
+                    'description' => sprintf('Created %s.', $targetLabel),
+                ],
+            ],
+            event: 'created',
+        );
 
         return response()->json(new BlogResource($blog), 201);
     }
@@ -125,6 +147,7 @@ class BlogController
     public function update(UpdateBlogRequest $request, Blog $blog): JsonResponse
     {
         $this->ensureCanManageBlog($request, $blog);
+        $before = $this->blogAuditAttributes($blog);
 
         $validated = $request->validated();
 
@@ -155,10 +178,42 @@ class BlogController
 
         $blog->update($payload);
 
-        $blog->loadMissing('author');
-        $blog->loadCount('comments');
+        $freshBlog = $blog->fresh();
+        $freshBlog->loadMissing('author');
+        $freshBlog->loadCount('comments');
+        $changes = $this->auditLogService->diff($before, $this->blogAuditAttributes($freshBlog));
+        $hasContentLikeChanges = array_key_exists('content', $validated)
+            || array_key_exists('hashtags', $validated)
+            || $request->hasFile('cover_image')
+            || $request->boolean('remove_cover_image', false);
 
-        return response()->json(new BlogResource($blog->fresh()));
+        if ($changes['old'] !== [] || $changes['attributes'] !== [] || $hasContentLikeChanges) {
+            $targetLabel = $this->blogTargetLabel($freshBlog);
+
+            $this->auditLogService->log(
+                request: $request,
+                description: 'blog.updated',
+                subject: $freshBlog,
+                properties: [
+                    'old' => $changes['old'],
+                    'attributes' => $changes['attributes'],
+                    'meta' => [
+                        'action_label' => 'UPDATE_BLOG',
+                        'target_label' => $targetLabel,
+                        'description' => $this->blogUpdatedDescription(
+                            targetLabel: $targetLabel,
+                            changes: $changes,
+                            validated: $validated,
+                            coverImageChanged: $request->hasFile('cover_image')
+                                || $request->boolean('remove_cover_image', false),
+                        ),
+                    ],
+                ],
+                event: 'updated',
+            );
+        }
+
+        return response()->json(new BlogResource($freshBlog));
     }
 
     #[Endpoint(title: 'Toggle Blog Active Status')]
@@ -166,15 +221,42 @@ class BlogController
     public function toggleStatus(Request $request, Blog $blog): JsonResponse
     {
         $this->ensureCanManageBlog($request, $blog);
+        $before = $this->blogAuditAttributes($blog);
 
         $blog->update([
             'is_active' => !$blog->is_active,
         ]);
 
-        $blog->loadMissing('author');
-        $blog->loadCount('comments');
+        $freshBlog = $blog->fresh();
+        $freshBlog->loadMissing('author');
+        $freshBlog->loadCount('comments');
+        $targetLabel = $this->blogTargetLabel($freshBlog);
 
-        return response()->json(new BlogResource($blog->fresh()));
+        $this->auditLogService->log(
+            request: $request,
+            description: 'blog.status_updated',
+            subject: $freshBlog,
+            properties: [
+                'old' => [
+                    'is_active' => $before['is_active'],
+                ],
+                'attributes' => [
+                    'is_active' => $freshBlog->is_active,
+                ],
+                'meta' => [
+                    'action_label' => 'UPDATE_BLOG_STATUS',
+                    'target_label' => $targetLabel,
+                    'description' => sprintf(
+                        'Updated %s status to %s.',
+                        $targetLabel,
+                        $freshBlog->is_active ? 'active' : 'inactive',
+                    ),
+                ],
+            ],
+            event: 'updated',
+        );
+
+        return response()->json(new BlogResource($freshBlog));
     }
 
     #[Endpoint(title: 'Delete Blog')]
@@ -182,12 +264,27 @@ class BlogController
     public function destroy(Request $request, Blog $blog): JsonResponse
     {
         $this->ensureCanManageBlog($request, $blog);
+        $targetLabel = $this->blogTargetLabel($blog);
 
         if ($blog->cover_image_path) {
             Storage::disk('public')->delete($blog->cover_image_path);
         }
 
         $blog->delete();
+
+        $this->auditLogService->log(
+            request: $request,
+            description: 'blog.deleted',
+            subject: $blog,
+            properties: [
+                'meta' => [
+                    'action_label' => 'DELETE_BLOG',
+                    'target_label' => $targetLabel,
+                    'description' => sprintf('Deleted %s.', $targetLabel),
+                ],
+            ],
+            event: 'deleted',
+        );
 
         return response()->json(null, 204);
     }
@@ -265,5 +362,55 @@ class BlogController
             ->unique()
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function blogAuditAttributes(Blog $blog): array
+    {
+        $loadedBlog = $blog->loadMissing('author:id,name');
+
+        return [
+            'title' => $loadedBlog->title,
+            'is_active' => $loadedBlog->is_active,
+        ];
+    }
+
+    private function blogTargetLabel(Blog $blog): string
+    {
+        return sprintf('Blog#%d', (int) $blog->id);
+    }
+
+    /**
+     * @param  array{old: array<string, mixed>, attributes: array<string, mixed>}  $changes
+     * @param  array<string, mixed>  $validated
+     */
+    private function blogUpdatedDescription(
+        string $targetLabel,
+        array $changes,
+        array $validated,
+        bool $coverImageChanged,
+    ): string {
+        $fields = array_values(array_unique([
+            ...array_map(
+                fn (string $field): string => $field === 'is_active'
+                    ? 'status'
+                    : strtolower(str_replace('_', ' ', $field)),
+                array_values(array_unique([
+                    ...array_keys($changes['old']),
+                    ...array_keys($changes['attributes']),
+                ])),
+            ),
+            ...(array_key_exists('content', $validated) ? ['content'] : []),
+            ...(array_key_exists('hashtags', $validated) ? ['hashtags'] : []),
+            ...($coverImageChanged ? ['cover image'] : []),
+        ]));
+
+        if ($fields === []) {
+            return sprintf('Updated %s.', $targetLabel);
+        }
+
+        return sprintf('Updated %s: %s.', $targetLabel, implode(', ', $fields));
     }
 }

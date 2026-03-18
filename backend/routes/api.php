@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\TutorAssignmentController;
@@ -137,6 +138,13 @@ Route::middleware(['auth:sanctum', 'role:STAFF'])
     ->controller(MeetingAttendanceController::class)
     ->group(function () {
         Route::post('/', 'store');
+    });
+
+Route::middleware(['auth:sanctum', 'role:STAFF'])
+    ->prefix('audit-logs')
+    ->controller(AuditLogController::class)
+    ->group(function () {
+        Route::get('/', 'index');
     });
 
 Route::middleware('auth:sanctum')

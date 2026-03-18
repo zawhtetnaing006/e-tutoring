@@ -7,7 +7,9 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\VerifyResetCodeRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
 use App\Services\AuthService;
+use App\Services\AuditLogService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
@@ -20,7 +22,8 @@ use Illuminate\Support\Facades\Password;
 class AuthController
 {
     public function __construct(
-        private readonly AuthService $authService
+        private readonly AuthService $authService,
+        private readonly AuditLogService $auditLogService,
     )
     {
     }
@@ -69,6 +72,27 @@ class AuthController
             ], 422);
         }
 
+        $user = User::query()
+            ->where('email', $validated['email'])
+            ->first();
+
+        if ($user instanceof User) {
+            $targetLabel = sprintf('User#%d', (int) $user->id);
+
+            $this->auditLogService->log(
+                request: $request,
+                description: 'auth.login',
+                subject: $user,
+                properties: [
+                    'meta' => [
+                        'action_label' => 'LOGIN_SUCCESS',
+                        'target_label' => $targetLabel,
+                        'description' => sprintf('%s logged in successfully.', $user->name),
+                    ],
+                ],
+            );
+        }
+
         return response()->json($payload);
     }
 
@@ -107,7 +131,27 @@ class AuthController
     )]
     public function logout(Request $request): JsonResponse
     {
-        $this->authService->logout($request->user());
+        /** @var User|null $user */
+        $user = $request->user();
+
+        $this->authService->logout($user);
+
+        if ($user instanceof User) {
+            $targetLabel = sprintf('User#%d', (int) $user->id);
+
+            $this->auditLogService->log(
+                request: $request,
+                description: 'auth.logout',
+                subject: $user,
+                properties: [
+                    'meta' => [
+                        'action_label' => 'LOGOUT',
+                        'target_label' => $targetLabel,
+                        'description' => sprintf('%s logged out.', $user->name),
+                    ],
+                ],
+            );
+        }
 
         return response()->json([
             'message' => 'Logged out.',
@@ -213,6 +257,27 @@ class AuthController
             return response()->json([
                 'message' => __($status),
             ], 422);
+        }
+
+        $user = User::query()
+            ->where('email', $request->validated('email'))
+            ->first();
+
+        if ($user instanceof User) {
+            $targetLabel = sprintf('User#%d', (int) $user->id);
+
+            $this->auditLogService->log(
+                request: $request,
+                description: 'auth.password_reset',
+                subject: $user,
+                properties: [
+                    'meta' => [
+                        'action_label' => 'RESET_PASSWORD',
+                        'target_label' => $targetLabel,
+                        'description' => sprintf('%s reset password successfully.', $user->name),
+                    ],
+                ],
+            );
         }
 
         return response()->json([

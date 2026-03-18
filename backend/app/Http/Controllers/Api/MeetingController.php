@@ -8,6 +8,7 @@ use App\Http\Resources\MeetingResource;
 use App\Models\Meeting;
 use App\Models\User;
 use App\Notifications\NewScheduleAssigned;
+use App\Services\AuditLogService;
 use App\Traits\FormatsListingResponse;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
@@ -22,6 +23,12 @@ use Illuminate\Support\Facades\DB;
 class MeetingController
 {
     use FormatsListingResponse;
+
+    public function __construct(
+        private readonly AuditLogService $auditLogService
+    )
+    {
+    }
 
     #[Endpoint(title: 'List Meetings')]
     #[QueryParameter('per_page', required: false, example: 15)]
@@ -146,6 +153,22 @@ class MeetingController
             ->unique(fn (User $recipient): int => (int) $recipient->id)
             ->each(fn (User $recipient) => $recipient->notify(new NewScheduleAssigned($meeting)));
 
+        $targetLabel = $this->meetingTargetLabel($meeting);
+
+        $this->auditLogService->log(
+            request: $request,
+            description: 'meeting.created',
+            subject: $meeting,
+            properties: [
+                'meta' => [
+                    'action_label' => 'CREATE_MEETING',
+                    'target_label' => $targetLabel,
+                    'description' => sprintf('Created %s.', $targetLabel),
+                ],
+            ],
+            event: 'created',
+        );
+
         return response()->json(
             new MeetingResource($meeting),
             201
@@ -213,19 +236,106 @@ class MeetingController
     ]])]
     public function update(UpdateMeetingRequest $request, Meeting $meeting): JsonResponse
     {
+        $before = $this->meetingAuditAttributes($meeting);
         $meeting->update($request->validated());
+        $freshMeeting = $meeting->fresh()->load(['schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time')]);
+        $changes = $this->auditLogService->diff($before, $this->meetingAuditAttributes($freshMeeting));
+
+        if ($changes['old'] !== [] || $changes['attributes'] !== []) {
+            $targetLabel = $this->meetingTargetLabel($freshMeeting);
+
+            $this->auditLogService->log(
+                request: $request,
+                description: 'meeting.updated',
+                subject: $freshMeeting,
+                properties: [
+                    'old' => $changes['old'],
+                    'attributes' => $changes['attributes'],
+                    'meta' => [
+                        'action_label' => 'UPDATE_MEETING',
+                        'target_label' => $targetLabel,
+                        'description' => $this->meetingUpdatedDescription($targetLabel, $changes),
+                    ],
+                ],
+                event: 'updated',
+            );
+        }
 
         return response()->json(new MeetingResource(
-            $meeting->fresh()->load(['schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time')])
+            $freshMeeting
         ));
     }
 
     #[Endpoint(title: 'Delete Meeting')]
     #[Response(status: 204, examples: [[null]])]
-    public function destroy(Meeting $meeting): JsonResponse
+    public function destroy(Request $request, Meeting $meeting): JsonResponse
     {
+        $targetLabel = $this->meetingTargetLabel($meeting);
         $meeting->delete();
 
+        $this->auditLogService->log(
+            request: $request,
+            description: 'meeting.deleted',
+            subject: $meeting,
+            properties: [
+                'meta' => [
+                    'action_label' => 'DELETE_MEETING',
+                    'target_label' => $targetLabel,
+                    'description' => sprintf('Deleted %s.', $targetLabel),
+                ],
+            ],
+            event: 'deleted',
+        );
+
         return response()->json(null, 204);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function meetingAuditAttributes(Meeting $meeting): array
+    {
+        $loadedMeeting = $meeting->loadMissing([
+            'schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time'),
+        ]);
+
+        return [
+            'title' => $loadedMeeting->title,
+            'description' => $loadedMeeting->description,
+            'type' => $loadedMeeting->type,
+            'platform' => $loadedMeeting->platform,
+            'link' => $loadedMeeting->link,
+            'location' => $loadedMeeting->location,
+            'tutor_assignment_id' => $loadedMeeting->tutor_assignment_id,
+        ];
+    }
+
+    private function meetingTargetLabel(Meeting $meeting): string
+    {
+        return sprintf('Meeting#%d', (int) $meeting->id);
+    }
+
+    /**
+     * @param  array{old: array<string, mixed>, attributes: array<string, mixed>}  $changes
+     */
+    private function meetingUpdatedDescription(string $targetLabel, array $changes): string
+    {
+        $fields = array_values(array_unique([
+            ...array_keys($changes['old']),
+            ...array_keys($changes['attributes']),
+        ]));
+
+        if ($fields === []) {
+            return sprintf('Updated %s.', $targetLabel);
+        }
+
+        $labels = array_map(
+            static fn (string $field): string => $field === 'tutor_assignment_id'
+                ? 'tutor assignment'
+                : strtolower(str_replace('_', ' ', $field)),
+            $fields,
+        );
+
+        return sprintf('Updated %s: %s.', $targetLabel, implode(', ', $labels));
     }
 }
