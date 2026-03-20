@@ -11,4 +11,60 @@
   body {
     @apply min-h-screen bg-background text-foreground antialiased;
   }
+  
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+@layer utilities {
+  .container-responsive {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
+    max-width: var(--container-max-width);
+  }
+  
+  .text-responsive-xs {
+    font-size: var(--text-xs);
+    line-height: var(--text-xs--line);
+  }
+  
+  .text-responsive-sm {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line);
+  }
+  
+  .text-responsive-base {
+    font-size: var(--text-base);
+    line-height: var(--text-base--line);
+  }
+  
+  .text-responsive-lg {
+    font-size: var(--text-lg);
+    line-height: var(--text-lg--line);
+  }
+  
+  .text-responsive-xl {
+    font-size: var(--text-xl);
+    line-height: var(--text-xl--line);
+  }
+  
+  .text-responsive-2xl {
+    font-size: var(--text-2xl);
+    line-height: var(--text-2xl--line);
+  }
+  
+  .text-responsive-3xl {
+    font-size: var(--text-3xl);
+    line-height: var(--text-3xl--line);
+  }
+  
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }

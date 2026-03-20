@@ -73,19 +73,27 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-10 h-16 w-16 rounded-lg bg-muted" />
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:px-6 lg:px-8">
+      <div className="w-full max-w-sm sm:max-w-md">
+        <img
+          src="/assets/logo.png"
+          alt="eTutor System"
+          className="mb-7 h-12 w-12 rounded-lg sm:h-16 sm:w-16"
+        />
 
-        <h1 className="text-2xl font-semibold text-foreground">
+        <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
           Set new password
         </h1>
 
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
+        <form
+          className="mt-6 space-y-4 sm:space-y-5"
+          onSubmit={handleSubmit}
+          noValidate
+        >
           <div className="space-y-1.5">
             <label
               htmlFor="password"
-              className="text-subtext font-medium text-foreground"
+              className="text-sm font-medium text-foreground sm:text-subtext"
             >
               Password
             </label>
@@ -94,14 +102,14 @@ export function ResetPasswordPage() {
               name="password"
               type="password"
               autoComplete="new-password"
-              className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
+              className="block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40 sm:py-2.5 sm:text-body"
             />
           </div>
 
           <div className="space-y-1.5">
             <label
               htmlFor="confirmPassword"
-              className="text-subtext font-medium text-foreground"
+              className="text-sm font-medium text-foreground sm:text-subtext"
             >
               Confirm Password
             </label>
@@ -110,20 +118,20 @@ export function ResetPasswordPage() {
               name="confirmPassword"
               type="password"
               autoComplete="new-password"
-              className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
+              className="block w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40 sm:py-2.5 sm:text-body"
             />
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+            className="mt-2 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:py-3"
           >
             {isSubmitting ? 'Resetting...' : 'Reset password'}
           </button>
         </form>
 
-        <div className="mt-8 border-t border-border pt-4">
+        <div className="mt-6 border-t border-border pt-4 sm:mt-8">
           <Link
             to="/login"
             className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"

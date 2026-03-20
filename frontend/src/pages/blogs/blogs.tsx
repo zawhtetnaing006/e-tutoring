@@ -180,7 +180,11 @@ export function BlogsPage() {
     perPage: PAGE_SIZE,
     search: debouncedSearch,
     isActive:
-      statusFilter === 'all' ? undefined : statusFilter === 'active' ? true : false,
+      statusFilter === 'all'
+        ? undefined
+        : statusFilter === 'active'
+          ? true
+          : false,
   })
 
   const detailQuery = useBlog(detailBlogId)
@@ -190,11 +194,18 @@ export function BlogsPage() {
     enabled: detailBlogId != null,
   })
 
-  const blogs = useMemo(() => blogsQuery.data?.data ?? [], [blogsQuery.data?.data])
+  const blogs = useMemo(
+    () => blogsQuery.data?.data ?? [],
+    [blogsQuery.data?.data]
+  )
 
+  const blogIds = useMemo(() => new Set(blogs.map(blog => blog.id)), [blogs])
+
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    setSelectedIds(current => current.filter(id => blogs.some(blog => blog.id === id)))
-  }, [blogs])
+    setSelectedIds(current => current.filter(id => blogIds.has(id)))
+  }, [blogIds])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     return () => {
@@ -219,23 +230,34 @@ export function BlogsPage() {
       void queryClient.invalidateQueries({ queryKey: ['blogs'] })
     },
     onError: error => {
-      toast.error(error instanceof Error ? error.message : 'Failed to create blog')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create blog'
+      )
     },
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ blogId, payload }: { blogId: number; payload: Parameters<typeof updateBlog>[1] }) =>
-      updateBlog(blogId, payload),
+    mutationFn: ({
+      blogId,
+      payload,
+    }: {
+      blogId: number
+      payload: Parameters<typeof updateBlog>[1]
+    }) => updateBlog(blogId, payload),
     onSuccess: () => {
       toast.success('Blog updated successfully.')
       closeEditorModal()
       void queryClient.invalidateQueries({ queryKey: ['blogs'] })
       if (detailBlogId != null) {
-        void queryClient.invalidateQueries({ queryKey: ['blogs', 'detail', detailBlogId] })
+        void queryClient.invalidateQueries({
+          queryKey: ['blogs', 'detail', detailBlogId],
+        })
       }
     },
     onError: error => {
-      toast.error(error instanceof Error ? error.message : 'Failed to update blog')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update blog'
+      )
     },
   })
 
@@ -245,11 +267,15 @@ export function BlogsPage() {
       toast.success('Blog status updated.')
       void queryClient.invalidateQueries({ queryKey: ['blogs'] })
       if (detailBlogId != null) {
-        void queryClient.invalidateQueries({ queryKey: ['blogs', 'detail', detailBlogId] })
+        void queryClient.invalidateQueries({
+          queryKey: ['blogs', 'detail', detailBlogId],
+        })
       }
     },
     onError: error => {
-      toast.error(error instanceof Error ? error.message : 'Failed to update status')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update status'
+      )
     },
   })
 
@@ -264,22 +290,35 @@ export function BlogsPage() {
       void queryClient.invalidateQueries({ queryKey: ['blogs'] })
     },
     onError: error => {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete blog')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete blog'
+      )
     },
   })
 
   const createCommentMutation = useMutation({
-    mutationFn: ({ blogId, commentText }: { blogId: number; commentText: string }) =>
-      createBlogComment(blogId, { comment_text: commentText }),
+    mutationFn: ({
+      blogId,
+      commentText,
+    }: {
+      blogId: number
+      commentText: string
+    }) => createBlogComment(blogId, { comment_text: commentText }),
     onSuccess: (_, variables) => {
       toast.success('Comment posted.')
       setCommentDraft('')
-      void queryClient.invalidateQueries({ queryKey: ['blogs', 'detail', variables.blogId] })
-      void queryClient.invalidateQueries({ queryKey: ['blogs', 'comments', variables.blogId] })
+      void queryClient.invalidateQueries({
+        queryKey: ['blogs', 'detail', variables.blogId],
+      })
+      void queryClient.invalidateQueries({
+        queryKey: ['blogs', 'comments', variables.blogId],
+      })
       void queryClient.invalidateQueries({ queryKey: ['blogs'] })
     },
     onError: error => {
-      toast.error(error instanceof Error ? error.message : 'Failed to post comment')
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to post comment'
+      )
     },
   })
 
@@ -320,7 +359,9 @@ export function BlogsPage() {
 
     setFormCoverFile(file)
     setRemoveCoverImage(false)
-    setFormCoverPreview(file ? URL.createObjectURL(file) : editingBlog?.cover_image_url ?? null)
+    setFormCoverPreview(
+      file ? URL.createObjectURL(file) : (editingBlog?.cover_image_url ?? null)
+    )
   }
 
   const applyEditorCommand = (command: string, value?: string) => {
@@ -373,7 +414,9 @@ export function BlogsPage() {
       return
     }
 
-    const confirmed = window.confirm(`Delete ${selectedIds.length} selected blog(s)?`)
+    const confirmed = window.confirm(
+      `Delete ${selectedIds.length} selected blog(s)?`
+    )
     if (!confirmed) return
 
     selectedIds.forEach(blogId => {
@@ -387,7 +430,9 @@ export function BlogsPage() {
 
   const handleToggleSelect = (blogId: number) => {
     setSelectedIds(current =>
-      current.includes(blogId) ? current.filter(id => id !== blogId) : [...current, blogId]
+      current.includes(blogId)
+        ? current.filter(id => id !== blogId)
+        : [...current, blogId]
     )
   }
 
@@ -406,7 +451,15 @@ export function BlogsPage() {
       return
     }
 
-    const headers = ['Title', 'Author', 'Status', 'Created At', 'Views', 'Comments', 'Hashtags']
+    const headers = [
+      'Title',
+      'Author',
+      'Status',
+      'Created At',
+      'Views',
+      'Comments',
+      'Hashtags',
+    ]
     const rows = blogs.map(blog => [
       blog.title,
       blog.author?.name ?? 'Unknown',
@@ -418,7 +471,9 @@ export function BlogsPage() {
     ])
 
     const csv = [headers, ...rows]
-      .map(row => row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(','))
+      .map(row =>
+        row.map(value => `"${String(value).replaceAll('"', '""')}"`).join(',')
+      )
       .join('\n')
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -437,281 +492,314 @@ export function BlogsPage() {
 
   const detailBlog = detailQuery.data
   return (
-    <div className="w-full bg-background p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold text-slate-800">Blogs</h1>
-          <p className="mt-1 text-lg text-slate-600">
-            Share knowledge and insights with the community
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={openNewModal}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-600 px-5 py-3 text-lg font-medium text-white hover:bg-slate-700"
-        >
-          <Plus className="size-5" />
-          New Blog
-        </button>
-      </div>
-
-      <div className="mt-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
-        <div className="relative w-full md:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-          <input
-            value={search}
-            onChange={event => {
-              setSearch(event.target.value)
-              setPage(1)
-            }}
-            placeholder="search......"
-            className="w-full rounded-xl border border-slate-200 px-11 py-2.5 text-lg text-slate-700 outline-none focus:border-slate-400"
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={handleExportCsv}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-lg text-slate-700 hover:bg-slate-50"
-        >
-          <Download className="size-5" />
-          Excel
-        </button>
-
-        <button
-          type="button"
-          onClick={toggleFilter}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-lg text-slate-700 hover:bg-slate-50"
-        >
-          <Filter className="size-5" />
-          <span className="hidden sm:inline">{statusFilter}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={handleDeleteSelected}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-lg text-slate-700 hover:bg-slate-50"
-        >
-          <Trash2 className="size-5" />
-        </button>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-3">
-        {blogsQuery.isLoading ? (
-          <div className="col-span-full rounded-xl border border-slate-200 p-8 text-center text-slate-500">
-            <span className="inline-flex items-center gap-2">
-              <LoaderCircle className="size-5 animate-spin" />
-              Loading blogs...
-            </span>
+    <div className="flex h-full max-h-screen w-full flex-col overflow-hidden bg-background">
+      <div className="flex h-full flex-col overflow-hidden p-4 sm:p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold text-slate-800">Blogs</h1>
+            <p className="mt-1 text-lg text-slate-600">
+              Share knowledge and insights with the community
+            </p>
           </div>
-        ) : blogs.length > 0 ? (
-          blogs.map(blog => {
-            const canManage = canManageBlog(blog, currentUser?.id, currentUserRole)
-            const isSelected = selectedIds.includes(blog.id)
 
-            return (
-              <article
-                key={blog.id}
-                onClick={() => {
-                  setDetailBlogId(blog.id)
-                  setCommentPage(1)
-                  setMenuOpenBlogId(null)
-                }}
-                className="cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white"
-              >
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={event => {
-                      event.stopPropagation()
-                      handleToggleSelect(blog.id)
+          <button
+            type="button"
+            onClick={openNewModal}
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-600 px-5 py-3 text-lg font-medium text-white hover:bg-slate-700"
+          >
+            <Plus className="size-5" />
+            New Blog
+          </button>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
+          <div className="relative w-full md:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={event => {
+                setSearch(event.target.value)
+                setPage(1)
+              }}
+              placeholder="search......"
+              className="w-full rounded-xl border border-slate-200 px-11 py-2.5 text-lg text-slate-700 outline-none focus:border-slate-400"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-lg text-slate-700 hover:bg-slate-50"
+          >
+            <Download className="size-5" />
+            Excel
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleFilter}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-lg text-slate-700 hover:bg-slate-50"
+          >
+            <Filter className="size-5" />
+            <span className="hidden sm:inline">{statusFilter}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDeleteSelected}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-lg text-slate-700 hover:bg-slate-50"
+          >
+            <Trash2 className="size-5" />
+          </button>
+        </div>
+
+        <div className="mt-8 min-h-0 flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+            {blogsQuery.isLoading ? (
+              <div className="col-span-full rounded-xl border border-slate-200 p-8 text-center text-slate-500">
+                <span className="inline-flex items-center gap-2">
+                  <LoaderCircle className="size-5 animate-spin" />
+                  Loading blogs...
+                </span>
+              </div>
+            ) : blogs.length > 0 ? (
+              blogs.map(blog => {
+                const canManage = canManageBlog(
+                  blog,
+                  currentUser?.id,
+                  currentUserRole
+                )
+                const isSelected = selectedIds.includes(blog.id)
+
+                return (
+                  <div
+                    key={blog.id}
+                    onClick={() => {
+                      setDetailBlogId(blog.id)
+                      setCommentPage(1)
+                      setMenuOpenBlogId(null)
                     }}
-                    className={`absolute left-3 top-3 z-10 inline-flex size-6 items-center justify-center rounded border ${
-                      isSelected
-                        ? 'border-slate-600 bg-slate-600 text-white'
-                        : 'border-white/80 bg-white/80 text-slate-700'
-                    }`}
-                    aria-label={`Select blog ${blog.title}`}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setDetailBlogId(blog.id)
+                        setCommentPage(1)
+                        setMenuOpenBlogId(null)
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className="cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white"
                   >
-                    {isSelected ? <Check className="size-4" /> : null}
-                  </button>
-
-                  {blog.cover_image_url ? (
-                    <img
-                      src={blog.cover_image_url}
-                      alt={blog.title}
-                      className="h-64 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-64 w-full bg-gradient-to-br from-indigo-950 via-indigo-800 to-blue-700" />
-                  )}
-
-                  <div className="absolute right-3 top-3">
-                    <button
-                      type="button"
-                      onClick={event => {
-                        event.stopPropagation()
-                        setMenuOpenBlogId(current => (current === blog.id ? null : blog.id))
-                      }}
-                      className="inline-flex size-10 items-center justify-center rounded-full bg-slate-500/70 text-white hover:bg-slate-600"
-                      aria-label={`Open actions for ${blog.title}`}
-                    >
-                      <MoreVertical className="size-5" />
-                    </button>
-
-                    {menuOpenBlogId === blog.id ? (
-                      <div
-                        onClick={event => event.stopPropagation()}
-                        className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={event => {
+                          event.stopPropagation()
+                          handleToggleSelect(blog.id)
+                        }}
+                        className={`absolute left-3 top-3 z-10 inline-flex size-6 items-center justify-center rounded border ${
+                          isSelected
+                            ? 'border-slate-600 bg-slate-600 text-white'
+                            : 'border-white/80 bg-white/80 text-slate-700'
+                        }`}
+                        aria-label={`Select blog ${blog.title}`}
                       >
+                        {isSelected ? <Check className="size-4" /> : null}
+                      </button>
+
+                      {blog.cover_image_url ? (
+                        <img
+                          src={blog.cover_image_url}
+                          alt={blog.title}
+                          className="h-64 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-64 w-full bg-gradient-to-br from-indigo-950 via-indigo-800 to-blue-700" />
+                      )}
+
+                      <div className="absolute right-3 top-3">
                         <button
                           type="button"
-                          onClick={() => {
-                            setDetailBlogId(blog.id)
-                            setCommentPage(1)
-                            setMenuOpenBlogId(null)
+                          onClick={event => {
+                            event.stopPropagation()
+                            setMenuOpenBlogId(current =>
+                              current === blog.id ? null : blog.id
+                            )
                           }}
-                          className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                          className="inline-flex size-10 items-center justify-center rounded-full bg-slate-500/70 text-white hover:bg-slate-600"
+                          aria-label={`Open actions for ${blog.title}`}
                         >
-                          View Details
+                          <MoreVertical className="size-5" />
                         </button>
 
-                        {canManage ? (
-                          <>
+                        {menuOpenBlogId === blog.id ? (
+                          <div
+                            onClick={event => event.stopPropagation()}
+                            onKeyDown={e => {
+                              if (e.key === 'Escape') {
+                                setMenuOpenBlogId(null)
+                              }
+                            }}
+                            role="menu"
+                            tabIndex={-1}
+                            className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                          >
                             <button
                               type="button"
                               onClick={() => {
-                                openEditModal(blog)
+                                setDetailBlogId(blog.id)
+                                setCommentPage(1)
                                 setMenuOpenBlogId(null)
                               }}
                               className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                             >
-                              Edit Blog
+                              View Details
                             </button>
 
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleToggleStatus(blog.id)
-                                setMenuOpenBlogId(null)
-                              }}
-                              className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                            >
-                              {blog.is_active ? 'Inactive Blog' : 'Active Blog'}
-                            </button>
+                            {canManage ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    openEditModal(blog)
+                                    setMenuOpenBlogId(null)
+                                  }}
+                                  className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                >
+                                  Edit Blog
+                                </button>
 
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleDeleteBlog(blog.id)
-                                setMenuOpenBlogId(null)
-                              }}
-                              className="block w-full px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50"
-                            >
-                              Delete Record
-                            </button>
-                          </>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleToggleStatus(blog.id)
+                                    setMenuOpenBlogId(null)
+                                  }}
+                                  className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                >
+                                  {blog.is_active
+                                    ? 'Inactive Blog'
+                                    : 'Active Blog'}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleDeleteBlog(blog.id)
+                                    setMenuOpenBlogId(null)
+                                  }}
+                                  className="block w-full px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50"
+                                >
+                                  Delete Record
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
                         ) : null}
                       </div>
-                    ) : null}
-                  </div>
-                </div>
+                    </div>
 
-                <div className="space-y-3 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-3xl font-medium text-slate-700">{blog.title}</h3>
-                    <span
-                      className={`rounded-full px-3 py-1 text-sm font-medium ${
-                        blog.is_active
-                          ? 'bg-emerald-100 text-emerald-600'
-                          : 'bg-rose-100 text-rose-600'
-                      }`}
-                    >
-                      {blog.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
+                    <div className="space-y-3 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-3xl font-medium text-slate-700">
+                          {blog.title}
+                        </h3>
+                        <span
+                          className={`rounded-full px-3 py-1 text-sm font-medium ${
+                            blog.is_active
+                              ? 'bg-emerald-100 text-emerald-600'
+                              : 'bg-rose-100 text-rose-600'
+                          }`}
+                        >
+                          {blog.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
 
-                  <p className="text-2xl leading-8 text-slate-600">
-                    {getExcerpt(stripHtml(blog.content))}
-                  </p>
+                      <p className="text-2xl leading-8 text-slate-600">
+                        {getExcerpt(stripHtml(blog.content))}
+                      </p>
 
-                  <p className="min-h-7 text-base font-medium text-slate-500">
-                    {blog.hashtags.length > 0
-                      ? blog.hashtags.map(tag => `#${tag}`).join(' ')
-                      : '#blog #learning'}
-                  </p>
+                      <p className="min-h-7 text-base font-medium text-slate-500">
+                        {blog.hashtags.length > 0
+                          ? blog.hashtags.map(tag => `#${tag}`).join(' ')
+                          : '#blog #learning'}
+                      </p>
 
-                  <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-sm text-slate-500">
-                    <span className="inline-flex items-center gap-1.5">
-                      <User className="size-4" />
-                      {blog.author?.name ?? 'Unknown'}
-                    </span>
+                      <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-sm text-slate-500">
+                        <span className="inline-flex items-center gap-1.5">
+                          <User className="size-4" />
+                          {blog.author?.name ?? 'Unknown'}
+                        </span>
 
-                    <div className="ml-auto flex items-center gap-4">
-                      <span className="inline-flex items-center gap-1.5">
-                        <Calendar className="size-4" />
-                        {formatDateTime(blog.created_at)}
-                      </span>
-                      <span className="inline-flex items-center gap-1.5">
-                        <Eye className="size-4" />
-                        {blog.view_count.toLocaleString()}
-                      </span>
+                        <div className="ml-auto flex items-center gap-4">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Calendar className="size-4" />
+                            {formatDateTime(blog.created_at)}
+                          </span>
+                          <span className="inline-flex items-center gap-1.5">
+                            <Eye className="size-4" />
+                            {blog.view_count.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </article>
-            )
-          })
-        ) : (
-          <div className="col-span-full rounded-xl border border-slate-200 p-8 text-center text-slate-500">
-            No blogs found.
+                )
+              })
+            ) : (
+              <div className="col-span-full rounded-xl border border-slate-200 p-8 text-center text-slate-500">
+                No blogs found.
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
 
-      <div className="mt-8 flex flex-col gap-3 text-lg text-slate-400 md:flex-row md:items-center md:justify-between">
-        <p>
-          {selectedIds.length} of {blogs.length} row(s) selected.
-        </p>
-
-        <div className="flex items-center gap-4">
+        <div className="mt-8 flex flex-col gap-3 text-lg text-slate-400 md:flex-row md:items-center md:justify-between">
           <p>
-            Showing {fromItem}-{toItem} of {totalItems}
+            {selectedIds.length} of {blogs.length} row(s) selected.
           </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setPage(1)}
-              disabled={page <= 1}
-              className="rounded-full border border-slate-300 p-1 text-slate-500 disabled:opacity-40"
-            >
-              <ChevronsLeft className="size-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage(current => Math.max(1, current - 1))}
-              disabled={page <= 1}
-              className="rounded-full border border-slate-300 p-1 text-slate-500 disabled:opacity-40"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage(current => Math.min(totalPages, current + 1))}
-              disabled={page >= totalPages}
-              className="rounded-full border border-slate-300 p-1 text-slate-500 disabled:opacity-40"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage(totalPages)}
-              disabled={page >= totalPages}
-              className="rounded-full border border-slate-300 p-1 text-slate-500 disabled:opacity-40"
-            >
-              <ChevronsRight className="size-4" />
-            </button>
+
+          <div className="flex items-center gap-4">
+            <p>
+              Showing {fromItem}-{toItem} of {totalItems}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage(1)}
+                disabled={page <= 1}
+                className="rounded-full border border-slate-300 p-1 text-slate-500 disabled:opacity-40"
+              >
+                <ChevronsLeft className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage(current => Math.max(1, current - 1))}
+                disabled={page <= 1}
+                className="rounded-full border border-slate-300 p-1 text-slate-500 disabled:opacity-40"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setPage(current => Math.min(totalPages, current + 1))
+                }
+                disabled={page >= totalPages}
+                className="rounded-full border border-slate-300 p-1 text-slate-500 disabled:opacity-40"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage(totalPages)}
+                disabled={page >= totalPages}
+                className="rounded-full border border-slate-300 p-1 text-slate-500 disabled:opacity-40"
+              >
+                <ChevronsRight className="size-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -725,7 +813,8 @@ export function BlogsPage() {
                   {editingBlog ? 'Edit Blog' : 'Create New Blog'}
                 </h2>
                 <p className="mt-1 text-xl text-slate-400">
-                  Fill in the details below to {editingBlog ? 'update' : 'add'} a blog....
+                  Fill in the details below to {editingBlog ? 'update' : 'add'}{' '}
+                  a blog....
                 </p>
               </div>
               <button
@@ -740,11 +829,15 @@ export function BlogsPage() {
 
             <div className="mt-6 space-y-4">
               <label className="block">
-                <span className="mb-1 block text-lg font-medium text-slate-600">Cover Image</span>
+                <span className="mb-1 block text-lg font-medium text-slate-600">
+                  Cover Image
+                </span>
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={event => handleFileChange(event.target.files?.[0] ?? null)}
+                  onChange={event =>
+                    handleFileChange(event.target.files?.[0] ?? null)
+                  }
                   className="hidden"
                   id="blog-cover-upload"
                 />
@@ -753,7 +846,11 @@ export function BlogsPage() {
                   className="flex h-52 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-400"
                 >
                   {formCoverPreview ? (
-                    <img src={formCoverPreview} alt="Preview" className="h-full w-full rounded-xl object-cover" />
+                    <img
+                      src={formCoverPreview}
+                      alt="Preview"
+                      className="h-full w-full rounded-xl object-cover"
+                    />
                   ) : (
                     <span className="inline-flex items-center gap-2 text-xl">
                       <Upload className="size-6" />
@@ -778,7 +875,9 @@ export function BlogsPage() {
               ) : null}
 
               <label className="block">
-                <span className="mb-1 block text-lg font-medium text-slate-600">Title *</span>
+                <span className="mb-1 block text-lg font-medium text-slate-600">
+                  Title *
+                </span>
                 <input
                   value={formTitle}
                   onChange={event => setFormTitle(event.target.value)}
@@ -788,7 +887,9 @@ export function BlogsPage() {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-lg font-medium text-slate-600">Hash Tags *</span>
+                <span className="mb-1 block text-lg font-medium text-slate-600">
+                  Hash Tags *
+                </span>
                 <input
                   value={formHashtags}
                   onChange={event => setFormHashtags(event.target.value)}
@@ -797,8 +898,13 @@ export function BlogsPage() {
                 />
               </label>
 
-              <label className="block">
-                <span className="mb-1 block text-lg font-medium text-slate-600">Content *</span>
+              <div className="block">
+                <label
+                  htmlFor="blog-content-editor"
+                  className="mb-1 block text-lg font-medium text-slate-600"
+                >
+                  Content *
+                </label>
                 <div className="rounded-lg border border-slate-200">
                   <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2 text-slate-500">
                     <button
@@ -860,7 +966,9 @@ export function BlogsPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => applyEditorCommand('formatBlock', 'blockquote')}
+                      onClick={() =>
+                        applyEditorCommand('formatBlock', 'blockquote')
+                      }
                       className="rounded px-2 py-1 text-base hover:bg-slate-100"
                       aria-label="Quote"
                     >
@@ -888,16 +996,19 @@ export function BlogsPage() {
                     </button>
                   </div>
                   <div
+                    id="blog-content-editor"
                     ref={editorRef}
                     contentEditable
                     suppressContentEditableWarning
                     onInput={event =>
-                      setFormContent((event.currentTarget as HTMLDivElement).innerHTML)
+                      setFormContent(
+                        (event.currentTarget as HTMLDivElement).innerHTML
+                      )
                     }
                     className="min-h-[260px] w-full rounded-b-lg px-3 py-2 text-xl text-slate-700 outline-none"
                   />
                 </div>
-              </label>
+              </div>
 
               <div className="flex items-center gap-3 pt-2">
                 <button
@@ -910,10 +1021,14 @@ export function BlogsPage() {
                 <button
                   type="button"
                   onClick={handleSaveBlog}
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={
+                    createMutation.isPending || updateMutation.isPending
+                  }
                   className="rounded-lg bg-slate-600 px-10 py-2 text-2xl font-medium text-white hover:bg-slate-700 disabled:opacity-50"
                 >
-                  {createMutation.isPending || updateMutation.isPending ? 'Saving...' : 'Save'}
+                  {createMutation.isPending || updateMutation.isPending
+                    ? 'Saving...'
+                    : 'Save'}
                 </button>
               </div>
             </div>
@@ -926,7 +1041,9 @@ export function BlogsPage() {
           <div className="max-h-[95vh] w-full max-w-6xl overflow-auto rounded-xl bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between border-b border-slate-200 pb-3">
               <h2 className="text-4xl font-semibold text-slate-800">
-                {detailQuery.isLoading ? 'Loading...' : detailBlog?.title ?? 'Blog Details'}
+                {detailQuery.isLoading
+                  ? 'Loading...'
+                  : (detailBlog?.title ?? 'Blog Details')}
               </h2>
               <button
                 type="button"
@@ -986,16 +1103,24 @@ export function BlogsPage() {
                 </p>
 
                 <section className="space-y-3 border-t border-slate-200 pt-4">
-                  <h3 className="text-2xl font-semibold text-slate-700">Comments</h3>
+                  <h3 className="text-2xl font-semibold text-slate-700">
+                    Comments
+                  </h3>
 
                   {commentsQuery.isLoading ? (
                     <p className="text-slate-500">Loading comments...</p>
                   ) : (commentsQuery.data?.data.length ?? 0) > 0 ? (
                     commentsQuery.data?.data.map(comment => (
-                      <div key={comment.id} className="rounded-lg border border-slate-200 px-3 py-2">
-                        <p className="text-xl text-slate-700">{comment.comment_text}</p>
+                      <div
+                        key={comment.id}
+                        className="rounded-lg border border-slate-200 px-3 py-2"
+                      >
+                        <p className="text-xl text-slate-700">
+                          {comment.comment_text}
+                        </p>
                         <p className="mt-1 text-sm text-slate-500">
-                          {comment.commenter?.name ?? 'Unknown'} • {formatDateTime(comment.created_at)}
+                          {comment.commenter?.name ?? 'Unknown'} •{' '}
+                          {formatDateTime(comment.created_at)}
                         </p>
                       </div>
                     ))
@@ -1006,7 +1131,9 @@ export function BlogsPage() {
                   <div className="flex items-center justify-between gap-2 text-sm text-slate-500">
                     <button
                       type="button"
-                      onClick={() => setCommentPage(current => Math.max(1, current - 1))}
+                      onClick={() =>
+                        setCommentPage(current => Math.max(1, current - 1))
+                      }
                       disabled={commentPage <= 1}
                       className="rounded border border-slate-300 px-2 py-1 disabled:opacity-40"
                     >
@@ -1019,10 +1146,15 @@ export function BlogsPage() {
                       type="button"
                       onClick={() =>
                         setCommentPage(current =>
-                          Math.min(commentsQuery.data?.total_page ?? current, current + 1)
+                          Math.min(
+                            commentsQuery.data?.total_page ?? current,
+                            current + 1
+                          )
                         )
                       }
-                      disabled={commentPage >= (commentsQuery.data?.total_page ?? 1)}
+                      disabled={
+                        commentPage >= (commentsQuery.data?.total_page ?? 1)
+                      }
                       className="rounded border border-slate-300 px-2 py-1 disabled:opacity-40"
                     >
                       Next
@@ -1053,13 +1185,16 @@ export function BlogsPage() {
                     disabled={createCommentMutation.isPending}
                     className="rounded-lg bg-slate-600 px-4 py-2 text-lg text-white hover:bg-slate-700 disabled:opacity-50"
                   >
-                    {createCommentMutation.isPending ? 'Posting...' : 'Post Comment'}
+                    {createCommentMutation.isPending
+                      ? 'Posting...'
+                      : 'Post Comment'}
                   </button>
                 </section>
-
               </div>
             ) : (
-              <div className="py-10 text-center text-slate-500">Unable to load blog detail.</div>
+              <div className="py-10 text-center text-slate-500">
+                Unable to load blog detail.
+              </div>
             )}
           </div>
         </div>
