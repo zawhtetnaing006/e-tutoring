@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Resources\AuditLogResource;
+use App\Models\Activity;
 use App\Models\User;
 use App\Traits\FormatsListingResponse;
 use Carbon\CarbonImmutable;
@@ -13,7 +14,6 @@ use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Spatie\Activitylog\Models\Activity;
 
 #[Group('Audit Logs', description: 'Audit log listing endpoints.', weight: 12)]
 class AuditLogController
@@ -97,14 +97,14 @@ class AuditLogController
                         $actorQuery
                             ->where(function ($causerQuery) use ($matchingActorIds): void {
                                 $causerQuery
-                                    ->where('causer_type', User::class)
-                                    ->whereIn('causer_id', $matchingActorIds);
+                                    ->where('actor_type', User::class)
+                                    ->whereIn('actor_id', $matchingActorIds);
                             })
                             ->orWhere(function ($authQuery) use ($matchingActorIds): void {
                                 $authQuery
                                     ->where('description', 'like', 'auth.%')
-                                    ->where('subject_type', User::class)
-                                    ->whereIn('subject_id', $matchingActorIds);
+                                    ->where('target_type', User::class)
+                                    ->whereIn('target_id', $matchingActorIds);
                             });
                     });
                 });

@@ -1,0 +1,157 @@
+<?php
+
+namespace App\Console\Commands;
+
+use App\Models\Activity;
+use App\Models\User;
+use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
+
+class LogInactiveUsersCommand extends Command
+{
+    protected $signature = 'activity-log:log-inactive-users {--days=28 : Inactivity threshold in days}';
+
+    protected $description = 'Log users whose latest activity is older than the configured number of days.';
+
+    public function handle(): int
+    {
+        $thresholdDays = max(1, (int) $this->option('days'));
+        $now = now();
+        $cutoff = $now->copy()->subDays($thresholdDays);
+        $today = $now->toDateString();
+
+        $latestByUserId = $this->latestActivityByUserId();
+        $checkedCount = 0;
+        $loggedCount = 0;
+
+        User::query()
+            ->select(['id', 'name', 'created_at'])
+            ->orderBy('id')
+            ->chunkById(200, function ($users) use (
+                $latestByUserId,
+                $cutoff,
+                $thresholdDays,
+                $today,
+                $now,
+                &$checkedCount,
+                &$loggedCount
+            ): void {
+                foreach ($users as $user) {
+                    $checkedCount++;
+
+                    $latestActivityAt = $latestByUserId[$user->id] ?? $user->created_at;
+
+                    if (! $latestActivityAt instanceof Carbon) {
+                        continue;
+                    }
+
+                    if ($latestActivityAt->greaterThan($cutoff)) {
+                        continue;
+                    }
+
+                    if ($this->alreadyLoggedToday($user->id, $today)) {
+                        continue;
+                    }
+
+                    $daysInactive = $latestActivityAt->diffInDays($now);
+                    $targetLabel = sprintf('User#%d', (int) $user->id);
+
+                    activity('audit')
+                        ->performedOn($user)
+                        ->withProperties([
+                            'inactivity' => [
+                                'threshold_days' => $thresholdDays,
+                                'latest_activity_at' => $latestActivityAt->toISOString(),
+                                'days_inactive' => $daysInactive,
+                                'checked_at' => $now->toISOString(),
+                            ],
+                            'meta' => [
+                                'action_label' => 'USER_INACTIVE_THRESHOLD_REACHED',
+                                'target_label' => $targetLabel,
+                                'description' => sprintf(
+                                    '%s is inactive for %d days (latest activity at %s).',
+                                    $targetLabel,
+                                    $daysInactive,
+                                    $latestActivityAt->toDateTimeString()
+                                ),
+                            ],
+                        ])
+                        ->event('inactivity_detected')
+                        ->log('user.inactive_detected');
+
+                    $loggedCount++;
+                }
+            });
+
+        $this->info(sprintf(
+            'Checked %d users and logged %d inactive users (threshold: %d days).',
+            $checkedCount,
+            $loggedCount,
+            $thresholdDays
+        ));
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * @return array<int, Carbon>
+     */
+    private function latestActivityByUserId(): array
+    {
+        $latestByUserId = [];
+
+        Activity::query()
+            ->selectRaw('actor_id as user_id, MAX(created_at) as latest_at')
+            ->where('actor_type', User::class)
+            ->whereNotNull('actor_id')
+            ->groupBy('actor_id')
+            ->orderBy('actor_id')
+            ->get()
+            ->each(function ($row) use (&$latestByUserId): void {
+                $userId = (int) ($row->user_id ?? 0);
+                $latestAt = $row->latest_at;
+
+                if ($userId <= 0 || ! is_string($latestAt)) {
+                    return;
+                }
+
+                $latestByUserId[$userId] = Carbon::parse($latestAt);
+            });
+
+        Activity::query()
+            ->selectRaw('target_id as user_id, MAX(created_at) as latest_at')
+            ->where('description', 'like', 'auth.%')
+            ->where('target_type', User::class)
+            ->whereNotNull('target_id')
+            ->groupBy('target_id')
+            ->orderBy('target_id')
+            ->get()
+            ->each(function ($row) use (&$latestByUserId): void {
+                $userId = (int) ($row->user_id ?? 0);
+                $latestAt = $row->latest_at;
+
+                if ($userId <= 0 || ! is_string($latestAt)) {
+                    return;
+                }
+
+                $candidate = Carbon::parse($latestAt);
+                $existing = $latestByUserId[$userId] ?? null;
+
+                if (! $existing instanceof Carbon || $candidate->greaterThan($existing)) {
+                    $latestByUserId[$userId] = $candidate;
+                }
+            });
+
+        return $latestByUserId;
+    }
+
+    private function alreadyLoggedToday(int $userId, string $today): bool
+    {
+        return Activity::query()
+            ->where('description', 'user.inactive_detected')
+            ->where('target_type', User::class)
+            ->where('target_id', $userId)
+            ->whereDate('created_at', $today)
+            ->exists();
+    }
+}
