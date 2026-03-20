@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('sanctum:prune-expired --hours=24')->daily();
 Schedule::command('tutor-assignments:sync-statuses')->dailyAt('00:00');
+Schedule::command('activity-log:log-inactive-users --days=28')->dailyAt('00:00');
