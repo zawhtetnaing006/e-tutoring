@@ -98,7 +98,7 @@ export function ListView({
   }
 
   return (
-    <div className="p-6">
+    <div className="h-full overflow-y-auto p-6">
       <div className="space-y-4">
         {meetingsWithSchedule.map(
           ({ meeting, nextSchedule, recurrence, status }) => (

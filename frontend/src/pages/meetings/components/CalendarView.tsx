@@ -141,8 +141,8 @@ function MonthView({ currentDate, events, onViewDetails }: MonthViewProps) {
   }, [events])
 
   return (
-    <div className="h-full p-6">
-      <div className="grid h-full grid-cols-7 gap-0.5 overflow-hidden rounded-lg border border-border">
+    <div className="h-full p-3">
+      <div className="grid h-full grid-cols-7 grid-rows-[auto_repeat(6,1fr)] gap-0.5 overflow-hidden rounded-lg border border-border">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
           <div
             key={day}
@@ -160,7 +160,7 @@ function MonthView({ currentDate, events, onViewDetails }: MonthViewProps) {
           return (
             <div
               key={index}
-              className={`min-h-[120px] border-t border-border bg-card p-2 ${
+              className={`border-t border-border bg-card p-2 ${
                 !day.isCurrentMonth ? 'bg-muted/30' : ''
               }`}
             >
@@ -241,7 +241,7 @@ function WeekView({ currentDate, events, onViewDetails }: WeekViewProps) {
   today.setHours(12, 0, 0, 0)
 
   return (
-    <div className="h-full p-6">
+    <div className="h-full p-3">
       <div className="grid h-full grid-cols-7 gap-2">
         {weekDays.map((date, index) => {
           const dateStr = date.toISOString().split('T')[0]
@@ -310,7 +310,7 @@ function DayView({ currentDate, events, onViewDetails }: DayViewProps) {
   }, [events, dateStr])
 
   return (
-    <div className="h-full p-6">
+    <div className="h-full p-3">
       <div className="mx-auto max-w-2xl">
         <div className="mb-4 rounded-lg border border-border bg-card p-4">
           <h3 className="text-lg font-semibold text-foreground">

@@ -58,30 +58,31 @@ export function MeetingManagerPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border bg-card px-6 py-4">
+      <div className="flex flex-col gap-3 border-b border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
             Meeting Manager
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground sm:text-sm">
             Manage your tutoring sessions
           </p>
         </div>
         <button
           onClick={() => setIsCreateOpen(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 sm:justify-start"
         >
           <Plus className="h-4 w-4" />
-          New Meeting
+          <span className="hidden sm:inline">New Meeting</span>
+          <span className="sm:hidden">New</span>
         </button>
       </div>
 
-      <div className="border-b border-border bg-card px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+      <div className="border-b border-border bg-card p-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-1 overflow-x-auto sm:gap-2">
             <button
               onClick={() => setViewMode('month')}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+              className={`shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium sm:px-3 sm:text-sm ${
                 viewMode === 'month'
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -91,7 +92,7 @@ export function MeetingManagerPage() {
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+              className={`shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium sm:px-3 sm:text-sm ${
                 viewMode === 'week'
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -101,7 +102,7 @@ export function MeetingManagerPage() {
             </button>
             <button
               onClick={() => setViewMode('day')}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+              className={`shrink-0 rounded-md px-2.5 py-1.5 text-xs font-medium sm:px-3 sm:text-sm ${
                 viewMode === 'day'
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -109,31 +110,31 @@ export function MeetingManagerPage() {
             >
               Day
             </button>
-            <div className="mx-2 h-6 w-px bg-border" />
+            <div className="mx-1 h-6 w-px bg-border sm:mx-2" />
             <button
               onClick={() => setViewMode('list')}
-              className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium sm:gap-2 sm:px-3 sm:text-sm ${
                 viewMode === 'list'
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
-              <List className="h-4 w-4" />
+              <List className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               List
             </button>
           </div>
 
           {viewMode !== 'list' && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-2 sm:justify-end sm:gap-3">
               <button
                 onClick={handlePrevious}
                 className="rounded-md bg-muted p-1.5 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
               <button
                 onClick={handleToday}
-                className="rounded-md bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary hover:bg-primary/20"
+                className="rounded-md bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/20 sm:px-4 sm:text-sm"
               >
                 Today
               </button>
@@ -141,7 +142,7 @@ export function MeetingManagerPage() {
                 onClick={handleNext}
                 className="rounded-md bg-muted p-1.5 text-muted-foreground hover:bg-muted/80 hover:text-foreground"
               >
-                <ChevronRight className="h-5 w-5" />
+                <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             </div>
           )}
@@ -149,8 +150,8 @@ export function MeetingManagerPage() {
       </div>
 
       {viewMode !== 'list' && (
-        <div className="border-b border-border bg-card px-6 py-3">
-          <h2 className="text-lg font-semibold text-foreground">
+        <div className="border-b border-border bg-card p-3">
+          <h2 className="text-base font-semibold text-foreground sm:text-lg">
             {currentMonthYear}
           </h2>
         </div>

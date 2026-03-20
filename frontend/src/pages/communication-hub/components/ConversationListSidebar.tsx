@@ -55,16 +55,16 @@ export function ConversationListSidebar({
   }
 
   return (
-    <aside className="flex min-h-0 flex-col border-r border-border">
-      <div className="border-b border-border p-4">
+    <aside className="flex min-h-0 flex-col border-r border-border lg:border-r">
+      <div className="border-b border-border p-3 sm:p-4">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground sm:left-3" />
           <input
             value={search}
             onChange={event => onSearchChange(event.target.value)}
             onKeyDown={handleSearchKeyDown}
-            placeholder="Search person name or email..."
-            className="w-full rounded-lg border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+            placeholder="Search person..."
+            className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-3 text-xs text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 sm:pl-9 sm:text-sm"
           />
         </div>
       </div>
@@ -91,25 +91,27 @@ export function ConversationListSidebar({
                       key={conversation.id}
                       type="button"
                       onClick={() => onSelectConversation(conversation.id)}
-                      className={`flex w-full items-start gap-3 px-4 py-4 text-left hover:bg-muted/30 ${
+                      className={`flex w-full items-start gap-2.5 px-3 py-3 text-left hover:bg-muted/30 sm:gap-3 sm:px-4 sm:py-4 ${
                         isActive ? 'bg-muted/40' : ''
                       }`}
                     >
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white">
+                      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white sm:size-8">
                         {(peer.name.charAt(0) || '?').toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <p className="truncate text-sm font-medium text-foreground">
+                        <div className="flex items-start justify-between gap-2 sm:gap-3">
+                          <p className="truncate text-xs font-medium text-foreground sm:text-sm">
                             {peer.name}
                           </p>
-                          <span className="shrink-0 text-[11px] text-muted-foreground">
+                          <span className="shrink-0 text-[10px] text-muted-foreground sm:text-[11px]">
                             {conversation.last_message
-                              ? formatRelative(conversation.last_message.created_at)
+                              ? formatRelative(
+                                  conversation.last_message.created_at
+                                )
                               : ''}
                           </span>
                         </div>
-                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                        <p className="mt-0.5 truncate text-[11px] text-muted-foreground sm:mt-1 sm:text-xs">
                           {getConversationPreview(conversation)}
                         </p>
                       </div>
@@ -170,25 +172,25 @@ export function ConversationListSidebar({
                   key={conversation.id}
                   type="button"
                   onClick={() => onSelectConversation(conversation.id)}
-                  className={`flex w-full items-start gap-3 px-4 py-4 text-left hover:bg-muted/30 ${
+                  className={`flex w-full items-start gap-2.5 px-3 py-3 text-left hover:bg-muted/30 sm:gap-3 sm:px-4 sm:py-4 ${
                     isActive ? 'bg-muted/40' : ''
                   }`}
                 >
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white sm:size-8">
                     {(peer.name.charAt(0) || '?').toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="truncate text-sm font-medium text-foreground">
+                    <div className="flex items-start justify-between gap-2 sm:gap-3">
+                      <p className="truncate text-xs font-medium text-foreground sm:text-sm">
                         {peer.name}
                       </p>
-                      <span className="shrink-0 text-[11px] text-muted-foreground">
+                      <span className="shrink-0 text-[10px] text-muted-foreground sm:text-[11px]">
                         {conversation.last_message
                           ? formatRelative(conversation.last_message.created_at)
                           : ''}
                       </span>
                     </div>
-                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground sm:mt-1 sm:text-xs">
                       {getConversationPreview(conversation)}
                     </p>
                   </div>

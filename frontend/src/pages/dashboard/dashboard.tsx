@@ -7,9 +7,11 @@ export function DashboardPage() {
   const role = useRole()
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-      <p className="max-w-2xl text-body text-muted-foreground">
+    <div className="space-y-3 sm:space-y-4">
+      <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
+        Dashboard
+      </h1>
+      <p className="max-w-2xl text-sm text-muted-foreground sm:text-body">
         {role === 'staff' &&
           'Tutor allocation, staff dashboards, and student dashboards.'}
         {role === 'student' &&

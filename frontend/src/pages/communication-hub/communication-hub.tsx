@@ -48,9 +48,7 @@ function createOptimisticMessagesState(
 }
 
 function addMessageToCache(
-  current:
-    | InfiniteData<PaginatedResponse<ChatMessage>>
-    | undefined,
+  current: InfiniteData<PaginatedResponse<ChatMessage>> | undefined,
   message: ChatMessage
 ): InfiniteData<PaginatedResponse<ChatMessage>> {
   if (!current || current.pages.length === 0) {
@@ -68,19 +66,14 @@ function addMessageToCache(
     ...current,
     pages: current.pages.map((page, pageIndex) => ({
       ...page,
-      data:
-        pageIndex === 0
-          ? [message, ...page.data]
-          : page.data,
+      data: pageIndex === 0 ? [message, ...page.data] : page.data,
       total_items: page.total_items + 1,
     })),
   }
 }
 
 function replaceMessageInCache(
-  current:
-    | InfiniteData<PaginatedResponse<ChatMessage>>
-    | undefined,
+  current: InfiniteData<PaginatedResponse<ChatMessage>> | undefined,
   optimisticMessageId: number,
   message: ChatMessage
 ): InfiniteData<PaginatedResponse<ChatMessage>> | undefined {
@@ -119,9 +112,7 @@ function replaceMessageInCache(
 }
 
 function removeMessageFromCache(
-  current:
-    | InfiniteData<PaginatedResponse<ChatMessage>>
-    | undefined,
+  current: InfiniteData<PaginatedResponse<ChatMessage>> | undefined,
   messageId: number
 ): InfiniteData<PaginatedResponse<ChatMessage>> | undefined {
   if (!current) {
@@ -147,9 +138,7 @@ function removeMessageFromCache(
 }
 
 function updateConversationSeenState(
-  current:
-    | InfiniteData<PaginatedResponse<ChatConversation>>
-    | undefined,
+  current: InfiniteData<PaginatedResponse<ChatConversation>> | undefined,
   receipt: {
     conversation_id: number
     user_id: number
@@ -263,8 +252,9 @@ export function CommunicationHubPage() {
     }
 
     const hasRequestedConversation =
-      conversations.some(conversation => conversation.id === requestedConversationId) ||
-      optimisticConversation?.id === requestedConversationId
+      conversations.some(
+        conversation => conversation.id === requestedConversationId
+      ) || optimisticConversation?.id === requestedConversationId
 
     if (!hasRequestedConversation) {
       if (hasNextConversationPage && !isFetchingNextConversationPage) {
@@ -278,11 +268,13 @@ export function CommunicationHubPage() {
       return
     }
 
-    setSelectedConversationId(requestedConversationId)
-    setSearch('')
-    setSelectedDocumentId(null)
-    setCommentDraft('')
-    setActiveTab('chat')
+    queueMicrotask(() => {
+      setSelectedConversationId(requestedConversationId)
+      setSearch('')
+      setSelectedDocumentId(null)
+      setCommentDraft('')
+      setActiveTab('chat')
+    })
   }, [
     conversations,
     fetchNextConversationsPage,
@@ -306,7 +298,9 @@ export function CommunicationHubPage() {
     null
 
   const activeConversation =
-    conversations.find(conversation => conversation.id === resolvedConversationId) ??
+    conversations.find(
+      conversation => conversation.id === resolvedConversationId
+    ) ??
     (optimisticConversation?.id === resolvedConversationId
       ? optimisticConversation
       : null) ??
@@ -447,7 +441,8 @@ export function CommunicationHubPage() {
       if (context) {
         queryClient.setQueryData<InfiniteData<PaginatedResponse<ChatMessage>>>(
           ['chat', 'messages', context.conversationId],
-          current => removeMessageFromCache(current, context.optimisticMessageId)
+          current =>
+            removeMessageFromCache(current, context.optimisticMessageId)
         )
 
         setDraft(currentDraft =>
@@ -490,10 +485,10 @@ export function CommunicationHubPage() {
       seenAttemptRef.current[receipt.conversation_id] =
         receipt.last_seen_message_id ?? 0
 
-      queryClient.setQueryData<InfiniteData<PaginatedResponse<ChatConversation>>>(
-        ['chat', 'conversations'],
-        current =>
-          updateConversationSeenState(current, receipt, currentUser?.id)
+      queryClient.setQueryData<
+        InfiniteData<PaginatedResponse<ChatConversation>>
+      >(['chat', 'conversations'], current =>
+        updateConversationSeenState(current, receipt, currentUser?.id)
       )
     },
     onError: (_error, variables, context) => {
@@ -530,6 +525,7 @@ export function CommunicationHubPage() {
     const latestIncomingMessageId = latestIncomingMessage.id
 
     if (latestIncomingMessageId <= currentSeenMessageId) {
+      // eslint-disable-next-line security/detect-object-injection
       seenAttemptRef.current[activeConversationId] = currentSeenMessageId
       return
     }
@@ -539,6 +535,9 @@ export function CommunicationHubPage() {
     if (attemptedSeenMessageId >= latestIncomingMessageId) {
       return
     }
+
+    // eslint-disable-next-line security/detect-object-injection
+    seenAttemptRef.current[activeConversationId] = latestIncomingMessageId
 
     markSeenMutation.mutate({
       conversationId: activeConversationId,
@@ -559,7 +558,10 @@ export function CommunicationHubPage() {
     onSuccess: conversation => {
       setOptimisticConversation(conversation)
       setSelectedConversationId(conversation.id)
-      setSearchParams({ conversation: String(conversation.id) }, { replace: true })
+      setSearchParams(
+        { conversation: String(conversation.id) },
+        { replace: true }
+      )
       setSearch('')
       setSelectedDocumentId(null)
       setCommentDraft('')
@@ -607,8 +609,7 @@ export function CommunicationHubPage() {
     }) => addDocumentComment(documentId, comment),
     onSuccess: comment => {
       setCommentDraft('')
-      const conversationId =
-        comment.conversation_id ?? activeConversationId
+      const conversationId = comment.conversation_id ?? activeConversationId
 
       if (conversationId != null) {
         void queryClient.invalidateQueries({
@@ -748,18 +749,18 @@ export function CommunicationHubPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] min-h-0 w-full flex-col">
-      <section className="flex min-h-0 flex-1 flex-col space-y-5">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">
+    <div className="flex h-[calc(100vh-8rem)] min-h-0 w-full flex-col sm:h-[calc(100vh-6rem)] lg:h-[calc(100vh-3rem)]">
+      <section className="flex min-h-0 flex-1 flex-col space-y-3 sm:space-y-4 lg:space-y-5">
+        <div className="px-1">
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
             Communication Hub
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-0.5 text-xs text-muted-foreground sm:mt-1 sm:text-sm">
             Connect with students and tutors anytime
           </p>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-2xl border border-border bg-background lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-lg border border-border bg-background sm:rounded-xl lg:grid-cols-[320px_minmax(0,1fr)] lg:rounded-2xl">
           <ConversationListSidebar
             currentUserId={currentUser?.id}
             conversations={filteredConversations}
@@ -768,7 +769,9 @@ export function CommunicationHubPage() {
             isFetchingNextPage={isFetchingNextConversationPage}
             searchResults={searchResults}
             onSearchSubmit={handleSearchSubmit}
-            isSearchingUsers={searchUsersQuery.isPending || searchUsersQuery.isFetching}
+            isSearchingUsers={
+              searchUsersQuery.isPending || searchUsersQuery.isFetching
+            }
             isStartingConversation={startConversationMutation.isPending}
             search={search}
             onSearchChange={setSearch}
