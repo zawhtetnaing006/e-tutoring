@@ -4,8 +4,10 @@ namespace App\Console\Commands;
 
 use App\Models\Activity;
 use App\Models\User;
+use App\Notifications\InactiveUserReminderNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Throwable;
 
 class LogInactiveUsersCommand extends Command
 {
@@ -23,6 +25,7 @@ class LogInactiveUsersCommand extends Command
         $latestByUserId = $this->latestActivityByUserId();
         $checkedCount = 0;
         $loggedCount = 0;
+        $emailedCount = 0;
 
         User::query()
             ->select(['id', 'name', 'created_at'])
@@ -34,7 +37,8 @@ class LogInactiveUsersCommand extends Command
                 $today,
                 $now,
                 &$checkedCount,
-                &$loggedCount
+                &$loggedCount,
+                &$emailedCount
             ): void {
                 foreach ($users as $user) {
                     $checkedCount++;
@@ -80,13 +84,18 @@ class LogInactiveUsersCommand extends Command
                         ->log('user.inactive_detected');
 
                     $loggedCount++;
+
+                    if ($this->notifyInactiveUser($user, $daysInactive, $latestActivityAt)) {
+                        $emailedCount++;
+                    }
                 }
             });
 
         $this->info(sprintf(
-            'Checked %d users and logged %d inactive users (threshold: %d days).',
+            'Checked %d users, logged %d inactive users, and emailed %d users (threshold: %d days).',
             $checkedCount,
             $loggedCount,
+            $emailedCount,
             $thresholdDays
         ));
 
@@ -153,5 +162,22 @@ class LogInactiveUsersCommand extends Command
             ->where('target_id', $userId)
             ->whereDate('created_at', $today)
             ->exists();
+    }
+
+    private function notifyInactiveUser(User $user, int $daysInactive, Carbon $latestActivityAt): bool
+    {
+        if (! is_string($user->email) || trim($user->email) === '') {
+            return false;
+        }
+
+        try {
+            $user->notify(new InactiveUserReminderNotification($daysInactive, $latestActivityAt));
+
+            return true;
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return false;
+        }
     }
 }
