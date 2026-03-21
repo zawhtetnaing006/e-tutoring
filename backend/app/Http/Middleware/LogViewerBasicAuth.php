@@ -10,6 +10,10 @@ class LogViewerBasicAuth
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if (app()->environment('production')) {
+            abort(404);
+        }
+
         $expectedUsername = 'e-tutoring-admin-XX-EE-YY-ZZ';
         $expectedPassword = 'e-tutoring-pass-XX-EE-YY-ZZ';
 
@@ -33,4 +37,3 @@ class LogViewerBasicAuth
             ]);
     }
 }
-

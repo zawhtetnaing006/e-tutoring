@@ -2,12 +2,12 @@
 set -euo pipefail
 
 # Assumes it is run from the repo root.
-if [[ ! -f docker-compose.prod.yml || ! -f backend/.env.prod ]]; then
-  echo "Error: run from the project root (missing docker-compose.prod.yml or backend/.env.prod)." >&2
+if [[ ! -f docker-compose.prod.yml || ! -f backend/.env ]]; then
+  echo "Error: run from the project root (missing docker-compose.prod.yml or backend/.env)." >&2
   exit 1
 fi
 
-compose=(docker compose --env-file backend/.env.prod -f docker-compose.prod.yml)
+compose=(docker compose --env-file backend/.env -f docker-compose.prod.yml)
 
 migrate=0
 
@@ -27,4 +27,3 @@ fi
 if [[ "${migrate}" -eq 1 ]]; then
   "${compose[@]}" exec -T php php artisan migrate --force
 fi
-

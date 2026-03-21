@@ -8,6 +8,7 @@ services:
       args:
         APP_DIR: backend
         FRONTEND_DIR: frontend
+        NGINX_CONF: prod.conf
         VITE_API_BASE_URL: /api
     depends_on:
       - php
@@ -38,7 +39,7 @@ services:
       APP_MIGRATION_MAX_ATTEMPTS: "30"
       APP_MIGRATION_RETRY_DELAY: "2"
     volumes:
-      - ./backend/.env.prod:/var/www/.env:ro
+      - ./backend/.env:/var/www/.env:ro
       - app_storage:/var/www/storage
       - app_bootstrap_cache:/var/www/bootstrap/cache
     networks:
@@ -58,7 +59,7 @@ services:
       redis:
         condition: service_started
     volumes:
-      - ./backend/.env.prod:/var/www/.env:ro
+      - ./backend/.env:/var/www/.env:ro
       - app_storage:/var/www/storage
       - app_bootstrap_cache:/var/www/bootstrap/cache
     command: ["php", "artisan", "schedule:work"]
@@ -90,14 +91,6 @@ services:
     image: redis:7-alpine
     volumes:
       - redis_data_prod:/data
-    networks:
-      - app
-    restart: unless-stopped
-
-  adminer:
-    image: adminer:4
-    depends_on:
-      - mysql
     networks:
       - app
     restart: unless-stopped
