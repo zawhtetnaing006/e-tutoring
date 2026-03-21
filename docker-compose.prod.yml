@@ -112,8 +112,8 @@ services:
       - app_storage:/var/www/storage
       - app_bootstrap_cache:/var/www/bootstrap/cache
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     networks:
       - app
     restart: unless-stopped
