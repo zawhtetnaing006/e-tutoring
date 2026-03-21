@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\ChatController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Api\WorkScheduleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', \App\Http\Controllers\Api\HealthCheckController::class);
+Route::middleware('auth:sanctum')->get('/analytics', AnalyticsController::class);
 
 Route::prefix('auth')
     ->controller(AuthController::class)
