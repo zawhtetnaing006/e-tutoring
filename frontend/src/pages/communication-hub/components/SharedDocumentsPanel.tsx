@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type KeyboardEvent } from 'react'
+import { useEffect, type ChangeEvent, type KeyboardEvent } from 'react'
 import {
   CalendarDays,
   Download,
@@ -9,14 +9,8 @@ import {
   UserRound,
   X,
 } from 'lucide-react'
-import type {
-  ChatDocument,
-  ChatDocumentComment,
-} from '@/features/chat/api'
-import {
-  formatChatDate,
-  formatFileSize,
-} from './chat-utils'
+import type { ChatDocument, ChatDocumentComment } from '@/features/chat/api'
+import { formatChatDate, formatFileSize } from './chat-utils'
 
 type SharedDocumentsPanelProps = {
   documents: ChatDocument[]
@@ -63,14 +57,13 @@ export function SharedDocumentsPanel({
 }: SharedDocumentsPanelProps) {
   const selectedDocument =
     documents.find(document => document.id === selectedDocumentId) ?? null
-  const [isCommentsOpen, setIsCommentsOpen] = useState(false)
+  const isCommentsOpen = selectedDocumentId !== null
 
   useEffect(() => {
     if (!isCommentsOpen) return
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setIsCommentsOpen(false)
         onSelectDocument(null)
       }
     }
@@ -78,12 +71,6 @@ export function SharedDocumentsPanel({
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isCommentsOpen, onSelectDocument])
-
-  useEffect(() => {
-    if (!selectedDocument) {
-      setIsCommentsOpen(false)
-    }
-  }, [selectedDocument])
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextFile = event.target.files?.[0]
@@ -95,11 +82,9 @@ export function SharedDocumentsPanel({
 
   const handleOpenComments = (documentId: number) => {
     onSelectDocument(documentId)
-    setIsCommentsOpen(true)
   }
 
   const handleCloseComments = () => {
-    setIsCommentsOpen(false)
     onSelectDocument(null)
   }
 
@@ -121,7 +106,9 @@ export function SharedDocumentsPanel({
             )}
           </div>
           <p className="text-sm font-medium text-foreground">
-            {isUploadingDocument ? 'Uploading document...' : 'Click to upload document'}
+            {isUploadingDocument
+              ? 'Uploading document...'
+              : 'Click to upload document'}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             PDF, DOCX, images, and other supporting files can be shared here.
@@ -163,7 +150,9 @@ export function SharedDocumentsPanel({
                                 <CalendarDays className="size-3.5" />
                                 {formatChatDate(document.created_at)}
                               </span>
-                              <span>{formatFileSize(document.file_size_bytes)}</span>
+                              <span>
+                                {formatFileSize(document.file_size_bytes)}
+                              </span>
                             </div>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
@@ -200,7 +189,8 @@ export function SharedDocumentsPanel({
                         >
                           <MessageSquareText className="size-3.5" />
                           <span className="text-left">
-                            {commentsCount} comment{commentsCount === 1 ? '' : 's'}
+                            {commentsCount} comment
+                            {commentsCount === 1 ? '' : 's'}
                           </span>
                         </button>
                       </div>
@@ -233,7 +223,8 @@ export function SharedDocumentsPanel({
                 No shared documents yet
               </p>
               <p className="mt-1 text-sm">
-                Upload the first document for this conversation from the panel above.
+                Upload the first document for this conversation from the panel
+                above.
               </p>
             </div>
           )}
@@ -242,15 +233,20 @@ export function SharedDocumentsPanel({
 
       {isCommentsOpen && selectedDocument ? (
         <div
+          role="presentation"
           className="fixed inset-0 z-modal flex items-center justify-center bg-slate-950/20 px-4 backdrop-blur-[2px]"
-          onClick={handleCloseComments}
         >
+          <button
+            type="button"
+            onClick={handleCloseComments}
+            aria-label="Close modal overlay"
+            className="absolute inset-0"
+          />
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="document-comments-title"
-            className="w-full max-w-md rounded-2xl border border-border bg-background p-6 shadow-2xl"
-            onClick={event => event.stopPropagation()}
+            className="relative w-full max-w-md rounded-2xl border border-border bg-background p-6 shadow-2xl"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
