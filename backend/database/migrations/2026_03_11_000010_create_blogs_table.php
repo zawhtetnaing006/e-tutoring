@@ -26,6 +26,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->unsignedBigInteger('view_count')->default(0);
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['author_user_id', 'created_at'], 'blogs_author_user_id_created_at_index');
             $table->index(['is_active', 'created_at'], 'blogs_is_active_created_at_index');

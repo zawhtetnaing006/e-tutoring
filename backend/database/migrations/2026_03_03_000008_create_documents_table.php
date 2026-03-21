@@ -28,6 +28,7 @@ return new class extends Migration
             $table->unsignedBigInteger('file_size_bytes');
             $table->string('mime_type');
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['conversation_id', 'created_at'], 'documents_conversation_id_created_at_index');
         });

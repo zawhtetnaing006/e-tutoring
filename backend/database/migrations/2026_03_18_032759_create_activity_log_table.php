@@ -18,6 +18,7 @@ class CreateActivityLogTable extends Migration
             $table->json('properties')->nullable();
             $table->uuid('batch_uuid')->nullable();
             $table->timestamps();
+            $table->softDeletes();
             $table->index('log_name');
         });
     }

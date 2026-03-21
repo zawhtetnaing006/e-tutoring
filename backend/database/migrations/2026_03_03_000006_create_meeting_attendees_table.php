@@ -26,6 +26,7 @@ return new class extends Migration
 
             $table->enum('status', ['PRESENCE', 'ABSENCE', 'ON_LEAVE']);
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['meeting_id', 'user_id']);
             $table->index('status');

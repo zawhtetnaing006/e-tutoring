@@ -25,6 +25,7 @@ return new class extends Migration
 
             $table->text('content')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['conversation_id', 'created_at'], 'messages_conversation_id_created_at_index');
         });

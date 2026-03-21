@@ -25,6 +25,7 @@ return new class extends Migration
             $table->text('note')->nullable();
             $table->timestamp('cancel_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['meeting_id', 'date', 'start_time']);
         });

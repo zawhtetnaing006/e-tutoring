@@ -26,6 +26,7 @@ return new class extends Migration
                 ->nullOnDelete();
 
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['tutor_assignment_id', 'type']);
         });
