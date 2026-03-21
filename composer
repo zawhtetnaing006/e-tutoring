@@ -14,7 +14,7 @@ elif [[ "${1-}" == "--local" ]]; then
 fi
 
 if [[ "${env_name}" == "prod" ]]; then
-  env_file="backend/.env.prod"
+  env_file="backend/.env"
   compose_file="docker-compose.prod.yml"
 else
   env_file="backend/.env.local"
