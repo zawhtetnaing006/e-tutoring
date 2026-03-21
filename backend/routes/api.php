@@ -12,7 +12,6 @@ use App\Http\Controllers\Api\MeetingScheduleController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\UserController;
-use App\Http\Controllers\Api\WorkScheduleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', \App\Http\Controllers\Api\HealthCheckController::class);
@@ -98,21 +97,6 @@ Route::prefix('tutor-assignments')
             Route::delete('/', 'bulkDestroy');
             Route::put('{tutorAssignment}', 'update');
             Route::delete('{tutorAssignment}', 'destroy');
-        });
-    });
-
-Route::prefix('work-schedules')
-    ->controller(WorkScheduleController::class)
-    ->group(function () {
-        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR,STUDENT'])->group(function () {
-            Route::get('/', 'index');
-            Route::get('{workSchedule}', 'show');
-        });
-
-        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])->group(function () {
-            Route::post('/', 'store');
-            Route::put('{workSchedule}', 'update');
-            Route::delete('{workSchedule}', 'destroy');
         });
     });
 
