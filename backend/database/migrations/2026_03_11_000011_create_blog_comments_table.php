@@ -25,6 +25,7 @@ return new class extends Migration
 
             $table->text('comment_text');
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['blog_id', 'created_at'], 'blog_comments_blog_id_created_at_index');
         });

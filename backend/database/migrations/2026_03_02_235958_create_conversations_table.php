@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('direct_pair_key')->nullable()->unique();
             $table->timestamp('last_message_at')->nullable()->index();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

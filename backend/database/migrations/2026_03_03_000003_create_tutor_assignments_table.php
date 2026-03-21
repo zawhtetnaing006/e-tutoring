@@ -28,6 +28,7 @@ return new class extends Migration
                 ->nullOnDelete();
 
             $table->timestamps();
+            $table->softDeletes();
 
             $table->unique(['tutor_user_id', 'student_user_id'], 'tutor_assignment_tutor_student_unique');
             $table->index(['start_date', 'end_date']);
