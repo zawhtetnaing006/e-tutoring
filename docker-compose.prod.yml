@@ -10,8 +10,13 @@ services:
         FRONTEND_DIR: frontend
         NGINX_CONF: prod.conf
         VITE_API_BASE_URL: /api
+        VITE_REVERB_APP_KEY: ${VITE_REVERB_APP_KEY}
+        VITE_REVERB_HOST: ${VITE_REVERB_HOST}
+        VITE_REVERB_PORT: ${VITE_REVERB_PORT}
+        VITE_REVERB_SCHEME: ${VITE_REVERB_SCHEME}
     depends_on:
       - php
+      - reverb
     ports:
       - "127.0.0.1:8000:80"
     volumes:
@@ -63,6 +68,52 @@ services:
       - app_storage:/var/www/storage
       - app_bootstrap_cache:/var/www/bootstrap/cache
     command: ["php", "artisan", "schedule:work"]
+    networks:
+      - app
+    restart: unless-stopped
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+      args:
+        APP_DIR: backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mailhog:
+        condition: service_started
+    volumes:
+      - ./backend/.env:/var/www/.env:ro
+      - app_storage:/var/www/storage
+      - app_bootstrap_cache:/var/www/bootstrap/cache
+    command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=1", "--timeout=60"]
+    networks:
+      - app
+    restart: unless-stopped
+
+  reverb:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+      args:
+        APP_DIR: backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend/.env:/var/www/.env:ro
+      - app_storage:/var/www/storage
+      - app_bootstrap_cache:/var/www/bootstrap/cache
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    ports:
+      - "8080:8080"
     networks:
       - app
     restart: unless-stopped
