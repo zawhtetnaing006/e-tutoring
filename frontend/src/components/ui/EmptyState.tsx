@@ -1,0 +1,30 @@
+import type { ReactNode } from 'react'
+
+export interface EmptyStateProps {
+  icon?: ReactNode
+  title: string
+  description?: string
+  action?: ReactNode
+  className?: string
+}
+
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+  className = '',
+}: EmptyStateProps) {
+  return (
+    <div
+      className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-12 ${className}`}
+    >
+      {icon && <div className="mb-4 text-gray-400">{icon}</div>}
+      <h3 className="mb-1 text-lg font-medium text-gray-900">{title}</h3>
+      {description && (
+        <p className="mb-4 text-sm text-gray-500">{description}</p>
+      )}
+      {action && <div>{action}</div>}
+    </div>
+  )
+}

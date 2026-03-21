@@ -1,5 +1,6 @@
 import type { KeyboardEvent, RefObject } from 'react'
-import { LoaderCircle, MessageSquarePlus, Search } from 'lucide-react'
+import { LoaderCircle, MessageSquarePlus } from 'lucide-react'
+import { SearchInput } from '@/components/ui'
 import type { ChatConversation, ChatUser } from '@/features/chat/api'
 import {
   formatRelative,
@@ -57,16 +58,16 @@ export function ConversationListSidebar({
   return (
     <aside className="flex min-h-0 flex-col border-r border-border lg:border-r">
       <div className="border-b border-border p-3 sm:p-4">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground sm:left-3" />
-          <input
-            value={search}
-            onChange={event => onSearchChange(event.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            placeholder="Search person..."
-            className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-3 text-xs text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 sm:pl-9 sm:text-sm"
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={event => onSearchChange(event.target.value)}
+          onKeyDown={handleSearchKeyDown}
+          placeholder="Search person..."
+          showClearButton={false}
+          className="w-full"
+          inputClassName="h-auto rounded-lg border-border bg-background py-2 pl-9 pr-3 text-xs text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 sm:pl-10 sm:text-sm"
+          iconClassName="left-2.5 size-4 text-muted-foreground sm:left-3"
+        />
       </div>
 
       <div
