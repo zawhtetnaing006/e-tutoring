@@ -9,6 +9,39 @@ import {
 } from '@/features/subjects/api'
 import { QUERY_KEYS } from '@/utils/constants'
 
+type SubjectSortKey = 'name' | 'description' | 'status'
+type SortDir = 'asc' | 'desc'
+export type SubjectStatusFilter = 'all' | 'active' | 'inactive'
+
+function compareSubjects(
+  a: Subject,
+  b: Subject,
+  key: SubjectSortKey,
+  dir: SortDir
+): number {
+  let cmp = 0
+  switch (key) {
+    case 'name':
+      cmp = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      break
+    case 'description':
+      cmp = (a.description ?? '').localeCompare(
+        b.description ?? '',
+        undefined,
+        {
+          sensitivity: 'base',
+        }
+      )
+      break
+    case 'status':
+      cmp = Number(a.is_active) - Number(b.is_active)
+      break
+    default:
+      cmp = 0
+  }
+  return dir === 'asc' ? cmp : -cmp
+}
+
 export function useSubjectListPage(showStaffActions: boolean) {
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(10)
@@ -23,6 +56,9 @@ export function useSubjectListPage(showStaffActions: boolean) {
     left: number
     right: number
   } | null>(null)
+  const [sortKey, setSortKey] = useState<SubjectSortKey | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [statusFilter, setStatusFilter] = useState<SubjectStatusFilter>('all')
 
   const queryClient = useQueryClient()
   const invalidateList = () =>
@@ -66,16 +102,35 @@ export function useSubjectListPage(showStaffActions: boolean) {
   const start = (page - 1) * perPage + 1
   const end = Math.min(page * perPage, totalItems)
 
+  const handleSort = (key: SubjectSortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
   const filteredRows = useMemo(() => {
-    const rows = data?.data ?? []
-    if (!search.trim()) return rows
-    const q = search.toLowerCase().trim()
-    return rows.filter(
-      r =>
-        r.name.toLowerCase().includes(q) ||
-        (r.description ?? '').toLowerCase().includes(q)
-    )
-  }, [data?.data, search])
+    let rows = data?.data ?? []
+    if (statusFilter === 'active') {
+      rows = rows.filter(r => r.is_active)
+    } else if (statusFilter === 'inactive') {
+      rows = rows.filter(r => !r.is_active)
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase().trim()
+      rows = rows.filter(
+        r =>
+          r.name.toLowerCase().includes(q) ||
+          (r.description ?? '').toLowerCase().includes(q)
+      )
+    }
+    if (sortKey) {
+      rows = [...rows].sort((a, b) => compareSubjects(a, b, sortKey, sortDir))
+    }
+    return rows
+  }, [data?.data, search, statusFilter, sortKey, sortDir])
 
   const allSelected =
     filteredRows.length > 0 && filteredRows.every(r => selectedIds.has(r.id))
@@ -165,5 +220,10 @@ export function useSubjectListPage(showStaffActions: boolean) {
     handleToggleRowMenu,
     closeStaffMenu,
     staffRow,
+    sortKey,
+    sortDir,
+    handleSort,
+    statusFilter,
+    setStatusFilter,
   }
 }
