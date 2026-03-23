@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { useZodForm } from '@/hooks/useZodForm'
 import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { getUserRole, getUserRoleLabel } from '@/features/auth/role-utils'
+import { getAuthSession, saveAuthSession } from '@/features/auth/storage'
 import type { User } from '@/features/auth'
 import { useSubjects } from '@/features/subjects/useSubjects'
 import { updateUser } from '@/features/users/api'
@@ -54,7 +56,7 @@ function userToProfileValues(user: User): ProfileFormValues {
     email: user.email,
     phoneNumber: user.phone ?? '',
     subject: Array.isArray(user.subjects)
-      ? user.subjects.map(s => s.name).join(', ')
+      ? (user.subjects[0]?.name ?? '')
       : '',
     country: user.country ?? '',
     city: user.city ?? '',
@@ -65,6 +67,7 @@ function userToProfileValues(user: User): ProfileFormValues {
 
 export function ProfilePage() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const queryClient = useQueryClient()
   const { data: user, isLoading } = useCurrentUser()
   const normalizedRole = getUserRole(user)
   const shouldShowSubject =
@@ -97,14 +100,6 @@ export function ProfilePage() {
       newPassword: '',
       confirmNewPassword: '',
     },
-  })
-
-  const handleProfileSubmit = profileForm.handleSubmit(values => {
-    // TODO: connect to API when backend is ready
-    toast.success('Profile saved', {
-      description: 'Your profile details have been updated.',
-    })
-    void values
   })
 
   const handlePasswordSubmit = passwordForm.handleSubmit(
@@ -147,6 +142,52 @@ export function ProfilePage() {
 
   const { data: subjectsData, isLoading: isSubjectsLoading } = useSubjects({
     enabled: shouldShowSubject,
+  })
+
+  const profileMutation = useMutation({
+    mutationFn: async (values: ProfileFormValues) => {
+      const selectedSubjectId = shouldShowSubject
+        ? subjectsData?.data.find(subject => subject.name === values.subject)?.id
+        : undefined
+
+      return updateUser(values.userId, {
+        name: values.name,
+        email: values.email,
+        phone: values.phoneNumber || null,
+        address: values.address || null,
+        country: values.country || null,
+        city: values.city || null,
+        township: values.township || null,
+        ...(shouldShowSubject
+          ? { subject_ids: selectedSubjectId != null ? [selectedSubjectId] : [] }
+          : {}),
+      })
+    },
+    onSuccess: updatedUser => {
+      profileForm.reset(userToProfileValues(updatedUser))
+      queryClient.setQueryData(['auth', 'me'], updatedUser)
+
+      const session = getAuthSession()
+      if (session) {
+        saveAuthSession({
+          ...session,
+          user: updatedUser,
+        })
+      }
+
+      toast.success('Profile saved', {
+        description: 'Your profile details have been updated.',
+      })
+    },
+    onError: error => {
+      const description =
+        error instanceof Error ? error.message : 'Please try again later.'
+      toast.error('Failed to save profile', { description })
+    },
+  })
+
+  const handleProfileSubmit = profileForm.handleSubmit(values => {
+    profileMutation.mutate(values)
   })
 
   return (
@@ -356,9 +397,10 @@ export function ProfilePage() {
                 </button>
                 <button
                   type="submit"
+                  disabled={profileMutation.isPending}
                   className="inline-flex w-28 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
                 >
-                  Save
+                  {profileMutation.isPending ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
