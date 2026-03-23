@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\Activity;
+use App\Models\Role;
+use App\Models\TutorAssignment;
 use App\Models\User;
 use App\Notifications\InactiveUserReminderNotification;
+use App\Notifications\StudentInactiveTutorReminderNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -71,5 +74,96 @@ class LogInactiveUsersCommandTest extends TestCase
         $this->artisan('activity-log:log-inactive-users --days=28')->assertSuccessful();
 
         Notification::assertNothingSent();
+    }
+
+    public function test_it_notifies_inactive_students_and_their_active_tutors(): void
+    {
+        Notification::fake();
+
+        $studentRole = Role::query()->create([
+            'code' => Role::STUDENT,
+            'name' => 'Student',
+        ]);
+
+        $tutorRole = Role::query()->create([
+            'code' => Role::TUTOR,
+            'name' => 'Tutor',
+        ]);
+
+        $inactiveStudent = User::factory()->create([
+            'role_id' => $studentRole->id,
+            'created_at' => now()->subDays(29),
+        ]);
+
+        $activeTutor = User::factory()->create([
+            'role_id' => $tutorRole->id,
+        ]);
+
+        TutorAssignment::query()->create([
+            'tutor_user_id' => $activeTutor->id,
+            'student_user_id' => $inactiveStudent->id,
+            'start_date' => now()->subDays(10)->toDateString(),
+            'end_date' => now()->addDays(10)->toDateString(),
+            'status' => TutorAssignment::STATUS_ACTIVE,
+        ]);
+
+        $this->artisan('activity-log:log-inactive-users --days=28')
+            ->expectsOutputToContain('emailed 2 recipients')
+            ->assertSuccessful();
+
+        Notification::assertSentTo($inactiveStudent, InactiveUserReminderNotification::class);
+        Notification::assertSentTo($activeTutor, StudentInactiveTutorReminderNotification::class);
+    }
+
+    public function test_it_notifies_the_latest_tutor_when_inactive_student_has_no_active_assignment(): void
+    {
+        Notification::fake();
+
+        $studentRole = Role::query()->create([
+            'code' => Role::STUDENT,
+            'name' => 'Student',
+        ]);
+
+        $tutorRole = Role::query()->create([
+            'code' => Role::TUTOR,
+            'name' => 'Tutor',
+        ]);
+
+        $inactiveStudent = User::factory()->create([
+            'role_id' => $studentRole->id,
+            'created_at' => now()->subDays(40),
+        ]);
+
+        $olderTutor = User::factory()->create([
+            'role_id' => $tutorRole->id,
+        ]);
+
+        $latestTutor = User::factory()->create([
+            'role_id' => $tutorRole->id,
+        ]);
+
+        TutorAssignment::query()->create([
+            'tutor_user_id' => $olderTutor->id,
+            'student_user_id' => $inactiveStudent->id,
+            'start_date' => now()->subDays(80)->toDateString(),
+            'end_date' => now()->subDays(40)->toDateString(),
+            'status' => TutorAssignment::STATUS_INACTIVE,
+        ]);
+
+        TutorAssignment::query()->create([
+            'tutor_user_id' => $latestTutor->id,
+            'student_user_id' => $inactiveStudent->id,
+            'start_date' => now()->subDays(39)->toDateString(),
+            'end_date' => now()->subDays(5)->toDateString(),
+            'status' => TutorAssignment::STATUS_INACTIVE,
+        ]);
+
+        $this->artisan('activity-log:log-inactive-users --days=28')
+            ->expectsOutputToContain('emailed 2 recipients')
+            ->assertSuccessful();
+
+        Notification::assertSentTo($inactiveStudent, InactiveUserReminderNotification::class);
+        Notification::assertSentTo($latestTutor, StudentInactiveTutorReminderNotification::class);
+        Notification::assertNotSentTo($olderTutor, StudentInactiveTutorReminderNotification::class);
     }
 }

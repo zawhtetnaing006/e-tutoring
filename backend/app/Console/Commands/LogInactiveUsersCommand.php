@@ -3,10 +3,14 @@
 namespace App\Console\Commands;
 
 use App\Models\Activity;
+use App\Models\Role;
+use App\Models\TutorAssignment;
 use App\Models\User;
 use App\Notifications\InactiveUserReminderNotification;
+use App\Notifications\StudentInactiveTutorReminderNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Throwable;
 
 class LogInactiveUsersCommand extends Command
@@ -25,10 +29,11 @@ class LogInactiveUsersCommand extends Command
         $latestByUserId = $this->latestActivityByUserId();
         $checkedCount = 0;
         $loggedCount = 0;
-        $emailedCount = 0;
+        $emailedRecipientCount = 0;
 
         User::query()
-            ->select(['id', 'name', 'created_at'])
+            ->select(['id', 'name', 'email', 'role_id', 'created_at'])
+            ->with('role:id,code')
             ->orderBy('id')
             ->chunkById(200, function ($users) use (
                 $latestByUserId,
@@ -38,7 +43,7 @@ class LogInactiveUsersCommand extends Command
                 $now,
                 &$checkedCount,
                 &$loggedCount,
-                &$emailedCount
+                &$emailedRecipientCount
             ): void {
                 foreach ($users as $user) {
                     $checkedCount++;
@@ -85,17 +90,15 @@ class LogInactiveUsersCommand extends Command
 
                     $loggedCount++;
 
-                    if ($this->notifyInactiveUser($user, $daysInactive, $latestActivityAt)) {
-                        $emailedCount++;
-                    }
+                    $emailedRecipientCount += $this->notifyInactiveRecipients($user, $daysInactive, $latestActivityAt, $now);
                 }
             });
 
         $this->info(sprintf(
-            'Checked %d users, logged %d inactive users, and emailed %d users (threshold: %d days).',
+            'Checked %d users, logged %d inactive users, and emailed %d recipients (threshold: %d days).',
             $checkedCount,
             $loggedCount,
-            $emailedCount,
+            $emailedRecipientCount,
             $thresholdDays
         ));
 
@@ -164,20 +167,150 @@ class LogInactiveUsersCommand extends Command
             ->exists();
     }
 
-    private function notifyInactiveUser(User $user, int $daysInactive, Carbon $latestActivityAt): bool
+    private function notifyInactiveRecipients(User $user, int $daysInactive, Carbon $latestActivityAt, Carbon $referenceDate): int
     {
-        if (! is_string($user->email) || trim($user->email) === '') {
-            return false;
+        $emailedRecipientCount = 0;
+
+        if ($this->canReceiveMail($user)) {
+            try {
+                $user->notify(new InactiveUserReminderNotification($daysInactive, $latestActivityAt));
+
+                $emailedRecipientCount++;
+            } catch (Throwable $exception) {
+                report($exception);
+            }
         }
 
-        try {
-            $user->notify(new InactiveUserReminderNotification($daysInactive, $latestActivityAt));
-
-            return true;
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return false;
+        if (! $user->hasRole(Role::STUDENT)) {
+            return $emailedRecipientCount;
         }
+
+        $activeTutorRecipients = $this->activeTutorRecipientsForStudent($user, $referenceDate);
+
+        if ($activeTutorRecipients->isNotEmpty()) {
+            return $emailedRecipientCount + $this->notifyTutorRecipients(
+                $activeTutorRecipients,
+                $user,
+                $daysInactive,
+                $latestActivityAt,
+                false
+            );
+        }
+
+        return $emailedRecipientCount + $this->notifyTutorRecipients(
+            $this->latestTutorRecipientsForStudent($user, $referenceDate),
+            $user,
+            $daysInactive,
+            $latestActivityAt,
+            true
+        );
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    private function activeTutorRecipientsForStudent(User $student, Carbon $referenceDate): Collection
+    {
+        $today = $referenceDate->copy()->startOfDay()->toDateString();
+
+        $tutorIds = TutorAssignment::query()
+            ->where('student_user_id', $student->id)
+            ->whereNotNull('tutor_user_id')
+            ->whereDate('start_date', '<=', $today)
+            ->whereDate('end_date', '>=', $today)
+            ->pluck('tutor_user_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return $this->loadUsersByIds($tutorIds);
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    private function latestTutorRecipientsForStudent(User $student, Carbon $referenceDate): Collection
+    {
+        $today = $referenceDate->copy()->startOfDay()->toDateString();
+
+        $latestEndDate = TutorAssignment::query()
+            ->where('student_user_id', $student->id)
+            ->whereNotNull('tutor_user_id')
+            ->whereDate('end_date', '<', $today)
+            ->max('end_date');
+
+        if (! is_string($latestEndDate) || trim($latestEndDate) === '') {
+            return collect();
+        }
+
+        $tutorIds = TutorAssignment::query()
+            ->where('student_user_id', $student->id)
+            ->whereNotNull('tutor_user_id')
+            ->whereDate('end_date', $latestEndDate)
+            ->pluck('tutor_user_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return $this->loadUsersByIds($tutorIds);
+    }
+
+    /**
+     * @param  Collection<int, User>  $tutors
+     */
+    private function notifyTutorRecipients(
+        Collection $tutors,
+        User $student,
+        int $daysInactive,
+        Carbon $latestActivityAt,
+        bool $usingLatestAssignmentFallback
+    ): int {
+        $emailedRecipientCount = 0;
+
+        foreach ($tutors as $tutor) {
+            if (! $tutor instanceof User || ! $this->canReceiveMail($tutor) || $tutor->is($student)) {
+                continue;
+            }
+
+            try {
+                $tutor->notify(new StudentInactiveTutorReminderNotification(
+                    $student,
+                    $daysInactive,
+                    $latestActivityAt,
+                    $usingLatestAssignmentFallback
+                ));
+
+                $emailedRecipientCount++;
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return $emailedRecipientCount;
+    }
+
+    /**
+     * @param  array<int, int|string>  $userIds
+     * @return Collection<int, User>
+     */
+    private function loadUsersByIds(array $userIds): Collection
+    {
+        $normalizedIds = array_values(array_unique(array_map('intval', $userIds)));
+
+        if ($normalizedIds === []) {
+            return collect();
+        }
+
+        return User::query()
+            ->whereIn('id', $normalizedIds)
+            ->orderBy('id')
+            ->get(['id', 'name', 'email']);
+    }
+
+    private function canReceiveMail(User $user): bool
+    {
+        return is_string($user->email) && trim($user->email) !== '';
     }
 }

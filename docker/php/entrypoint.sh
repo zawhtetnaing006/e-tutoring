@@ -82,11 +82,6 @@ chown -R "${OWNER_USER}:${OWNER_GROUP}" \
   "$APP_DIR/bootstrap/cache" \
   2>/dev/null || true
 
-# A persisted bootstrap/cache volume can retain stale service manifests from older
-# deployments. Clear them before Laravel boots so the current container rebuilds
-# package discovery from its own installed dependencies.
-rm -f "$APP_DIR"/bootstrap/cache/*.php
-
 # Helpful warning for a common prod misconfig (app will throw MissingAppKeyException).
 if [ -z "${APP_KEY:-}" ] && [ -f "$APP_DIR/.env" ]; then
   # shellcheck disable=SC2002

@@ -6,10 +6,11 @@ use App\Models\Role;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class InactiveUserReminderNotification extends Notification
+class InactiveUserReminderNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
