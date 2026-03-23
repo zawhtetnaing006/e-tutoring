@@ -17,8 +17,17 @@ if [[ "${env_name}" == "prod" ]]; then
   env_file="backend/.env"
   compose_file="docker-compose.prod.yml"
 else
-  env_file="backend/.env.local"
+  env_file="backend/.env"
   compose_file="docker-compose.local.yml"
+  if [[ ! -f "${env_file}" ]]; then
+    if [[ -f "backend/.env.local.example" ]]; then
+      cp "backend/.env.local.example" "${env_file}"
+      echo "Created ${env_file} from backend/.env.local.example."
+    else
+      echo "Error: missing ${env_file} and backend/.env.local.example." >&2
+      exit 1
+    fi
+  fi
 fi
 
 compose=(docker compose --env-file "${env_file}" -f "${compose_file}")

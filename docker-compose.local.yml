@@ -43,7 +43,7 @@ services:
       - mailhog
     volumes:
       - ./backend:/var/www
-      - ./backend/.env.local:/var/www/.env:ro
+      - ./backend/.env:/var/www/.env:ro
     networks:
       - app
 
@@ -60,7 +60,7 @@ services:
       - "8080:8080"
     volumes:
       - ./backend:/var/www
-      - ./backend/.env.local:/var/www/.env:ro
+      - ./backend/.env:/var/www/.env:ro
     networks:
       - app
 
@@ -76,7 +76,7 @@ services:
       - mailhog
     volumes:
       - ./backend:/var/www
-      - ./backend/.env.local:/var/www/.env:ro
+      - ./backend/.env:/var/www/.env:ro
     networks:
       - app
 
@@ -92,7 +92,7 @@ services:
       - mailhog
     volumes:
       - ./backend:/var/www
-      - ./backend/.env.local:/var/www/.env:ro
+      - ./backend/.env:/var/www/.env:ro
     networks:
       - app
 

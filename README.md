@@ -84,7 +84,10 @@ Production (cron every minute):
 ./artisan key:generate --show
 ```
 
-Then paste it into `backend/.env.local`.
+Then paste it into `backend/.env`.
+
+- Local setup: copy `backend/.env.local.example` to `backend/.env`
+- Production setup: copy `backend/.env.prod.example` to `backend/.env` on the server
 
 ## Log Viewer
 

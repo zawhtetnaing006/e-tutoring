@@ -4,7 +4,20 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${ROOT_DIR}"
 
-compose=(docker compose --env-file backend/.env.local -f docker-compose.local.yml)
+local_env_file="backend/.env"
+local_env_example="backend/.env.local.example"
+
+if [[ ! -f "${local_env_file}" ]]; then
+  if [[ -f "${local_env_example}" ]]; then
+    cp "${local_env_example}" "${local_env_file}"
+    echo "Created ${local_env_file} from ${local_env_example}."
+  else
+    echo "Error: missing ${local_env_file} and ${local_env_example}." >&2
+    exit 1
+  fi
+fi
+
+compose=(docker compose --env-file "${local_env_file}" -f docker-compose.local.yml)
 
 if [[ $# -gt 0 ]]; then
   echo "Usage: $0" >&2
@@ -14,7 +27,7 @@ fi
 # Env vars in services are applied at container creation time, so we must recreate.
 "${compose[@]}" up -d --build --force-recreate --remove-orphans
 
-# Ensure DB/schema permissions match backend/.env.local (idempotent).
+# Ensure DB/schema permissions match backend/.env (idempotent).
 read_env_value() {
   local key="$1"
   awk -F= -v k="${key}" '
@@ -24,7 +37,7 @@ read_env_value() {
       print value
       exit
     }
-  ' backend/.env.local
+  ' "${local_env_file}"
 }
 
 db_name="$(read_env_value DB_DATABASE)"
@@ -33,7 +46,7 @@ db_password="$(read_env_value DB_PASSWORD)"
 mysql_root_password="${MYSQL_ROOT_PASSWORD_LOCAL:-root_password}"
 
 if [[ -z "${db_name}" || -z "${db_user}" || -z "${db_password}" ]]; then
-  echo "DB_DATABASE, DB_USERNAME, and DB_PASSWORD must be set in backend/.env.local." >&2
+  echo "DB_DATABASE, DB_USERNAME, and DB_PASSWORD must be set in ${local_env_file}." >&2
   exit 1
 fi
 
