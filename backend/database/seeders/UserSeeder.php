@@ -8,10 +8,12 @@ use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
 {
-    public const ADMIN_EMAIL = 'admin@gmail.com';
-    public const STAFF_EMAIL = 'staff@gmail.com';
-    public const TUTOR_EMAIL = 'tutor@gmail.com';
-    public const STUDENT_EMAIL = 'student@gmail.com';
+    private const EMAIL_DOMAIN = 'greenwich.ac.uk';
+
+    public const ADMIN_EMAIL = 'admin@greenwich.ac.uk';
+    public const STAFF_EMAIL = 'staff@greenwich.ac.uk';
+    public const TUTOR_EMAIL = 'tutor@greenwich.ac.uk';
+    public const STUDENT_EMAIL = 'student@greenwich.ac.uk';
 
     /**
      * Seed default users for the demo environment.
@@ -61,6 +63,7 @@ class UserSeeder extends Seeder
         User::factory()
             ->count(30)
             ->state(fn () => [
+                'email' => fake()->unique()->userName() . '@' . self::EMAIL_DOMAIN,
                 'role_id' => fake()->randomElement($seedableRoleIds),
                 'phone' => fake()->phoneNumber(),
                 'address' => fake()->streetAddress(),
