@@ -1,4 +1,6 @@
 @component('mail::message')
+@include('mail.partials.logo')
+
 # {{ __('passwords.mail_heading') }}
 
 {{ __('passwords.mail_intro') }}
@@ -11,7 +13,11 @@
 
 {{ __('passwords.mail_expire', ['minutes' => $expireMinutes]) }}
 
-{{ __('passwords.mail_ignore') }}
+<div style="font-size:14px; line-height:1.7; color:#64748b; text-align:center; margin-bottom:8px;">
+    {{ __('passwords.mail_ignore') }}
+</div>
 
-{{ config('app.name') }}
+<div style="font-size:14px; color:#0f172a; text-align:center; font-weight:600;">
+    {{ config('app.name') }}
+</div>
 @endcomponent

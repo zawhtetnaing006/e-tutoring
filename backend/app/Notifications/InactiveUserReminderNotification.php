@@ -30,20 +30,21 @@ class InactiveUserReminderNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         $roleCode = $this->resolveRoleCode($notifiable);
+        $subject = $this->subjectForRole($roleCode);
 
         return (new MailMessage)
-            ->subject($this->subjectForRole($roleCode))
-            ->greeting(sprintf('Hello %s,', (string) ($notifiable->name ?? 'there')))
-            ->line(sprintf(
-                $this->introForRole($roleCode),
-                $this->daysInactive
-            ))
-            ->line(sprintf(
-                'Your latest recorded activity was on %s.',
-                $this->latestActivityAt->toDayDateTimeString()
-            ))
-            ->line($this->closingForRole($roleCode))
-            ->action('Open E-Tutoring', (string) config('app.url'));
+            ->subject($subject)
+            ->markdown('mail.inactive-user-reminder', [
+                'subjectLine' => $subject,
+                'recipientName' => (string) ($notifiable->name ?? 'there'),
+                'introLine' => sprintf(
+                    $this->introForRole($roleCode),
+                    $this->daysInactive
+                ),
+                'latestActivityAt' => $this->latestActivityAt->toDayDateTimeString(),
+                'closingLine' => $this->closingForRole($roleCode),
+                'appUrl' => (string) config('app.url'),
+            ]);
     }
 
     private function resolveRoleCode(object $notifiable): ?string

@@ -25,12 +25,14 @@ class UserGeneratedPasswordNotification extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        $subject = 'Your new account password';
+
         return (new MailMessage)
-            ->subject('Your new account password')
-            ->greeting('Hello '.$notifiable->name.',')
-            ->line('An account has been created for you.')
-            ->line('Your generated temporary password is:')
-            ->line($this->password)
-            ->line('Please sign in and change your password as soon as possible.');
+            ->subject($subject)
+            ->markdown('mail.user-generated-password', [
+                'subjectLine' => $subject,
+                'recipientName' => (string) ($notifiable->name ?? 'there'),
+                'password' => $this->password,
+            ]);
     }
 }
