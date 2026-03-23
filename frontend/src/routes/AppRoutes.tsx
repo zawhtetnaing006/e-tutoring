@@ -18,7 +18,7 @@ import { MeetingManagerPage } from '@/pages/meetings'
 import { CommunicationHubPage } from '@/pages/communication-hub'
 import { BlogsPage } from '@/pages/blogs'
 import { NotificationsPage } from '@/pages/notifications'
-import { PlaceholderPage } from '@/components/common/PlaceholderPage'
+import { AuditLogPage } from '@/pages/audit-log'
 
 /**
  * Routes: login (public); root is dashboard (protected, redirects to login if unauthenticated).
@@ -48,10 +48,7 @@ export function AppRoutes() {
           <Route path="blogs" element={<BlogsPage />} />
           <Route path="communication-hub" element={<CommunicationHubPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
-          <Route
-            path="audit-log"
-            element={<PlaceholderPage title="Audit Log" />}
-          />
+          <Route path="audit-log" element={<AuditLogPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
       </Route>
