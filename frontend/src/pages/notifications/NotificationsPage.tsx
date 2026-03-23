@@ -169,9 +169,9 @@ export function NotificationsPage() {
   }
 
   return (
-    <div className="w-full">
-      <div className="overflow-hidden rounded-2xl bg-white">
-        <div className="px-3 pb-0 pt-3">
+    <div className="flex h-full w-full flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white">
+        <div className="shrink-0 px-3 pb-0 pt-3">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
@@ -227,7 +227,7 @@ export function NotificationsPage() {
           </div>
         </div>
 
-        <div className="p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <LoadingSpinner />
@@ -252,9 +252,11 @@ export function NotificationsPage() {
               ))}
             </div>
           )}
+        </div>
 
-          {!isLoading && filteredNotifications.length > 0 && totalItems > 0 && (
-            <div className="mt-8 flex flex-col gap-4 pt-5 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+        {!isLoading && filteredNotifications.length > 0 && totalItems > 0 && (
+          <div className="shrink-0 border-t border-slate-200 px-4 py-3 dark:border-slate-700">
+            <div className="flex flex-col gap-4 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <span className="whitespace-nowrap text-slate-600 dark:text-slate-400">
                   Rows per page:
@@ -315,8 +317,8 @@ export function NotificationsPage() {
                 </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
