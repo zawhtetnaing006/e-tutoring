@@ -45,7 +45,9 @@ export function SidebarUserSection({
   const handleSignOut = async () => {
     setOpen(false)
     await logout()
-    queryClient.removeQueries({ queryKey: ['auth', 'me'] })
+    // Clear all cached queries so the next user never sees the previous user's data
+    // (notifications, lists, etc. were still served from cache after only removing auth/me).
+    queryClient.clear()
     navigate(paths.public.login)
     toast.success('Logged out successfully')
   }

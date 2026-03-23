@@ -17,7 +17,7 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
-      className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 py-12 ${className}`}
+      className={`flex flex-col items-center justify-center rounded-lg py-12 ${className}`}
     >
       {icon && <div className="mb-4 text-gray-400">{icon}</div>}
       <h3 className="mb-1 text-lg font-medium text-gray-900">{title}</h3>
