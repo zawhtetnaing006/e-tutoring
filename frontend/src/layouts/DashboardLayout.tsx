@@ -3,7 +3,10 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { paths } from '@/routes/index'
 import { getSidebarNavigation } from '@/static_data/navigation'
 import { useRole } from '@/features/auth/useRole'
-import { useNotificationsRealtime } from '@/features/notifications/useNotificationsRealtime'
+import {
+  useNotificationsRealtime,
+  useUnreadCount,
+} from '@/features/notifications'
 import { PanelLeftOpen, PanelRightOpen, Menu, X } from 'lucide-react'
 import { SidebarUserSection } from '@/components/dashboard/SidebarUserSection'
 import { Tooltip } from '@/components/ui/Tooltip'
@@ -21,6 +24,8 @@ export function DashboardLayout() {
   const prevPathnameRef = useRef(location.pathname)
 
   useNotificationsRealtime()
+  const { data: unreadCountData } = useUnreadCount()
+  const unreadCount = unreadCountData?.count ?? 0
 
   useEffect(() => {
     if (prevPathnameRef.current !== location.pathname) {
@@ -151,6 +156,8 @@ export function DashboardLayout() {
                 <ul className="space-y-1">
                   {section.items.map(item => {
                     const isActive = isActiveLink(item.href)
+                    const isNotifications = item.href === '/notifications'
+                    const showBadge = isNotifications && unreadCount > 0
                     return (
                       <li key={item.name}>
                         <Tooltip content={item.name} disabled={!isCollapsed}>
@@ -166,12 +173,19 @@ export function DashboardLayout() {
                                 : 'text-foreground hover:bg-muted'
                             )}
                           >
-                            {item.icon && (
-                              <item.icon className="size-5 shrink-0" />
-                            )}
+                            <div className="relative flex items-center">
+                              {item.icon && (
+                                <item.icon className="size-5 shrink-0" />
+                              )}
+                            </div>
                             {!isCollapsed && (
-                              <span className="whitespace-nowrap">
+                              <span className="flex flex-1 items-center justify-between whitespace-nowrap">
                                 {item.name}
+                                {showBadge && (
+                                  <span className="ml-2 flex size-5 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-500">
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                  </span>
+                                )}
                               </span>
                             )}
                           </Link>
@@ -208,7 +222,7 @@ export function DashboardLayout() {
           </Link>
         </header>
 
-        <main className="min-h-0 flex-1 overflow-hidden p-4 sm:p-6">
+        <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />
         </main>
       </div>

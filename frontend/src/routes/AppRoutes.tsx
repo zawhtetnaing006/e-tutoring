@@ -17,6 +17,7 @@ import { AllocationsPage } from '@/pages/allocations'
 import { MeetingManagerPage } from '@/pages/meetings'
 import { CommunicationHubPage } from '@/pages/communication-hub'
 import { BlogsPage } from '@/pages/blogs'
+import { NotificationsPage } from '@/pages/notifications'
 import { PlaceholderPage } from '@/components/common/PlaceholderPage'
 
 /**
@@ -46,10 +47,7 @@ export function AppRoutes() {
           <Route path="meeting-manager" element={<MeetingManagerPage />} />
           <Route path="blogs" element={<BlogsPage />} />
           <Route path="communication-hub" element={<CommunicationHubPage />} />
-          <Route
-            path="notifications"
-            element={<PlaceholderPage title="Notifications" />}
-          />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route
             path="audit-log"
             element={<PlaceholderPage title="Audit Log" />}
