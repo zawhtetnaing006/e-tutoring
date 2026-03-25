@@ -8,10 +8,15 @@ RUN apt-get update \
     curl \
     git \
     unzip \
+    libfreetype6-dev \
+    libjpeg62-turbo-dev \
+    libpng-dev \
     libicu-dev \
     libzip-dev \
+  && docker-php-ext-configure gd --with-freetype --with-jpeg \
   && docker-php-ext-install -j"$(nproc)" \
     bcmath \
+    gd \
     intl \
     opcache \
     pcntl \
