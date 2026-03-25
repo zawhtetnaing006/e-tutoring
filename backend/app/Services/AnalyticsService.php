@@ -100,30 +100,19 @@ class AnalyticsService
      */
     private function buildStaffPayload(User $user): array
     {
-        $upcomingQuery = $this->upcomingMeetingSchedulesGlobalQuery();
-        $activeAssignments = $this->applyActiveTutorAssignmentScope(TutorAssignment::query())->count();
-
-        $upcomingMeetings = $this->formatUpcomingMeetings(
-            (clone $upcomingQuery)
-                ->with('meeting:id,title,platform')
-                ->orderBy('meeting_schedule.date')
-                ->orderBy('meeting_schedule.start_time')
-                ->limit(5)
-                ->get()
-        );
+        $studentInteractions = $this->staffStudentInteractions();
 
         return [
-            'lastSevenDaysMessage' => Message::query()
-                ->where('created_at', '>=', now()->subDays(7))
-                ->count(),
-            'meetingSchedules' => (clone $upcomingQuery)->count(),
-            'documentShares' => Document::query()->count(),
             'lastLoginAt' => $this->formatLastLoginAt($user),
-            'lastActiveAt' => $this->formatLastActiveAt($user),
+            'displayName' => $user->name,
+            'welcomeSubtitle' => 'System reports and monitoring tools are available in your dashboard.',
             'totalStudents' => $this->countUsersByRole(Role::STUDENT),
-            'totalTutors' => $this->countUsersByRole(Role::TUTOR),
-            'activeTutorAssignments' => $activeAssignments,
-            'upcomingMeetings' => $upcomingMeetings,
+            'studentsWithoutTutor' => $this->studentsWithoutTutorCount(),
+            'noInteractionStudents7PlusDays' => $this->countStudentInactivity($studentInteractions, 7),
+            'noInteractionStudents28PlusDays' => $this->countStudentInactivity($studentInteractions, 28),
+            'messageByTutorLast7Days' => $this->messageByTutorLast7Days(),
+            'tuteesPerTutor' => $this->tuteesPerTutor(),
+            'recentAllocations' => $this->recentAllocations(),
             'latestBlogs' => $this->latestBlogs(),
         ];
     }
@@ -406,6 +395,213 @@ class AnalyticsService
             ->implode('');
 
         return $letters !== '' ? $letters : 'NA';
+    }
+
+    /**
+     * @return list<array{studentId:int, lastInteractionIso:string|null}>
+     */
+    private function staffStudentInteractions(): array
+    {
+        $students = User::query()
+            ->select('users.id')
+            ->whereHas('role', function (Builder $query): void {
+                $query->where('code', Role::STUDENT);
+            })
+            ->get();
+
+        return $students
+            ->map(function (User $student): array {
+                return [
+                    'studentId' => (int) $student->id,
+                    'lastInteractionIso' => $this->resolveUserInteractionIso((int) $student->id),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    private function resolveUserInteractionIso(int $userId): ?string
+    {
+        $activityTimestamp = null;
+        $activityTableName = (string) config('activitylog.table_name', 'activity_log');
+
+        if ($activityTableName !== '' && Schema::hasTable($activityTableName)) {
+            $activityTimestamp = DB::table($activityTableName)
+                ->where('actor_type', User::class)
+                ->where('actor_id', $userId)
+                ->max('created_at');
+        }
+
+        $latest = collect([
+            $activityTimestamp,
+            Message::query()->where('sender_user_id', $userId)->max('created_at'),
+            Document::query()->where('uploaded_by_user_id', $userId)->max('created_at'),
+            ConversationMember::query()->where('user_id', $userId)->max('last_seen_at'),
+        ])
+            ->filter()
+            ->map(static function (mixed $value): Carbon {
+                if ($value instanceof Carbon) {
+                    return $value;
+                }
+
+                return Carbon::parse((string) $value);
+            })
+            ->sortDesc()
+            ->first();
+
+        return $latest?->toISOString();
+    }
+
+    /**
+     * @param  list<array{studentId:int, lastInteractionIso:string|null}>  $rows
+     */
+    private function countStudentInactivity(array $rows, int $thresholdDays): int
+    {
+        return collect($rows)
+            ->filter(function (array $row) use ($thresholdDays): bool {
+                $lastInteractionIso = $row['lastInteractionIso'];
+                if (! is_string($lastInteractionIso) || $lastInteractionIso === '') {
+                    return true;
+                }
+
+                return Carbon::parse($lastInteractionIso)->diffInDays(now()) >= $thresholdDays;
+            })
+            ->count();
+    }
+
+    private function studentsWithoutTutorCount(): int
+    {
+        $assignedStudentIds = $this->applyActiveTutorAssignmentScope(
+            TutorAssignment::query()->whereNotNull('student_user_id')
+        )
+            ->distinct()
+            ->pluck('student_user_id')
+            ->filter()
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+
+        return User::query()
+            ->whereHas('role', function (Builder $query): void {
+                $query->where('code', Role::STUDENT);
+            })
+            ->when($assignedStudentIds !== [], function (Builder $query) use ($assignedStudentIds): void {
+                $query->whereNotIn('id', $assignedStudentIds);
+            })
+            ->count();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function messageByTutorLast7Days(): array
+    {
+        $rows = Message::query()
+            ->select([
+                'users.id as tutor_id',
+                'users.uuid as tutor_uuid',
+                'users.name as tutor_name',
+                DB::raw('COUNT(messages.id) as message_count'),
+            ])
+            ->join('users', 'users.id', '=', 'messages.sender_user_id')
+            ->join('roles', 'roles.id', '=', 'users.role_id')
+            ->where('roles.code', Role::TUTOR)
+            ->where('messages.created_at', '>=', now()->subDays(7))
+            ->groupBy('users.id', 'users.uuid', 'users.name')
+            ->orderByDesc('message_count')
+            ->orderBy('users.name')
+            ->limit(5)
+            ->get();
+
+        return $rows
+            ->map(static function (object $row): array {
+                return [
+                    'tutorId' => (int) $row->tutor_id,
+                    'tutorUuid' => $row->tutor_uuid,
+                    'tutorName' => $row->tutor_name,
+                    'messagesCount' => (int) $row->message_count,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function tuteesPerTutor(): array
+    {
+        $rows = $this->applyActiveTutorAssignmentScope(
+            TutorAssignment::query()
+                ->select([
+                    'users.id as tutor_id',
+                    'users.uuid as tutor_uuid',
+                    'users.name as tutor_name',
+                    DB::raw('COUNT(DISTINCT tutor_assignments.student_user_id) as tutees_count'),
+                ])
+                ->join('users', 'users.id', '=', 'tutor_assignments.tutor_user_id')
+                ->whereNotNull('tutor_assignments.student_user_id')
+                ->groupBy('users.id', 'users.uuid', 'users.name')
+        )
+            ->orderByDesc('tutees_count')
+            ->orderBy('users.name')
+            ->limit(5)
+            ->get();
+
+        return $rows
+            ->map(static function (object $row): array {
+                return [
+                    'tutorId' => (int) $row->tutor_id,
+                    'tutorUuid' => $row->tutor_uuid,
+                    'tutorName' => $row->tutor_name,
+                    'tuteesCount' => (int) $row->tutees_count,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function recentAllocations(): array
+    {
+        $rows = $this->applyActiveTutorAssignmentScope(
+            TutorAssignment::query()
+                ->with([
+                    'tutor:id,uuid,name',
+                    'student:id,uuid,name',
+                ])
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+        )
+            ->limit(5)
+            ->get();
+
+        return $rows
+            ->map(static function (TutorAssignment $assignment): array {
+                return [
+                    'allocationId' => (int) $assignment->id,
+                    'tutor' => $assignment->tutor === null ? null : [
+                        'id' => (int) $assignment->tutor->id,
+                        'uuid' => $assignment->tutor->uuid,
+                        'name' => $assignment->tutor->name,
+                    ],
+                    'student' => $assignment->student === null ? null : [
+                        'id' => (int) $assignment->student->id,
+                        'uuid' => $assignment->student->uuid,
+                        'name' => $assignment->student->name,
+                    ],
+                    'semesterPeriod' => [
+                        'from' => $assignment->start_date,
+                        'to' => $assignment->end_date,
+                        'label' => $assignment->start_date.' - '.$assignment->end_date,
+                    ],
+                    'status' => $assignment->status,
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     private function messagesLast7DaysForTutor(User $user): int

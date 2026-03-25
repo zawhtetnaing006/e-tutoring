@@ -140,6 +140,71 @@ class AnalyticsController
                     ],
                 ],
             ],
+            // Staff/Admin dashboard payload
+            [
+                'lastLoginAt' => '2026/03/22 08:10',
+                'displayName' => 'Admin User',
+                'welcomeSubtitle' => 'System reports and monitoring tools are available in your dashboard.',
+                'totalStudents' => 32,
+                'studentsWithoutTutor' => 3,
+                'noInteractionStudents7PlusDays' => 4,
+                'noInteractionStudents28PlusDays' => 1,
+                'messageByTutorLast7Days' => [
+                    [
+                        'tutorId' => 9,
+                        'tutorUuid' => '07d6833f-8f35-45c4-bf1e-31ce8f6ea193',
+                        'tutorName' => 'Dr. Michael Grant',
+                        'messagesCount' => 70,
+                    ],
+                ],
+                'tuteesPerTutor' => [
+                    [
+                        'tutorId' => 9,
+                        'tutorUuid' => '07d6833f-8f35-45c4-bf1e-31ce8f6ea193',
+                        'tutorName' => 'Dr. Michael Grant',
+                        'tuteesCount' => 18,
+                    ],
+                ],
+                'recentAllocations' => [
+                    [
+                        'allocationId' => 88,
+                        'tutor' => [
+                            'id' => 9,
+                            'uuid' => '07d6833f-8f35-45c4-bf1e-31ce8f6ea193',
+                            'name' => 'Dr. Michael Grant',
+                        ],
+                        'student' => [
+                            'id' => 22,
+                            'uuid' => 'f2f4fc74-b9df-4a5d-8f94-3e6aa66b62bf',
+                            'name' => 'Aiden Murphy',
+                        ],
+                        'semesterPeriod' => [
+                            'from' => '2026-01-15',
+                            'to' => '2026-05-15',
+                            'label' => '2026-01-15 - 2026-05-15',
+                        ],
+                        'status' => 'ACTIVE',
+                    ],
+                ],
+                'latestBlogs' => [
+                    [
+                        'id' => 1,
+                        'title' => 'Study Routine for Busy Weeks',
+                        'description' => 'A simple routine to stay on top of revision during a packed schedule.',
+                        'tags' => ['study', 'routine', 'productivity'],
+                        'coverImageUrl' => 'https://example.test/storage/blog-covers/cover.jpg',
+                        'viewCount' => 120,
+                        'commentCount' => 8,
+                        'created_at' => '2026-03-22T05:00:00.000000Z',
+                        'author' => [
+                            'id' => 4,
+                            'uuid' => 'ebbe4f9b-bdc1-471f-b7f9-feb4f8b6138c',
+                            'name' => 'Staff User',
+                            'role_code' => 'STAFF',
+                        ],
+                    ],
+                ],
+            ],
         ],
     )]
     public function __invoke(Request $request): JsonResponse

@@ -309,24 +309,29 @@ class AnalyticsApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonStructure([
-                'lastSevenDaysMessage',
-                'meetingSchedules',
-                'documentShares',
                 'lastLoginAt',
-                'lastActiveAt',
+                'displayName',
+                'welcomeSubtitle',
                 'totalStudents',
-                'totalTutors',
-                'activeTutorAssignments',
-                'upcomingMeetings',
+                'studentsWithoutTutor',
+                'noInteractionStudents7PlusDays',
+                'noInteractionStudents28PlusDays',
+                'messageByTutorLast7Days',
+                'tuteesPerTutor',
+                'recentAllocations',
                 'latestBlogs',
             ])
             ->assertJsonPath('totalStudents', 2)
-            ->assertJsonPath('totalTutors', 1)
-            ->assertJsonPath('activeTutorAssignments', 1);
+            ->assertJsonPath('studentsWithoutTutor', 1)
+            ->assertJsonPath('noInteractionStudents7PlusDays', 2)
+            ->assertJsonPath('noInteractionStudents28PlusDays', 2);
 
         $payload = $response->json();
         $this->assertArrayNotHasKey('personalTutor', $payload);
         $this->assertArrayNotHasKey('assignedStudents', $payload);
+        $this->assertArrayNotHasKey('totalTutors', $payload);
+        $this->assertArrayNotHasKey('activeTutorAssignments', $payload);
+        $this->assertArrayNotHasKey('upcomingMeetings', $payload);
         $this->assertArrayNotHasKey('upcomingMeeting', $payload);
     }
 
