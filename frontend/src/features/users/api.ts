@@ -1,4 +1,4 @@
-import { apiClient, ApiError } from '@/lib/api-client'
+import { apiClient, ApiError, getBaseUrl } from '@/lib/api-client'
 import { getAuthSession } from '@/features/auth/storage'
 import type { UserRoleCode } from '@/features/auth/types'
 
@@ -42,6 +42,11 @@ export type GetUsersParams = {
   perPage?: number
   name?: string
   role_code?: 'ADMIN' | 'STAFF' | 'STUDENT' | 'TUTOR'
+}
+
+export type ExportUsersPayload = {
+  user_ids: number[]
+  role_code: 'ADMIN' | 'STAFF' | 'STUDENT' | 'TUTOR'
 }
 
 export async function getUsers(
@@ -155,4 +160,46 @@ export async function deleteUser(
     method: 'DELETE',
     token: session.token,
   })
+}
+
+export async function exportUsersExcel(
+  payload: ExportUsersPayload
+): Promise<Blob> {
+  const session = getAuthSession()
+  if (!session?.token) {
+    throw new ApiError(401, 'Not authenticated')
+  }
+
+  const baseUrl = getBaseUrl()
+  if (!baseUrl) {
+    throw new Error(
+      'VITE_API_BASE_URL is not set. Add it to .env or .env.local'
+    )
+  }
+
+  const response = await fetch(`${baseUrl}/users/export`, {
+    method: 'POST',
+    headers: {
+      Accept:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    const message =
+      typeof data === 'object' &&
+      data !== null &&
+      'message' in data &&
+      typeof data.message === 'string'
+        ? data.message
+        : response.statusText || 'Failed to export users'
+
+    throw new ApiError(response.status, message, data)
+  }
+
+  return response.blob()
 }

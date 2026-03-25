@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Traits\FormatsListingResponse;
+use App\Http\Requests\User\ExportUsersRequest;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Http\Resources\UserResource;
@@ -10,6 +11,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Notifications\UserGeneratedPasswordNotification;
 use App\Services\AuditLogService;
+use App\Services\UserExportService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
@@ -19,6 +21,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Group('Users', description: 'User management endpoints.', weight: 2)]
 class UserController
@@ -26,7 +29,8 @@ class UserController
     use FormatsListingResponse;
 
     public function __construct(
-        private readonly AuditLogService $auditLogService
+        private readonly AuditLogService $auditLogService,
+        private readonly UserExportService $userExportService,
     )
     {
     }
@@ -174,6 +178,43 @@ class UserController
         );
 
         return response()->json(new UserResource($loadedUser), 201);
+    }
+
+    #[Endpoint(title: 'Export Users')]
+    #[BodyParameter('user_ids', required: true, example: [1, 2, 3])]
+    #[BodyParameter('role_code', required: true, example: 'STAFF')]
+    #[Response(status: 200, description: 'Excel file download')]
+    public function export(ExportUsersRequest $request): StreamedResponse
+    {
+        $validated = $request->validated();
+        $roleCode = strtoupper(trim((string) $validated['role_code']));
+        $userIds = collect($validated['user_ids'])
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+        $userIdPositions = array_flip($userIds);
+
+        $users = User::query()
+            ->with('role:id,code,name')
+            ->whereIn('id', $userIds)
+            ->whereHas('role', function ($query) use ($roleCode): void {
+                $query->where('code', $roleCode);
+            })
+            ->get()
+            ->sortBy(static fn (User $user): int => $userIdPositions[$user->id] ?? PHP_INT_MAX)
+            ->values();
+
+        $spreadsheet = $this->userExportService->createSpreadsheet($users);
+        $writer = $this->userExportService->createWriter($spreadsheet);
+        $fileName = sprintf('%s-users.xlsx', Str::lower($roleCode));
+
+        return response()->streamDownload(function () use ($writer, $spreadsheet): void {
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 
     #[Endpoint(title: 'Get User')]

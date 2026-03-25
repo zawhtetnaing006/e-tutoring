@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\HealthCheckController;
 use App\Http\Controllers\Api\TutorAssignmentController;
 use App\Http\Controllers\Api\MeetingAttendanceController;
 use App\Http\Controllers\Api\MeetingController;
@@ -14,7 +15,7 @@ use App\Http\Controllers\Api\SubjectController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/health', \App\Http\Controllers\Api\HealthCheckController::class);
+Route::get('/health', HealthCheckController::class);
 Route::middleware('auth:sanctum')->get('/analytics', AnalyticsController::class);
 
 Route::prefix('auth')
@@ -67,6 +68,7 @@ Route::middleware(['auth:sanctum', 'role:STAFF'])
     ->group(function () {
         Route::get('/', 'index');
         Route::post('/', 'store');
+        Route::post('export', 'export');
         Route::get('{user}', 'show');
         Route::put('{user}', 'update');
         Route::delete('{user}', 'destroy');

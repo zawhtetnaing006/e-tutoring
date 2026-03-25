@@ -24,6 +24,7 @@ import {
   getUser,
   updateUser,
   deleteUser,
+  exportUsersExcel,
   type ListUser,
   type UserResource,
 } from '@/features/users/api'
@@ -134,6 +135,25 @@ export function UserListPage({
     },
   })
 
+  const exportMutation = useMutation({
+    mutationFn: exportUsersExcel,
+    onSuccess: blob => {
+      const fileName = `${userType.toLowerCase()}-users.xlsx`
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      toast.success('Excel exported')
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to export users')
+    },
+  })
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ uuid, is_active }: { uuid: string; is_active: boolean }) =>
       updateUser(uuid, { is_active }),
@@ -209,6 +229,23 @@ export function UserListPage({
     })
   }
 
+  const handleExport = () => {
+    const selectedUserIds = (data?.data ?? [])
+      .filter(row => selectedIds.has(row.uuid))
+      .map(row => row.id)
+      .filter((id): id is number => typeof id === 'number')
+
+    if (selectedUserIds.length === 0) {
+      toast.error('Select at least one user to export.')
+      return
+    }
+
+    exportMutation.mutate({
+      user_ids: selectedUserIds,
+      role_code: userType,
+    })
+  }
+
   return (
     <div className="w-full p-3 sm:p-4 lg:p-2">
       {/* Header */}
@@ -257,10 +294,14 @@ export function UserListPage({
           </button>
           <button
             type="button"
+            onClick={handleExport}
+            disabled={exportMutation.isPending}
             className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring sm:h-10 sm:gap-2 sm:px-3 sm:text-sm md:px-4 2xl:h-11 2xl:px-5 2xl:text-base"
           >
             <FileUp className="h-4 w-4 2xl:h-5 2xl:w-5" />
-            <span className="hidden sm:inline">Excel</span>
+            <span className="hidden sm:inline">
+              {exportMutation.isPending ? 'Exporting...' : 'Excel'}
+            </span>
           </button>
         </div>
       </div>
