@@ -9,6 +9,7 @@ import {
 } from '@/features/notifications'
 import { PanelLeftOpen, PanelRightOpen, Menu, X } from 'lucide-react'
 import { SidebarUserSection } from '@/components/dashboard/SidebarUserSection'
+import { AppCopyright } from '@/components/layout/AppCopyright'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 
@@ -225,6 +226,7 @@ export function DashboardLayout() {
         <main className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           <Outlet />
         </main>
+        <AppCopyright />
       </div>
     </div>
   )
