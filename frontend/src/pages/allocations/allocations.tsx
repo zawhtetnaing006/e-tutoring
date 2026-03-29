@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Eye,
   LoaderCircle,
-  MoreVertical,
   Pencil,
   Plus,
   Search,
@@ -49,6 +48,7 @@ function findUserName(
 
 export function AllocationsPage() {
   const sessionUser = getAuthSession()?.user
+  const isStaff = getUserRole(sessionUser) === 'staff'
   const isTutor = getUserRole(sessionUser) === 'tutor'
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
@@ -234,7 +234,7 @@ export function AllocationsPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {visibleSelectedIds.length > 0 ? (
+              {isStaff && visibleSelectedIds.length > 0 ? (
                 <button
                   type="button"
                   onClick={handleBulkDelete}
@@ -246,14 +246,16 @@ export function AllocationsPage() {
                 </button>
               ) : null}
 
-              <button
-                type="button"
-                onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-              >
-                <Plus className="size-4" />
-                Allocation Student
-              </button>
+              {isStaff ? (
+                <button
+                  type="button"
+                  onClick={() => setIsCreateOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                >
+                  <Plus className="size-4" />
+                  Allocation Student
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -354,30 +356,27 @@ export function AllocationsPage() {
                             >
                               <Eye className="size-4" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingAllocation(row)}
-                              className="rounded-md p-2 text-blue-500 hover:bg-muted"
-                              aria-label={`Edit allocation ${row.id}`}
-                            >
-                              <Pencil className="size-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(row)}
-                              disabled={deleteMutation.isPending}
-                              className="rounded-md p-2 text-red-500 hover:bg-muted disabled:opacity-50"
-                              aria-label={`Delete allocation ${row.id}`}
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded-md p-2 text-slate-500 hover:bg-muted"
-                              aria-label={`More actions for allocation ${row.id}`}
-                            >
-                              <MoreVertical className="size-4" />
-                            </button>
+                            {isStaff ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingAllocation(row)}
+                                  className="rounded-md p-2 text-blue-500 hover:bg-muted"
+                                  aria-label={`Edit allocation ${row.id}`}
+                                >
+                                  <Pencil className="size-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(row)}
+                                  disabled={deleteMutation.isPending}
+                                  className="rounded-md p-2 text-red-500 hover:bg-muted disabled:opacity-50"
+                                  aria-label={`Delete allocation ${row.id}`}
+                                >
+                                  <Trash2 className="size-4" />
+                                </button>
+                              </>
+                            ) : null}
                           </div>
                         </td>
                       </tr>
