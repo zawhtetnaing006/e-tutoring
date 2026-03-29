@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\GoogleAnalyticsDashboardService;
 use Google\Analytics\Data\V1beta\Dimension;
 use Google\Analytics\Data\V1beta\Metric;
 use Google\Analytics\Data\V1beta\MinuteRange;
@@ -9,7 +10,6 @@ use Illuminate\Console\Command;
 use Spatie\Analytics\Analytics;
 use Spatie\Analytics\AnalyticsClient;
 use Spatie\Analytics\OrderBy;
-use Spatie\Analytics\Period;
 
 class VerifyGoogleAnalyticsCommand extends Command
 {
@@ -53,8 +53,7 @@ class VerifyGoogleAnalyticsCommand extends Command
         try {
             /** @var Analytics $analytics */
             $analytics = app('laravel-analytics');
-            $reportingDays = max(1, min(366, (int) config('analytics.reporting_days', 90)));
-            $period = Period::days($reportingDays);
+            $period = GoogleAnalyticsDashboardService::reportingPeriod();
 
             $pages = $analytics->fetchMostVisitedPages($period, 5);
             $pagesByPath = $analytics->get(
