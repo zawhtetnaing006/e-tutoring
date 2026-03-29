@@ -11,7 +11,8 @@ import {
   Upload,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import type { User } from '@/features/auth'
+import { getAuthSession } from '@/features/auth/storage'
+import { getUserRole, type User } from '@/features/auth'
 import {
   deleteAllocation,
   deleteAllocations,
@@ -46,6 +47,8 @@ function findUserName(
 }
 
 export function AllocationsPage() {
+  const sessionUser = getAuthSession()?.user
+  const isTutor = getUserRole(sessionUser) === 'tutor'
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
@@ -64,23 +67,33 @@ export function AllocationsPage() {
     page,
     perPage: 10,
     search: debouncedSearch,
+    onlyMine: isTutor,
   })
-  const tutorsQuery = useUsers({ perPage: 100, role_code: 'TUTOR' })
+  const tutorsQuery = useUsers({
+    perPage: 100,
+    role_code: 'TUTOR',
+    enabled: !isTutor,
+  })
   const studentsQuery = useUsers({ perPage: 100, role_code: 'STUDENT' })
 
   const users = useMemo(
-    () => [
-      ...(tutorsQuery.data?.data ?? []),
-      ...(studentsQuery.data?.data ?? []),
-    ],
-    [studentsQuery.data?.data, tutorsQuery.data?.data]
+    () =>
+      [
+        ...(sessionUser?.id != null ? [sessionUser] : []),
+        ...(tutorsQuery.data?.data ?? []),
+        ...(studentsQuery.data?.data ?? []),
+      ].filter(
+        (user, index, allUsers) =>
+          allUsers.findIndex(candidate => candidate.id === user.id) === index
+      ),
+    [sessionUser, studentsQuery.data?.data, tutorsQuery.data?.data]
   )
 
   const rows = useMemo<AllocationRow[]>(() => {
     return (allocationsQuery.data?.data ?? []).map(allocation => ({
       ...allocation,
       tutorName: findUserName(
-        tutorsQuery.data?.data,
+        users,
         allocation.tutor_user_id,
         `Tutor #${allocation.tutor_user_id}`
       ),
@@ -90,11 +103,7 @@ export function AllocationsPage() {
         `Student #${allocation.student_user_id}`
       ),
     }))
-  }, [
-    allocationsQuery.data?.data,
-    studentsQuery.data?.data,
-    tutorsQuery.data?.data,
-  ])
+  }, [allocationsQuery.data?.data, studentsQuery.data?.data, users])
 
   const currentPageIds = useMemo(() => rows.map(row => row.id), [rows])
   const visibleSelectedIds = useMemo(

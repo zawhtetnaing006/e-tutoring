@@ -38,7 +38,7 @@ export async function getClassRooms(
   if (params.per_page != null)
     searchParams.set('per_page', String(params.per_page))
   if (params.only_mine != null)
-    searchParams.set('only_mine', String(params.only_mine))
+    searchParams.set('only_mine', params.only_mine ? '1' : '0')
 
   const path =
     searchParams.toString() !== ''

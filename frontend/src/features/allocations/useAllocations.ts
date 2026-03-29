@@ -10,16 +10,17 @@ type UseAllocationsOptions = {
   page?: number
   perPage?: number
   search?: string
+  onlyMine?: boolean
 }
 
 export function useAllocations(
   options: UseAllocationsOptions = {}
 ): ReturnType<typeof useQuery<AllocationsResponse>> {
-  const { page = 1, perPage = 10, search = '' } = options
+  const { page = 1, perPage = 10, search = '', onlyMine } = options
 
   return useQuery<AllocationsResponse>({
-    queryKey: ['allocations', page, perPage, search],
-    queryFn: () => getAllocations({ page, perPage, search }),
+    queryKey: ['allocations', page, perPage, search, onlyMine],
+    queryFn: () => getAllocations({ page, perPage, search, onlyMine }),
   })
 }
 

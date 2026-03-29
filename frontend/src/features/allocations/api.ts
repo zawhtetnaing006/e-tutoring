@@ -23,6 +23,7 @@ export type GetAllocationsParams = {
   page?: number
   perPage?: number
   search?: string
+  onlyMine?: boolean
 }
 
 export type CreateAllocationPayload = {
@@ -58,6 +59,8 @@ export async function getAllocations(
   if (params.perPage != null)
     searchParams.set('per_page', String(params.perPage))
   if (params.search) searchParams.set('search', params.search)
+  if (params.onlyMine != null)
+    searchParams.set('only_mine', params.onlyMine ? '1' : '0')
 
   const path = searchParams.toString()
     ? `tutor-assignments?${searchParams.toString()}`
