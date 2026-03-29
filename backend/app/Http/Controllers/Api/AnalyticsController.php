@@ -197,6 +197,14 @@ class AnalyticsController
                         'status' => 'ACTIVE',
                     ],
                 ],
+                'mostViewedPages' => [
+                    ['name' => 'Dashboard', 'views' => 120],
+                    ['name' => 'Staff', 'views' => 45],
+                ],
+                'browsersUsed' => [
+                    ['name' => 'Chrome', 'value' => 100],
+                    ['name' => 'Safari', 'value' => 40],
+                ],
                 'latestBlogs' => [
                     [
                         'id' => 1,
@@ -224,8 +232,8 @@ class AnalyticsController
         $user = $request->user();
         abort_if(! $user instanceof User, 401, 'Unauthenticated.');
 
-        return response()->json(
-            $this->analyticsService->getForUser($user)
-        );
+        return response()
+            ->json($this->analyticsService->getForUser($user))
+            ->header('Cache-Control', 'no-store, private');
     }
 }

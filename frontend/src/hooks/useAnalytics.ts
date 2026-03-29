@@ -1,49 +1,59 @@
-import { useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
+import { toast } from 'sonner'
 import { getAnalytics, type AnalyticsResponse } from '@/api'
-import { ApiError } from '@/lib/api-client'
+
+const ANALYTICS_QUERY_KEY = ['analytics'] as const
 
 type UseAnalyticsResult = {
   data: AnalyticsResponse | null
   loading: boolean
+  /** True while re-fetching after the first load (keeps existing data on screen). */
+  refreshing: boolean
   error: Error | null
+  fetchedAt: Date | null
   refetch: () => Promise<void>
 }
 
 /**
- * Hook to fetch analytics data from the backend
+ * Dashboard analytics from `GET /api/analytics`.
+ * Uses React Query so the request is deduplicated (e.g. React Strict Mode dev double-mount).
  */
 export function useAnalytics(): UseAnalyticsResult {
-  const [data, setData] = useState<AnalyticsResponse | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const queryClient = useQueryClient()
 
-  const fetchAnalytics = async () => {
+  const query = useQuery({
+    queryKey: ANALYTICS_QUERY_KEY,
+    queryFn: () => getAnalytics(),
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const refetch = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
-      const result = await getAnalytics()
-      setData(result)
+      await queryClient.fetchQuery({
+        queryKey: ANALYTICS_QUERY_KEY,
+        queryFn: () => getAnalytics({ cacheBust: true }),
+      })
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err)
-      } else if (err instanceof Error) {
-        setError(err)
-      } else {
-        setError(new Error('Failed to fetch analytics'))
-      }
-    } finally {
-      setLoading(false)
+      toast.error(
+        err instanceof Error ? err.message : 'Could not refresh analytics'
+      )
     }
-  }
+  }, [queryClient])
 
-  useEffect(() => {
-    fetchAnalytics()
-  }, [])
+  const error =
+    query.error instanceof Error
+      ? query.error
+      : query.error
+        ? new Error(String(query.error))
+        : null
 
   return {
-    data,
-    loading,
+    data: query.data ?? null,
+    loading: query.isLoading,
+    refreshing: query.isFetching && !query.isLoading,
     error,
-    refetch: fetchAnalytics,
+    fetchedAt: query.dataUpdatedAt ? new Date(query.dataUpdatedAt) : null,
+    refetch,
   }
 }

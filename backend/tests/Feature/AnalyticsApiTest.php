@@ -331,6 +331,8 @@ class AnalyticsApiTest extends TestCase
                 ],
                 'recentAllocations',
                 'latestBlogs',
+                'mostViewedPages',
+                'browsersUsed',
             ])
             ->assertJsonPath('totalStudents', 2)
             ->assertJsonPath('studentsWithoutTutor', 1)

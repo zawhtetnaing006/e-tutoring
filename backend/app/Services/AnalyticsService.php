@@ -21,6 +21,10 @@ use Illuminate\Support\Str;
 
 class AnalyticsService
 {
+    public function __construct(
+        private readonly GoogleAnalyticsDashboardService $googleAnalyticsDashboard,
+    ) {}
+
     public function getForUser(User $user): array
     {
         if ($user->hasRole(Role::STUDENT)) {
@@ -102,6 +106,8 @@ class AnalyticsService
     {
         $studentInteractions = $this->staffStudentInteractions();
 
+        $googleAnalytics = $this->googleAnalyticsDashboard->fetchDashboardData();
+
         return [
             'lastLoginAt' => $this->formatLastLoginAt($user),
             'displayName' => $user->name,
@@ -115,6 +121,8 @@ class AnalyticsService
             'mostActiveUsers' => $this->mostActiveUsers(),
             'recentAllocations' => $this->recentAllocations(),
             'latestBlogs' => $this->latestBlogs(),
+            'mostViewedPages' => $googleAnalytics['mostViewedPages'],
+            'browsersUsed' => $googleAnalytics['browsersUsed'],
         ];
     }
 

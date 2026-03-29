@@ -133,6 +133,16 @@ export type MostActiveUserRow = {
   lastActive: string
 }
 
+export type GaPageViewsRow = {
+  name: string
+  views: number
+}
+
+export type GaBrowserRow = {
+  name: string
+  value: number
+}
+
 export type StaffAnalyticsPayload = {
   lastLoginAt: string | null
   displayName: string
@@ -146,6 +156,10 @@ export type StaffAnalyticsPayload = {
   mostActiveUsers: MostActiveUserRow[]
   recentAllocations: RecentAllocationRow[]
   latestBlogs: LatestBlogPost[]
+  /** GA4 last 30 days; human-readable page names (e.g. Dashboard, Notifications) */
+  mostViewedPages: GaPageViewsRow[]
+  /** GA4 last 30 days; screen views by browser */
+  browsersUsed: GaBrowserRow[]
 }
 
 export type AnalyticsResponse =
@@ -157,10 +171,14 @@ export type AnalyticsResponse =
  * GET /api/analytics - Returns analytics data for the dashboard
  * Requires authentication token
  */
-export function getAnalytics(): Promise<AnalyticsResponse> {
+export function getAnalytics(options?: {
+  /** Avoid stale JSON when the user clicks Refresh (proxies/CDN). */
+  cacheBust?: boolean
+}): Promise<AnalyticsResponse> {
   const session = getAuthSession()
+  const suffix = options?.cacheBust ? `?t=${Date.now()}` : ''
 
-  return apiClient<AnalyticsResponse>('analytics', {
+  return apiClient<AnalyticsResponse>(`analytics${suffix}`, {
     method: 'GET',
     token: session?.token || null,
   })
