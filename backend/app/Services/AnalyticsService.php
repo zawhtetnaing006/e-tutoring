@@ -18,9 +18,31 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Spatie\Analytics\Analytics;
+use Spatie\Analytics\OrderBy;
+use Spatie\Analytics\Period;
 
 class AnalyticsService
 {
+    /**
+     * First URL path segment → dashboard label (matches `frontend/src/routes/AppRoutes.tsx`).
+     *
+     * @var array<string, string>
+     */
+    private const GOOGLE_ANALYTICS_PAGE_LABELS_BY_FIRST_SEGMENT = [
+        'staffs' => 'Staff',
+        'tutors' => 'Tutor',
+        'students' => 'Student',
+        'subjects' => 'Subject',
+        'allocations' => 'Allocation',
+        'meeting-manager' => 'Meetings',
+        'blogs' => 'Blogs',
+        'communication-hub' => 'Com-Hub',
+        'notifications' => 'Notification',
+        'audit-log' => 'Audit Log',
+        'profile' => 'Profile',
+    ];
+
     public function getForUser(User $user): array
     {
         if ($user->hasRole(Role::STUDENT)) {
@@ -102,6 +124,8 @@ class AnalyticsService
     {
         $studentInteractions = $this->staffStudentInteractions();
 
+        $googleAnalytics = $this->fetchGoogleAnalyticsDashboardData();
+
         return [
             'lastLoginAt' => $this->formatLastLoginAt($user),
             'displayName' => $user->name,
@@ -115,7 +139,197 @@ class AnalyticsService
             'mostActiveUsers' => $this->mostActiveUsers(),
             'recentAllocations' => $this->recentAllocations(),
             'latestBlogs' => $this->latestBlogs(),
+            'mostViewedPages' => $googleAnalytics['mostViewedPages'],
+            'browsersUsed' => $googleAnalytics['browsersUsed'],
         ];
+    }
+
+    /**
+     * Top pages and browser breakdown from GA4 (last 30 days). Empty when not configured or on API errors.
+     *
+     * @return array{mostViewedPages: list<array{name: string, views: int}>, browsersUsed: list<array{name: string, value: int}>}
+     */
+    private function fetchGoogleAnalyticsDashboardData(): array
+    {
+        $propertyId = config('analytics.property_id');
+        $credentials = config('analytics.service_account_credentials_json');
+
+        if (empty($propertyId) || $credentials === null || $credentials === '') {
+            return $this->emptyGoogleAnalyticsDashboardPayload();
+        }
+
+        if (! is_array($credentials) && (! is_string($credentials) || ! is_file($credentials))) {
+            return $this->emptyGoogleAnalyticsDashboardPayload();
+        }
+
+        try {
+            /** @var Analytics $analytics */
+            $analytics = app('laravel-analytics');
+            $reportingDays = max(1, min(366, (int) config('analytics.reporting_days', 90)));
+            $period = Period::days($reportingDays);
+
+            // Use `pagePath` only (not pageTitle + fullPageUrl). The latter splits SPA traffic across
+            // identical titles and host/URL variants, so the "top pages" report often misses real routes.
+            // `pagePath` matches `page_view` / `page_path` from the SPA and aggregates per route.
+            // Note: GA4 Realtime API does not support `pagePath` or `browser`; only RunReport does.
+            $mostViewedPages = $analytics->get(
+                period: $period,
+                metrics: ['screenPageViews'],
+                dimensions: ['pagePath'],
+                maxResults: 100,
+                orderBy: [
+                    OrderBy::metric('screenPageViews', true),
+                ],
+            )
+                ->map(function (array $row): ?array {
+                    $pagePath = $row['pagePath'] ?? '';
+                    $path = $this->googleAnalyticsPagePathFromGaDimension(is_string($pagePath) ? $pagePath : '');
+                    if (! $this->isGoogleAnalyticsDashboardPagePath($path)) {
+                        return null;
+                    }
+                    $label = $this->googleAnalyticsPageViewLabel('', $path);
+
+                    return [
+                        'name' => $label,
+                        'views' => (int) ($row['screenPageViews'] ?? 0),
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->groupBy('name')
+                ->map(function (Collection $rows): array {
+                    $first = $rows->first();
+
+                    return [
+                        'name' => is_array($first) ? (string) ($first['name'] ?? '') : '',
+                        'views' => (int) $rows->sum('views'),
+                    ];
+                })
+                ->sortByDesc('views')
+                ->take(8)
+                ->values()
+                ->all();
+
+            $browsersUsed = $analytics->fetchTopBrowsers($period, 8)
+                ->map(function (array $row): array {
+                    $name = $row['browser'] ?? 'Unknown';
+                    if (! is_string($name) || $name === '' || $name === '(not set)') {
+                        $name = 'Unknown';
+                    }
+
+                    return [
+                        'name' => $name,
+                        'value' => (int) ($row['screenPageViews'] ?? 0),
+                    ];
+                })
+                ->values()
+                ->all();
+
+            return [
+                'mostViewedPages' => $mostViewedPages,
+                'browsersUsed' => $browsersUsed,
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return $this->emptyGoogleAnalyticsDashboardPayload();
+        }
+    }
+
+    /**
+     * @return array{mostViewedPages: list<array{name: string, views: int}>, browsersUsed: list<array{name: string, value: int}>}
+     */
+    private function emptyGoogleAnalyticsDashboardPayload(): array
+    {
+        return [
+            'mostViewedPages' => [],
+            'browsersUsed' => [],
+        ];
+    }
+
+    /**
+     * Only include authenticated app routes (matches `AppRoutes`); excludes /login, password reset, etc.
+     */
+    private function isGoogleAnalyticsDashboardPagePath(string $path): bool
+    {
+        $path = trim($path);
+        if ($path === '' || $path === '/') {
+            return true;
+        }
+
+        $segments = array_values(array_filter(explode('/', $path), fn (string $s): bool => $s !== ''));
+        if ($segments === []) {
+            return true;
+        }
+
+        return array_key_exists($segments[0], self::GOOGLE_ANALYTICS_PAGE_LABELS_BY_FIRST_SEGMENT);
+    }
+
+    /**
+     * Normalize GA4 `pagePath` (may include query/hash) to a pathname for route labels.
+     */
+    private function googleAnalyticsPagePathFromGaDimension(string $pagePath): string
+    {
+        $pagePath = trim($pagePath);
+        if ($pagePath === '' || $pagePath === '(not set)') {
+            return '';
+        }
+
+        if ($pagePath[0] !== '/') {
+            $pagePath = '/'.$pagePath;
+        }
+
+        $pathOnly = parse_url($pagePath, PHP_URL_PATH);
+        if (is_string($pathOnly) && $pathOnly !== '') {
+            return $pathOnly;
+        }
+
+        return '/';
+    }
+
+    /**
+     * Human-readable page name for charts: "/" → "Dashboard"; known routes use app labels; others fall back to title case.
+     */
+    private function googleAnalyticsPageDisplayNameFromPath(string $path): string
+    {
+        $path = trim($path);
+        if ($path === '' || $path === '/') {
+            return 'Dashboard';
+        }
+
+        $segments = array_values(array_filter(explode('/', $path), fn (string $s): bool => $s !== ''));
+        if ($segments === []) {
+            return 'Dashboard';
+        }
+
+        $first = $segments[0];
+        if (isset(self::GOOGLE_ANALYTICS_PAGE_LABELS_BY_FIRST_SEGMENT[$first])) {
+            return self::GOOGLE_ANALYTICS_PAGE_LABELS_BY_FIRST_SEGMENT[$first];
+        }
+
+        $parts = array_map(function (string $segment): string {
+            $words = str_replace(['-', '_'], ' ', $segment);
+
+            return Str::title($words);
+        }, $segments);
+
+        return implode(' · ', $parts);
+    }
+
+    /**
+     * Prefer route-derived display name; fall back to GA page title when path is missing.
+     */
+    private function googleAnalyticsPageViewLabel(string $pageTitle, string $path): string
+    {
+        if ($path !== '') {
+            return $this->googleAnalyticsPageDisplayNameFromPath($path);
+        }
+
+        if ($pageTitle !== '' && $pageTitle !== '(not set)') {
+            return $pageTitle;
+        }
+
+        return 'Dashboard';
     }
 
     /**

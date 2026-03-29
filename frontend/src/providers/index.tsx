@@ -4,11 +4,15 @@ import { BrowserRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { queryClient } from '@/lib/query-client'
 import { Toaster } from '@/components/ui/sonner'
+import { GoogleAnalyticsRouteTracker } from '@/components/GoogleAnalyticsRouteTracker'
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>{children}</BrowserRouter>
+      <BrowserRouter>
+        <GoogleAnalyticsRouteTracker />
+        {children}
+      </BrowserRouter>
       <Toaster richColors position="top-right" />
       {import.meta.env.DEV && (
         <ReactQueryDevtools

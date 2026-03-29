@@ -34,30 +34,29 @@ import {
 import { useAnalytics, useMediaQuery } from '@/hooks'
 import { useCurrentUser } from '@/features/auth'
 import type {
+  GaBrowserRow,
   MostActiveUserRow,
   RecentAllocationRow,
   StaffAnalyticsPayload,
 } from '@/api/analytics'
 
-const pageViewsData = [
-  { name: 'Dashboard', views: 100 },
-  { name: 'Staff', views: 45 },
-  { name: 'Student', views: 70 },
-  { name: 'Subject', views: 50 },
-  { name: 'Meetings', views: 85 },
-  { name: 'Blogs', views: 75 },
-  { name: 'Comm-Hub', views: 95 },
-  { name: 'Notification', views: 65 },
-]
-
-const browsersData = [
-  { name: 'Chrome', value: 100, color: '#5B8FF9' },
-  { name: 'Edge', value: 62, color: '#5AD8A6' },
-  { name: 'Firefox', value: 62, color: '#F6BD16' },
-  { name: 'Safari', value: 50, color: '#E8684A' },
+const BROWSER_PIE_COLORS = [
+  '#5B8FF9',
+  '#5AD8A6',
+  '#F6BD16',
+  '#E8684A',
+  '#6B7EB8',
+  '#9DD4A8',
+  '#C8A2E8',
+  '#F0A870',
 ] as const
 
-const browsersTotal = browsersData.reduce((sum, b) => sum + b.value, 0)
+function browsersWithColors(rows: GaBrowserRow[]) {
+  return rows.map((row, index) => ({
+    ...row,
+    color: BROWSER_PIE_COLORS[index % BROWSER_PIE_COLORS.length],
+  }))
+}
 
 const mostActiveColumns: ResponsiveTableColumn<MostActiveUserRow>[] = [
   {
@@ -119,6 +118,16 @@ export function StaffDashboard() {
 
   const mostActiveUsers = analytics?.mostActiveUsers.slice(0, 5) ?? []
   const recentAllocations = analytics?.recentAllocations.slice(0, 5) ?? []
+
+  const pageViewsData = analytics?.mostViewedPages ?? []
+  const browsersForChart = useMemo(
+    () => browsersWithColors(analytics?.browsersUsed ?? []),
+    [analytics?.browsersUsed]
+  )
+  const browsersTotal = useMemo(
+    () => browsersForChart.reduce((sum, b) => sum + b.value, 0),
+    [browsersForChart]
+  )
 
   const tutorYAxisWidth = isSm ? 120 : 72
   const pieInner = isSm ? 72 : 52
@@ -184,80 +193,117 @@ export function StaffDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
-        <Card className="min-w-0 p-4 sm:p-6">
-          <DashboardSectionHeader title="Most Viewed Pages" />
-          <div className="h-[240px] w-full xs:h-[260px] sm:h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={pageViewsData}
-                margin={{ top: 8, right: 8, left: 0, bottom: isSm ? 40 : 48 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: isSm ? 11 : 10 }}
-                  interval={0}
-                  angle={isSm ? -32 : -45}
-                  textAnchor="end"
-                  height={isSm ? 52 : 60}
-                  tickMargin={4}
-                  tickFormatter={v => truncateChartLabel(v, PAGE_AXIS_MAX)}
-                />
-                <YAxis tick={{ fontSize: 11 }} width={isSm ? 44 : 36} />
-                <Tooltip />
-                <Bar dataKey="views" fill="#5B8FF9" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <Card className="min-w-0 p-4 sm:p-6">
-          <DashboardSectionHeader title="Browsers Used" />
-          <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="h-[240px] w-full max-w-[min(100%,340px)] sm:h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={[...browsersData]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={pieInner}
-                    outerRadius={pieOuter}
-                    paddingAngle={2}
-                    dataKey="value"
-                    nameKey="name"
-                    label={false}
+      <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+          <Card className="min-w-0 p-4 sm:p-6">
+            <DashboardSectionHeader title="Most Viewed Pages" />
+            <p className="-mt-2 mb-3 text-xs text-gray-500">
+              Last 90 days · Google Analytics
+            </p>
+            <div className="h-[240px] w-full xs:h-[260px] sm:h-[300px]">
+              {pageViewsData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={pageViewsData}
+                    margin={{
+                      top: 8,
+                      right: 8,
+                      left: 0,
+                      bottom: isSm ? 40 : 48,
+                    }}
                   >
-                    {browsersData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="w-full space-y-2 lg:max-w-[220px]">
-              {browsersData.map((browser, index) => {
-                const pct =
-                  browsersTotal > 0
-                    ? ((browser.value / browsersTotal) * 100).toFixed(0)
-                    : '0'
-                return (
-                  <div key={index} className="flex items-center gap-2 text-sm">
-                    <div
-                      className="size-3 shrink-0 rounded-sm"
-                      style={{ backgroundColor: browser.color }}
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fontSize: isSm ? 11 : 10 }}
+                      interval={0}
+                      angle={isSm ? -32 : -45}
+                      textAnchor="end"
+                      height={isSm ? 52 : 60}
+                      tickMargin={4}
+                      tickFormatter={v => truncateChartLabel(v, PAGE_AXIS_MAX)}
                     />
-                    <span className="text-gray-700">
-                      {browser.name} {pct}%
-                    </span>
-                  </div>
-                )
-              })}
+                    <YAxis tick={{ fontSize: 11 }} width={isSm ? 44 : 36} />
+                    <Tooltip />
+                    <Bar dataKey="views" fill="#5B8FF9" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="flex h-full items-center justify-center text-center text-sm text-gray-500">
+                  No data from GA4 yet (this chart uses the server Data API on{' '}
+                  <code className="text-xs">GET /api/analytics</code>
+                  ). Confirm hits in the GA4 property, allow 24–48h for reports,
+                  and restart <code className="text-xs">npm run dev</code> after
+                  changing{' '}
+                  <code className="text-xs">VITE_GA_MEASUREMENT_ID</code>.
+                </p>
+              )}
             </div>
-          </div>
-        </Card>
+          </Card>
+
+          <Card className="min-w-0 p-4 sm:p-6">
+            <DashboardSectionHeader title="Browsers Used" />
+            <p className="-mt-2 mb-3 text-xs text-gray-500">
+              Last 90 days · Google Analytics
+            </p>
+            <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="h-[240px] w-full max-w-[min(100%,340px)] sm:h-[300px]">
+                {browsersForChart.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[...browsersForChart]}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={pieInner}
+                        outerRadius={pieOuter}
+                        paddingAngle={2}
+                        dataKey="value"
+                        nameKey="name"
+                        label={false}
+                      >
+                        {browsersForChart.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <p className="flex h-full items-center justify-center text-center text-sm text-gray-500">
+                    No browser breakdown from GA4 yet (same Data API as above).
+                    Check DevTools → Network for{' '}
+                    <code className="text-xs">googletagmanager</code> /{' '}
+                    <code className="text-xs">google-analytics</code> (disable
+                    ad blockers while testing).
+                  </p>
+                )}
+              </div>
+              <div className="w-full space-y-2 lg:max-w-[220px]">
+                {browsersForChart.map((browser, index) => {
+                  const pct =
+                    browsersTotal > 0
+                      ? ((browser.value / browsersTotal) * 100).toFixed(0)
+                      : '0'
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <div
+                        className="size-3 shrink-0 rounded-sm"
+                        style={{ backgroundColor: browser.color }}
+                      />
+                      <span className="text-gray-700">
+                        {browser.name} {pct}%
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
