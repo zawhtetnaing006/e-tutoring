@@ -1,5 +1,16 @@
-import { Users, AlertTriangle, MessageSquare, UserMinus } from 'lucide-react'
+import { useMemo } from 'react'
+import { Users, AlertTriangle, UserMinus } from 'lucide-react'
+import { LastLoginBanner } from '@/components/dashboard/LastLoginBanner'
 import { StatCard } from '@/components/dashboard/StatCard'
+import { LatestBlogsSection } from '@/components/dashboard/LatestBlogsSection'
+import { DashboardWelcomeCard } from '@/components/dashboard/DashboardWelcomeCard'
+import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader'
+import {
+  DashboardErrorState,
+  DashboardLoadingState,
+} from '@/components/dashboard/DashboardStates'
+import type { ResponsiveTableColumn } from '@/components/dashboard/ResponsiveTable'
+import { ResponsiveTable } from '@/components/dashboard/ResponsiveTable'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import {
@@ -14,9 +25,19 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { Badge } from '@/components/ui/Badge'
-import { useAnalytics } from '@/hooks'
+import { formatLastLoginDisplay } from '@/utils/formatters'
+import {
+  PAGE_AXIS_MAX,
+  TUTOR_AXIS_MAX,
+  truncateChartLabel,
+} from '@/utils/chart'
+import { useAnalytics, useMediaQuery } from '@/hooks'
 import { useCurrentUser } from '@/features/auth'
+import type {
+  MostActiveUserRow,
+  RecentAllocationRow,
+  StaffAnalyticsPayload,
+} from '@/api/analytics'
 
 const pageViewsData = [
   { name: 'Dashboard', views: 100 },
@@ -34,348 +55,309 @@ const browsersData = [
   { name: 'Edge', value: 62, color: '#5AD8A6' },
   { name: 'Firefox', value: 62, color: '#F6BD16' },
   { name: 'Safari', value: 50, color: '#E8684A' },
+] as const
+
+const browsersTotal = browsersData.reduce((sum, b) => sum + b.value, 0)
+
+const mostActiveColumns: ResponsiveTableColumn<MostActiveUserRow>[] = [
+  {
+    id: 'user',
+    header: 'User',
+    cell: row => (
+      <span className="font-medium text-gray-900">{row.userName}</span>
+    ),
+  },
+  { id: 'role', header: 'Role', cell: row => row.role },
+  { id: 'logins', header: 'Login Count', cell: row => row.loginCount },
+  { id: 'messages', header: 'Messages Sent', cell: row => row.messagesSent },
+  { id: 'last', header: 'Last Active', cell: row => row.lastActive },
 ]
 
-const messagesData = [
-  { name: 'Dr. Michael Grant', messages: 75 },
-  { name: 'Ms. Natalie Brooks', messages: 45 },
-  { name: 'Dr. Isabelle Reed', messages: 60 },
-]
-
-const tuteesData = [
-  { name: 'Mr. Ethan Foster', tutees: 80 },
-  { name: 'Dr. Isabella Reed', tutees: 45 },
-  { name: 'Dr. Lucas Bennett', tutees: 60 },
-]
-
-const recentAllocations = [
+const allocationColumns: ResponsiveTableColumn<RecentAllocationRow>[] = [
   {
-    tutor: 'Dr. Michael Grant',
-    student: 'Aiden Murphy',
-    semester: '2026-01-15/2026-05-15',
+    id: 'tutor',
+    header: 'Tutor',
+    cell: row => row.tutor?.name ?? '—',
   },
   {
-    tutor: 'Ms. Natalie Brooks',
-    student: 'Sophia Nguyen',
-    semester: '2026-01-15/2026-05-15',
-  },
-]
-
-const activeUsers = [
-  {
-    user: 'Emma Wilson',
-    role: 'Student',
-    loginCount: 32,
-    messages: 2,
-    lastActive: '2026-02-26 14:30',
+    id: 'student',
+    header: 'Student',
+    cell: row => row.student?.name ?? '—',
   },
   {
-    user: 'Dr. Sarah Johnson',
-    role: 'Tutor',
-    loginCount: 15,
-    messages: 1,
-    lastActive: '2026-02-27 09:30',
-  },
-  {
-    user: 'John Mathes',
-    role: 'Admin',
-    loginCount: 37,
-    messages: 0,
-    lastActive: '2026-02-27 08:30',
+    id: 'semester',
+    header: 'Semester Period',
+    cell: row => row.semesterPeriod.label,
   },
 ]
 
 export function StaffDashboard() {
-  const { data: analytics, loading, error } = useAnalytics()
+  const { data, loading, error } = useAnalytics()
   const { data: user } = useCurrentUser()
+  const analytics = data as StaffAnalyticsPayload | null
+  const isSm = useMediaQuery('(min-width: 640px)')
+
+  const messagesData =
+    analytics?.messageByTutorLast7Days.map(r => ({
+      name: r.tutorName,
+      messages: r.messagesCount,
+    })) ?? []
+
+  const messagesChartHeight = useMemo(
+    () =>
+      messagesData.length === 0
+        ? 200
+        : Math.min(480, Math.max(220, messagesData.length * 52)),
+    [messagesData.length]
+  )
+
+  const tuteesData =
+    analytics?.tuteesPerTutor.map(r => ({
+      name: r.tutorName,
+      tutees: r.tuteesCount,
+    })) ?? []
+
+  const mostActiveUsers = analytics?.mostActiveUsers.slice(0, 5) ?? []
+  const recentAllocations = analytics?.recentAllocations.slice(0, 5) ?? []
+
+  const tutorYAxisWidth = isSm ? 120 : 72
+  const pieInner = isSm ? 72 : 52
+  const pieOuter = isSm ? 118 : 88
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="inline-block size-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
-          <p className="mt-2 text-sm text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    )
+    return <DashboardLoadingState />
   }
 
   if (error) {
-    return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-        <p className="text-sm text-red-800">
-          Failed to load dashboard data: {error.message}
-        </p>
-      </div>
-    )
+    return <DashboardErrorState message={error.message} />
   }
 
   if (!analytics) {
     return null
   }
-  return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 sm:p-4">
-        <div className="flex items-start gap-2 sm:gap-3">
-          <MessageSquare className="mt-0.5 size-4 shrink-0 text-blue-600 sm:size-5" />
-          <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-gray-900 sm:text-base">
-              Welcome back, {user?.name || 'Staff'}
-            </h2>
-            <p className="mt-1 text-xs text-gray-700 sm:text-sm">
-              Last login:{' '}
-              <span className="font-medium">{analytics.lastActiveAt}</span>
-            </p>
-            <p className="mt-1 text-xs text-gray-700 sm:text-sm">
-              System reports and monitoring tools are available in your
-              dashboard.
-            </p>
-          </div>
-        </div>
-      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+  return (
+    <div className="w-full min-w-0 space-y-4 sm:space-y-6">
+      <LastLoginBanner lastLoginAt={analytics.lastLoginAt} />
+
+      <DashboardWelcomeCard
+        heading={
+          <>Welcome back, {analytics.displayName || user?.name || 'Staff'}</>
+        }
+      >
+        <p className="mt-1 text-xs text-gray-700 sm:text-sm">
+          We are glad to see you again. Your last login was on{' '}
+          <span className="font-medium">
+            {formatLastLoginDisplay(analytics.lastLoginAt)}
+          </span>
+          .
+        </p>
+        <p className="mt-1 text-xs text-gray-700 sm:text-sm">
+          {analytics.welcomeSubtitle}
+        </p>
+      </DashboardWelcomeCard>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<Users className="size-6 sm:size-8" />}
           label="Total Students"
-          value="3"
+          value={analytics.totalStudents.toString()}
           variant="success"
         />
         <StatCard
           icon={<UserMinus className="size-6 sm:size-8" />}
           label="Students Without Tutor"
-          value="0"
+          value={analytics.studentsWithoutTutor.toString()}
           variant="danger"
         />
         <StatCard
           icon={<AlertTriangle className="size-6 sm:size-8" />}
-          label="Inactive Students (7 days)"
-          value="32"
+          label="No Interaction Students (7 days)"
+          value={analytics.noInteractionStudents7PlusDays.toString()}
           variant="warning"
         />
         <StatCard
           icon={<AlertTriangle className="size-6 sm:size-8" />}
-          label="Inactive Students (28+ days)"
-          value="4"
+          label="No Interaction Students (28+ days)"
+          value={analytics.noInteractionStudents28PlusDays.toString()}
           variant="danger"
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="p-4 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
-              Most Viewed Pages
-            </h3>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+        <Card className="min-w-0 p-4 sm:p-6">
+          <DashboardSectionHeader title="Most Viewed Pages" />
+          <div className="h-[240px] w-full xs:h-[260px] sm:h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={pageViewsData}
+                margin={{ top: 8, right: 8, left: 0, bottom: isSm ? 40 : 48 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: isSm ? 11 : 10 }}
+                  interval={0}
+                  angle={isSm ? -32 : -45}
+                  textAnchor="end"
+                  height={isSm ? 52 : 60}
+                  tickMargin={4}
+                  tickFormatter={v => truncateChartLabel(v, PAGE_AXIS_MAX)}
+                />
+                <YAxis tick={{ fontSize: 11 }} width={isSm ? 44 : 36} />
+                <Tooltip />
+                <Bar dataKey="views" fill="#5B8FF9" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={pageViewsData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="views" fill="#5B8FF9" />
-            </BarChart>
-          </ResponsiveContainer>
         </Card>
 
-        <Card className="p-4 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
-              Browsers Used
-            </h3>
-          </div>
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-            <ResponsiveContainer width="60%" height={200}>
-              <PieChart>
-                <Pie
-                  data={browsersData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={80}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {browsersData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-2">
-              {browsersData.map((browser, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm">
-                  <div
-                    className="size-3 rounded-sm"
-                    style={{ backgroundColor: browser.color }}
-                  />
-                  <span className="text-gray-700">
-                    {browser.name} {browser.value}%
-                  </span>
-                </div>
-              ))}
+        <Card className="min-w-0 p-4 sm:p-6">
+          <DashboardSectionHeader title="Browsers Used" />
+          <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="h-[240px] w-full max-w-[min(100%,340px)] sm:h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[...browsersData]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={pieInner}
+                    outerRadius={pieOuter}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="name"
+                    label={false}
+                  >
+                    {browsersData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="w-full space-y-2 lg:max-w-[220px]">
+              {browsersData.map((browser, index) => {
+                const pct =
+                  browsersTotal > 0
+                    ? ((browser.value / browsersTotal) * 100).toFixed(0)
+                    : '0'
+                return (
+                  <div key={index} className="flex items-center gap-2 text-sm">
+                    <div
+                      className="size-3 shrink-0 rounded-sm"
+                      style={{ backgroundColor: browser.color }}
+                    />
+                    <span className="text-gray-700">
+                      {browser.name} {pct}%
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="p-4 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
-              Message by Tutor (Last 7 days)
-            </h3>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+        <Card className="min-w-0 p-4 sm:p-6">
+          <DashboardSectionHeader title="Message by Tutor (Last 7 days)" />
+          <div className="w-full" style={{ height: messagesChartHeight }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={messagesData} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  width={tutorYAxisWidth}
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={v => truncateChartLabel(v, TUTOR_AXIS_MAX)}
+                />
+                <Tooltip />
+                <Bar dataKey="messages" fill="#5AD8A6" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={messagesData} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis
-                dataKey="name"
-                type="category"
-                width={120}
-                tick={{ fontSize: 11 }}
-              />
-              <Tooltip />
-              <Bar dataKey="messages" fill="#5AD8A6" />
-            </BarChart>
-          </ResponsiveContainer>
+          {messagesData.length === 0 ? (
+            <p className="mt-2 text-center text-sm text-gray-500">
+              No tutor messages in the last 7 days
+            </p>
+          ) : null}
         </Card>
 
-        <Card className="p-4 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
-              Tutees per Tutor
-            </h3>
+        <Card className="min-w-0 p-4 sm:p-6">
+          <DashboardSectionHeader title="Tutees per Tutor" />
+          <div className="h-[240px] w-full sm:h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={tuteesData}
+                margin={{ top: 8, right: 8, left: 0, bottom: isSm ? 44 : 52 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 10 }}
+                  interval={0}
+                  angle={isSm ? -32 : -45}
+                  textAnchor="end"
+                  height={isSm ? 56 : 64}
+                  tickMargin={4}
+                  tickFormatter={v => truncateChartLabel(v, TUTOR_AXIS_MAX)}
+                />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip />
+                <Bar dataKey="tutees" fill="#5AD8A6" />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={tuteesData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="tutees" fill="#5AD8A6" />
-            </BarChart>
-          </ResponsiveContainer>
+          {tuteesData.length === 0 ? (
+            <p className="mt-2 text-center text-sm text-gray-500">
+              No active tutor assignments to summarize
+            </p>
+          ) : null}
         </Card>
       </div>
 
-      <Card className="p-4 sm:p-6">
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
-            Most Active Users
-          </h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[600px]">
-            <thead>
-              <tr className="border-b border-gray-200 text-left text-sm font-medium text-gray-700">
-                <th className="pb-3">User</th>
-                <th className="pb-3">Role</th>
-                <th className="pb-3">Login Count</th>
-                <th className="pb-3">Messages Sent</th>
-                <th className="pb-3">Last Active</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activeUsers.map((user, index) => (
-                <tr key={index} className="border-b border-gray-100 text-sm">
-                  <td className="py-3 text-gray-900">{user.user}</td>
-                  <td className="py-3 text-gray-700">{user.role}</td>
-                  <td className="py-3 text-gray-700">{user.loginCount}</td>
-                  <td className="py-3 text-gray-700">{user.messages}</td>
-                  <td className="py-3 text-gray-700">{user.lastActive}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <Card className="min-w-0 p-4 sm:p-6">
+        <DashboardSectionHeader title="Most Active Users" />
+        <ResponsiveTable
+          columns={mostActiveColumns}
+          rows={mostActiveUsers}
+          emptyMessage="No activity data to rank users yet"
+          getRowKey={row => row.userId}
+          tableClassName="w-full min-w-[720px]"
+        />
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="p-4 sm:p-6">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
-              Recent Allocations
-            </h3>
-            <Button
-              variant="link"
-              size="sm"
-              className="self-start sm:self-auto"
-            >
-              View All →
-            </Button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[400px]">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-sm font-medium text-gray-700">
-                  <th className="pb-3">Tutor</th>
-                  <th className="pb-3">Student</th>
-                  <th className="pb-3">Semester Period</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentAllocations.map((allocation, index) => (
-                  <tr key={index} className="border-b border-gray-100 text-sm">
-                    <td className="py-3 text-gray-900">{allocation.tutor}</td>
-                    <td className="py-3 text-gray-700">{allocation.student}</td>
-                    <td className="py-3 text-gray-700">
-                      {allocation.semester}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card className="min-w-0 p-4 sm:p-6">
+          <DashboardSectionHeader
+            title="Recent Allocations"
+            action={
+              <Button
+                variant="link"
+                size="sm"
+                className="self-start sm:self-auto"
+              >
+                View All →
+              </Button>
+            }
+          />
+          <ResponsiveTable
+            columns={allocationColumns}
+            rows={recentAllocations}
+            emptyMessage="No recent allocations"
+            getRowKey={row => row.allocationId}
+            tableClassName="w-full min-w-[520px]"
+          />
         </Card>
 
-        <Card className="p-4 sm:p-6">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
-              Latest Blogs
-            </h3>
-            <Button
-              variant="link"
-              size="sm"
-              className="self-start sm:self-auto"
-            >
-              View All →
-            </Button>
-          </div>
-          {analytics.lastblogs && analytics.lastblogs.length > 0 ? (
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <img
-                src="/assets/blog-placeholder.jpg"
-                alt={analytics.lastblogs[0].title}
-                className="h-32 w-full rounded-lg object-cover sm:w-32"
-                onError={e => {
-                  e.currentTarget.src =
-                    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="none" stroke="%235B8FF9" stroke-width="2"%3E%3Crect x="3" y="3" width="18" height="18" rx="2" ry="2"%3E%3C/rect%3E%3Ccircle cx="8.5" cy="8.5" r="1.5"%3E%3C/circle%3E%3Cpolyline points="21 15 16 10 5 21"%3E%3C/polyline%3E%3C/svg%3E'
-                }}
-              />
-              <div className="flex-1 space-y-2">
-                <h4 className="font-semibold text-gray-900">
-                  {analytics.lastblogs[0].title}
-                </h4>
-                <p className="line-clamp-2 text-sm text-gray-600">
-                  {analytics.lastblogs[0].description}
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {analytics.lastblogs[0].tags.map((tag, index) => (
-                    <Badge key={index} variant="primary">
-                      #{tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">No blogs available</p>
-          )}
-        </Card>
+        <LatestBlogsSection
+          blogs={analytics.latestBlogs ?? []}
+          previewCount={1}
+        />
       </div>
     </div>
   )

@@ -105,6 +105,54 @@ export function formatPercentage(value: number, decimals: number = 0): string {
   return `${value.toFixed(decimals)}%`
 }
 
+/**
+ * Parse last-login timestamps for display in the browser's local timezone.
+ * - ISO 8601 from the API (`toIso8601String`) encodes the real instant.
+ * - Legacy `Y/m/d H:i` strings were UTC wall-clock without a zone; treat as UTC.
+ */
+function parseLastLoginToLocalDate(value: string): Date | null {
+  const trimmed = value.trim()
+  const slash = trimmed.match(/^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2})$/)
+  if (slash) {
+    const y = Number(slash[1])
+    const mo = Number(slash[2]) - 1
+    const d = Number(slash[3])
+    const h = Number(slash[4])
+    const min = Number(slash[5])
+    const date = new Date(Date.UTC(y, mo, d, h, min))
+    return Number.isNaN(date.getTime()) ? null : date
+  }
+  const date = new Date(trimmed)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+/**
+ * Dashboard last-login: local timezone, `2026/03/29 12:08 AM` (slashes, 12h, no seconds).
+ * Accepts ISO 8601 or legacy UTC `Y/m/d H:i`; invalid values pass through.
+ */
+export function formatLastLoginDisplay(
+  value: string | null | undefined
+): string {
+  if (value == null || value === '') return '—'
+  const trimmed = value.trim()
+  try {
+    const date = parseLastLoginToLocalDate(trimmed)
+    if (date === null) return trimmed
+    const y = date.getFullYear()
+    const mo = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    let hour = date.getHours()
+    const ampm = hour >= 12 ? 'PM' : 'AM'
+    hour = hour % 12
+    if (hour === 0) hour = 12
+    const hStr = String(hour)
+    const min = String(date.getMinutes()).padStart(2, '0')
+    return `${y}/${mo}/${d} ${hStr}:${min} ${ampm}`
+  } catch {
+    return trimmed
+  }
+}
+
 /** en-US date/time without seconds (matches legacy blog list formatting). */
 export function formatDateTimeShort(iso: string): string {
   if (!iso) return '-'

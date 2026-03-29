@@ -31,8 +31,8 @@ class AnalyticsController
                 'lastSevenDaysMessage' => 10,
                 'meetingSchedules' => 1,
                 'documentShares' => 5,
-                'lastLoginAt' => '2026/03/22 08:10',
-                'lastActiveAt' => '2026/03/22 14:30',
+                'lastLoginAt' => '2026-03-22T08:10:00+00:00',
+                'lastActiveAt' => '2026-03-22T14:30:00+00:00',
                 'personalTutor' => [
                     'id' => 9,
                     'uuid' => '7cf7fd7d-6be0-4988-b0d8-9f6deff44b95',
@@ -84,7 +84,7 @@ class AnalyticsController
             ],
             // Tutor dashboard payload
             [
-                'lastLoginAt' => '2026/03/22 08:10',
+                'lastLoginAt' => '2026-03-22T08:10:00+00:00',
                 'displayName' => 'Dr. Andrew Collins',
                 'welcomeSubtitle' => 'Your students requiring attention today.',
                 'totalTutees' => 3,
@@ -142,7 +142,7 @@ class AnalyticsController
             ],
             // Staff/Admin dashboard payload
             [
-                'lastLoginAt' => '2026/03/22 08:10',
+                'lastLoginAt' => '2026-03-22T08:10:00+00:00',
                 'displayName' => 'Admin User',
                 'welcomeSubtitle' => 'System reports and monitoring tools are available in your dashboard.',
                 'totalStudents' => 32,
@@ -163,6 +163,17 @@ class AnalyticsController
                         'tutorUuid' => '07d6833f-8f35-45c4-bf1e-31ce8f6ea193',
                         'tutorName' => 'Dr. Michael Grant',
                         'tuteesCount' => 18,
+                    ],
+                ],
+                'mostActiveUsers' => [
+                    [
+                        'userId' => 12,
+                        'userUuid' => 'f2f4fc74-b9df-4a5d-8f94-3e6aa66b62bf',
+                        'userName' => 'Aiden Murphy',
+                        'role' => 'Student',
+                        'loginCount' => 32,
+                        'messagesSent' => 12,
+                        'lastActive' => '2026/03/22 14:30',
                     ],
                 ],
                 'recentAllocations' => [
