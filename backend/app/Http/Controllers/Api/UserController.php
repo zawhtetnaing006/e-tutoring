@@ -8,6 +8,7 @@ use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Models\Role;
+use App\Models\TutorAssignment;
 use App\Models\User;
 use App\Notifications\UserGeneratedPasswordNotification;
 use App\Services\AuditLogService;
@@ -70,6 +71,8 @@ class UserController
     )]
     public function index(Request $request): JsonResponse
     {
+        /** @var User|null $currentUser */
+        $currentUser = $request->user();
         $filters = $request->validate([
             'name' => ['sometimes', 'string'],
             'role_code' => ['sometimes', 'string'],
@@ -82,6 +85,13 @@ class UserController
 
         $users = User::query()
             ->with(['subjects:id,name,description', 'role:id,code,name'])
+            ->when($currentUser?->hasRole(Role::TUTOR), function ($query) use ($currentUser) {
+                $query->whereIn('id', function ($assignmentQuery) use ($currentUser): void {
+                    $assignmentQuery->select('student_user_id')
+                        ->from((new TutorAssignment())->getTable())
+                        ->where('tutor_user_id', (int) $currentUser->id);
+                });
+            })
             ->when($name !== '', function ($query) use ($name) {
                 $query->where('name', 'like', '%' . $name . '%');
             })

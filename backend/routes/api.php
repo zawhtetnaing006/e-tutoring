@@ -62,16 +62,18 @@ Route::prefix('blogs')
         Route::post('{blog}/comments', 'storeComment');
     });
 
-Route::middleware(['auth:sanctum', 'role:STAFF'])
-    ->prefix('users')
+Route::prefix('users')
     ->controller(UserController::class)
     ->group(function () {
-        Route::get('/', 'index');
-        Route::post('/', 'store');
-        Route::post('export', 'export');
-        Route::get('{user}', 'show');
-        Route::put('{user}', 'update');
-        Route::delete('{user}', 'destroy');
+        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])->get('/', 'index');
+
+        Route::middleware(['auth:sanctum', 'role:STAFF'])->group(function () {
+            Route::post('/', 'store');
+            Route::post('export', 'export');
+            Route::get('{user}', 'show');
+            Route::put('{user}', 'update');
+            Route::delete('{user}', 'destroy');
+        });
     });
 
 Route::middleware(['auth:sanctum', 'role:STAFF'])
@@ -102,15 +104,17 @@ Route::prefix('tutor-assignments')
         });
     });
 
-Route::middleware(['auth:sanctum', 'role:STAFF'])
-    ->prefix('meetings')
+Route::prefix('meetings')
     ->controller(MeetingController::class)
     ->group(function () {
-        Route::get('/', 'index');
-        Route::post('/', 'store');
-        Route::get('{meeting}', 'show');
-        Route::put('{meeting}', 'update');
-        Route::delete('{meeting}', 'destroy');
+        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])->get('/', 'index');
+
+        Route::middleware(['auth:sanctum', 'role:STAFF'])->group(function () {
+            Route::post('/', 'store');
+            Route::get('{meeting}', 'show');
+            Route::put('{meeting}', 'update');
+            Route::delete('{meeting}', 'destroy');
+        });
     });
 
 Route::middleware(['auth:sanctum', 'role:STAFF'])

@@ -6,6 +6,7 @@ use App\Http\Requests\Meeting\StoreMeetingRequest;
 use App\Http\Requests\Meeting\UpdateMeetingRequest;
 use App\Http\Resources\MeetingResource;
 use App\Models\Meeting;
+use App\Models\Role;
 use App\Models\User;
 use App\Notifications\NewScheduleAssigned;
 use App\Services\AuditLogService;
@@ -62,11 +63,18 @@ class MeetingController
     ]])]
     public function index(Request $request): JsonResponse
     {
+        /** @var User|null $currentUser */
+        $currentUser = $request->user();
         $perPage = max(1, min(100, (int) $request->integer('per_page', 15)));
         $page = max(1, (int) $request->integer('page', 1));
 
         $meetings = Meeting::query()
             ->with(['schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time')])
+            ->when($currentUser?->hasRole(Role::TUTOR), function ($query) use ($currentUser) {
+                $query->whereHas('tutorAssignment', function ($assignmentQuery) use ($currentUser): void {
+                    $assignmentQuery->where('tutor_user_id', (int) $currentUser->id);
+                });
+            })
             ->latest('id')
             ->paginate($perPage, ['*'], 'page', $page);
 
