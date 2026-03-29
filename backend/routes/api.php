@@ -96,6 +96,10 @@ Route::prefix('tutor-assignments')
             Route::get('{tutorAssignment}', 'show');
         });
 
+        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])->group(function () {
+            Route::post('export', 'export');
+        });
+
         Route::middleware(['auth:sanctum', 'role:STAFF'])->group(function () {
             Route::post('/', 'store');
             Route::delete('/', 'bulkDestroy');

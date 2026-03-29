@@ -16,6 +16,7 @@ import { getUserRole, type User } from '@/features/auth'
 import {
   deleteAllocation,
   deleteAllocations,
+  exportAllocationsExcel,
   type Allocation,
 } from '@/features/allocations/api'
 import { useAllocations } from '@/features/allocations/useAllocations'
@@ -149,6 +150,26 @@ export function AllocationsPage() {
     },
   })
 
+  const exportMutation = useMutation({
+    mutationFn: exportAllocationsExcel,
+    onSuccess: blob => {
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'allocations.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      toast.success('Excel exported')
+    },
+    onError: error => {
+      const description =
+        error instanceof Error ? error.message : 'Please try again later.'
+      toast.error('Failed to export allocations', { description })
+    },
+  })
+
   const handleDelete = (allocation: Allocation) => {
     const confirmed = window.confirm(
       `Delete the allocation for student #${allocation.student_user_id}?`
@@ -185,6 +206,17 @@ export function AllocationsPage() {
         ? current.filter(id => !currentPageIds.includes(id))
         : [...new Set([...current, ...currentPageIds])]
     )
+  }
+
+  const handleExport = () => {
+    if (visibleSelectedIds.length === 0) {
+      toast.error('Select at least one allocation to export.')
+      return
+    }
+
+    exportMutation.mutate({
+      tutor_assignment_ids: visibleSelectedIds,
+    })
   }
 
   return (
@@ -241,9 +273,15 @@ export function AllocationsPage() {
 
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-muted"
+              onClick={handleExport}
+              disabled={exportMutation.isPending}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-foreground hover:bg-muted disabled:opacity-50"
             >
-              <Upload className="size-4" />
+              {exportMutation.isPending ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : (
+                <Upload className="size-4" />
+              )}
               Excel
             </button>
           </div>

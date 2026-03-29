@@ -1,4 +1,4 @@
-import { apiClient, ApiError } from '@/lib/api-client'
+import { apiClient, ApiError, getBaseUrl } from '@/lib/api-client'
 import { getAuthSession } from '@/features/auth/storage'
 
 export type Allocation = {
@@ -40,6 +40,10 @@ export type UpdateAllocationPayload = {
   from_date: string
   to_date: string
   status?: 'ACTIVE' | 'INACTIVE' | null
+}
+
+export type ExportAllocationsPayload = {
+  tutor_assignment_ids: number[]
 }
 
 function getToken() {
@@ -115,4 +119,43 @@ export async function deleteAllocations(ids: number[]): Promise<void> {
       tutor_assignment_ids: ids,
     },
   })
+}
+
+export async function exportAllocationsExcel(
+  payload: ExportAllocationsPayload
+): Promise<Blob> {
+  const token = getToken()
+  const baseUrl = getBaseUrl()
+
+  if (!baseUrl) {
+    throw new Error(
+      'VITE_API_BASE_URL is not set. Add it to .env or .env.local'
+    )
+  }
+
+  const response = await fetch(`${baseUrl}/tutor-assignments/export`, {
+    method: 'POST',
+    headers: {
+      Accept:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    const message =
+      typeof data === 'object' &&
+      data !== null &&
+      'message' in data &&
+      typeof data.message === 'string'
+        ? data.message
+        : response.statusText || 'Failed to export allocations'
+
+    throw new ApiError(response.status, message, data)
+  }
+
+  return response.blob()
 }

@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\TutorAssignment\ExportTutorAssignmentsRequest;
 use App\Http\Requests\TutorAssignment\StoreTutorAssignmentRequest;
 use App\Http\Requests\TutorAssignment\UpdateTutorAssignmentRequest;
 use App\Http\Resources\TutorAssignmentResource;
-use App\Models\TutorAssignment;
 use App\Models\Role;
+use App\Models\TutorAssignment;
 use App\Models\User;
 use App\Services\AuditLogService;
 use App\Services\ChatService;
+use App\Services\TutorAssignmentExportService;
 use App\Traits\FormatsListingResponse;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
@@ -20,6 +22,8 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Group('Tutor Assignments', description: 'Tutor assignment management endpoints.', weight: 6)]
 class TutorAssignmentController
@@ -29,6 +33,7 @@ class TutorAssignmentController
     public function __construct(
         private readonly ChatService $chatService,
         private readonly AuditLogService $auditLogService,
+        private readonly TutorAssignmentExportService $tutorAssignmentExportService,
     ) {
     }
 
@@ -241,6 +246,59 @@ class TutorAssignmentController
     public function show(TutorAssignment $tutorAssignment): JsonResponse
     {
         return response()->json(new TutorAssignmentResource($tutorAssignment));
+    }
+
+    #[Endpoint(title: 'Export Tutor Assignments')]
+    #[BodyParameter('tutor_assignment_ids', required: true, example: [1, 2, 3])]
+    #[Response(status: 200, description: 'Excel file download')]
+    public function export(ExportTutorAssignmentsRequest $request): StreamedResponse
+    {
+        /** @var User|null $currentUser */
+        $currentUser = $request->user();
+        $validated = $request->validated();
+        $tutorAssignmentIds = collect($validated['tutor_assignment_ids'])
+            ->map(static fn (mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+        $tutorAssignmentIdPositions = array_flip($tutorAssignmentIds);
+
+        $query = TutorAssignment::query()
+            ->with([
+                'tutor:id,name',
+                'student:id,name',
+            ])
+            ->whereIn('id', $tutorAssignmentIds);
+
+        if (
+            $currentUser !== null
+            && $currentUser->hasRole(Role::TUTOR)
+            && ! $currentUser->hasAnyRole([Role::STAFF, Role::ADMIN])
+        ) {
+            $query->where('tutor_user_id', (int) $currentUser->id);
+        }
+
+        $tutorAssignments = $query
+            ->get()
+            ->sortBy(
+                static fn (TutorAssignment $tutorAssignment): int => $tutorAssignmentIdPositions[$tutorAssignment->id] ?? PHP_INT_MAX
+            )
+            ->values();
+
+        if ($tutorAssignments->count() !== count($tutorAssignmentIds)) {
+            abort(403, 'Access denied for one or more tutor assignments.');
+        }
+
+        $spreadsheet = $this->tutorAssignmentExportService->createSpreadsheet($tutorAssignments);
+        $writer = $this->tutorAssignmentExportService->createWriter($spreadsheet);
+        $fileName = sprintf('%s.xlsx', Str::slug('allocations'));
+
+        return response()->streamDownload(function () use ($writer, $spreadsheet): void {
+            $writer->save('php://output');
+            $spreadsheet->disconnectWorksheets();
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 
     #[Endpoint(title: 'Update Tutor Assignment')]
