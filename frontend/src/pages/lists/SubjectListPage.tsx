@@ -71,6 +71,11 @@ export function SubjectListPage({
     openRowId,
     page,
     perPage,
+    sortKey,
+    sortDir,
+    handleSort,
+    statusFilter,
+    setStatusFilter,
   } = useSubjectListPage(showStaffActions)
 
   return (
@@ -81,7 +86,15 @@ export function SubjectListPage({
         addLabel={addLabel}
         onAdd={() => setAddOpen(true)}
       />
-      <SubjectFilters search={search} onSearchChange={setSearch} />
+      <SubjectFilters
+        search={search}
+        onSearchChange={setSearch}
+        statusFilter={statusFilter}
+        onStatusFilterChange={value => {
+          setStatusFilter(value)
+          setPage(1)
+        }}
+      />
       <SubjectTable
         filteredRows={filteredRows}
         isLoading={isLoading}
@@ -109,6 +122,9 @@ export function SubjectListPage({
           setPerPage(next)
           setPage(1)
         }}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSort={handleSort}
       />
       {showStaffActions && (
         <SubjectStaffActionsPortal
