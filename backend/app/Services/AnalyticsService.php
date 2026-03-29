@@ -112,9 +112,118 @@ class AnalyticsService
             'noInteractionStudents28PlusDays' => $this->countStudentInactivity($studentInteractions, 28),
             'messageByTutorLast7Days' => $this->messageByTutorLast7Days(),
             'tuteesPerTutor' => $this->tuteesPerTutor(),
+            'mostActiveUsers' => $this->mostActiveUsers(),
             'recentAllocations' => $this->recentAllocations(),
             'latestBlogs' => $this->latestBlogs(),
         ];
+    }
+
+    /**
+     * Top 5 users for staff dashboard: highest login count first, then messages sent.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function mostActiveUsers(): array
+    {
+        $limit = 5;
+
+        $messageCounts = Message::query()
+            ->selectRaw('sender_user_id as user_id')
+            ->selectRaw('COUNT(*) as cnt')
+            ->groupBy('sender_user_id')
+            ->pluck('cnt', 'user_id');
+
+        $loginCounts = $this->loginCountsByUserId();
+
+        $users = User::query()
+            ->with('role:id,code,name')
+            ->whereHas('role', function (Builder $query): void {
+                $query->whereIn('code', Role::CODES);
+            })
+            ->get(['id', 'uuid', 'name', 'role_id']);
+
+        $ranked = $users
+            ->map(function (User $u) use ($messageCounts, $loginCounts): array {
+                $id = (int) $u->id;
+                $messages = (int) ($messageCounts[$id] ?? 0);
+                $logins = (int) ($loginCounts[$id] ?? 0);
+
+                return [
+                    'user' => $u,
+                    'loginCount' => $logins,
+                    'messagesSent' => $messages,
+                ];
+            })
+            ->sort(function (array $a, array $b): int {
+                if ($a['loginCount'] !== $b['loginCount']) {
+                    return $b['loginCount'] <=> $a['loginCount'];
+                }
+
+                return $b['messagesSent'] <=> $a['messagesSent'];
+            })
+            ->values();
+
+        $top = $ranked->take($limit);
+
+        return $top
+            ->map(function (array $row): array {
+                /** @var User $u */
+                $u = $row['user'];
+                $roleName = $u->role?->name;
+                if (! is_string($roleName) || $roleName === '') {
+                    $roleName = $u->role?->code ?? 'Unknown';
+                }
+
+                return [
+                    'userId' => (int) $u->id,
+                    'userUuid' => $u->uuid,
+                    'userName' => $u->name,
+                    'role' => $roleName,
+                    'loginCount' => (int) $row['loginCount'],
+                    'messagesSent' => (int) $row['messagesSent'],
+                    'lastActive' => $this->formatLastActiveAt($u),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, int> user id => login count
+     */
+    private function loginCountsByUserId(): array
+    {
+        $activityTableName = (string) config('activitylog.table_name', 'activity_log');
+
+        if ($activityTableName === '' || ! Schema::hasTable($activityTableName)) {
+            return [];
+        }
+
+        $rows = DB::table($activityTableName)
+            ->where('description', 'auth.login')
+            ->where(function ($query): void {
+                $query
+                    ->where(function ($q): void {
+                        $q->where('target_type', User::class)->whereNotNull('target_id');
+                    })
+                    ->orWhere(function ($q): void {
+                        $q->where('actor_type', User::class)->whereNotNull('actor_id');
+                    });
+            })
+            ->selectRaw('COALESCE(target_id, actor_id) as user_id')
+            ->selectRaw('COUNT(*) as cnt')
+            ->groupBy(DB::raw('COALESCE(target_id, actor_id)'))
+            ->get();
+
+        $out = [];
+        foreach ($rows as $row) {
+            if (! isset($row->user_id) || $row->user_id === null) {
+                continue;
+            }
+            $out[(int) $row->user_id] = (int) $row->cnt;
+        }
+
+        return $out;
     }
 
     private function lastSevenDaysMessageCount(User $user): int
@@ -151,7 +260,7 @@ class AnalyticsService
             ->with(['author:id,uuid,name,role_id', 'author.role:id,code'])
             ->withCount('comments')
             ->latest('id')
-            ->limit(5)
+            ->limit(2)
             ->get()
             ->map(function (Blog $blog): array {
                 /** @var array<int, string>|mixed $tags */
@@ -354,7 +463,7 @@ class AnalyticsService
             ->sortDesc()
             ->first();
 
-        return ($latest ?? now())->format('Y/m/d H:i');
+        return ($latest ?? now())->toIso8601String();
     }
 
     private function formatLastLoginAt(User $user): ?string
@@ -381,7 +490,7 @@ class AnalyticsService
             return null;
         }
 
-        return Carbon::parse((string) $loginActivityTimestamp)->format('Y/m/d H:i');
+        return Carbon::parse((string) $loginActivityTimestamp)->toIso8601String();
     }
 
     private function extractInitials(string $name): string

@@ -220,12 +220,12 @@ class AnalyticsApiTest extends TestCase
         $this->assertIsArray($payload['upcomingMeetings'] ?? null);
         $this->assertIsArray($payload['latestBlogs'] ?? null);
         $this->assertCount(5, $payload['upcomingMeetings']);
-        $this->assertCount(5, $payload['latestBlogs']);
+        $this->assertCount(2, $payload['latestBlogs']);
         $this->assertArrayNotHasKey('lastblogs', $payload);
         $this->assertArrayNotHasKey('upcomingMeeting', $payload);
 
         $this->assertMatchesRegularExpression(
-            '/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}$/',
+            '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/',
             (string) ($payload['lastActiveAt'] ?? '')
         );
     }
@@ -318,6 +318,17 @@ class AnalyticsApiTest extends TestCase
                 'noInteractionStudents28PlusDays',
                 'messageByTutorLast7Days',
                 'tuteesPerTutor',
+                'mostActiveUsers' => [
+                    '*' => [
+                        'userId',
+                        'userUuid',
+                        'userName',
+                        'role',
+                        'loginCount',
+                        'messagesSent',
+                        'lastActive',
+                    ],
+                ],
                 'recentAllocations',
                 'latestBlogs',
             ])

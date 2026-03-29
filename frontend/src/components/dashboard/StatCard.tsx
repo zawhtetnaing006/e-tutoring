@@ -19,18 +19,29 @@ export function StatCard({
   variant = 'default',
   className,
 }: StatCardProps) {
-  const iconColorClass = {
-    default: 'text-blue-600',
-    warning: 'text-yellow-600',
-    danger: 'text-red-600',
-    info: 'text-cyan-600',
-    success: 'text-green-600',
-  }[variant]
+  let iconColorClass: string
+  switch (variant) {
+    case 'warning':
+      iconColorClass = 'text-yellow-600'
+      break
+    case 'danger':
+      iconColorClass = 'text-red-600'
+      break
+    case 'info':
+      iconColorClass = 'text-cyan-600'
+      break
+    case 'success':
+      iconColorClass = 'text-green-600'
+      break
+    default:
+      iconColorClass = 'text-blue-600'
+      break
+  }
 
   return (
     <div
       className={cn(
-        'rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6',
+        'min-w-0 rounded-lg border border-gray-200 bg-white p-4 shadow-sm sm:p-6',
         className
       )}
     >
