@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Meeting;
+use App\Policies\MeetingPolicy;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
@@ -23,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(Meeting::class, MeetingPolicy::class);
+
         Gate::define('viewApiDocs', function ($user = null): bool {
             return (bool) config('scramble.public_docs', false);
         });

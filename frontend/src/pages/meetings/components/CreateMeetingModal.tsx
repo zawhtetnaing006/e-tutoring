@@ -3,6 +3,9 @@ import { X, Video, MapPin, Calendar, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateMeeting } from '@/features/meetings/useMeetings'
 import { type CreateMeetingPayload } from '@/features/meetings/api'
+import { getUserRole } from '@/features/auth/role-utils'
+import { getAuthSession } from '@/features/auth/storage'
+import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { useAllocations } from '@/features/allocations/useAllocations'
 import { useUsers } from '@/features/users/useUsers'
 
@@ -49,7 +52,21 @@ export function CreateMeetingModal({
   const [weeklyStartTime, setWeeklyStartTime] = useState('')
   const [weeklyEndTime, setWeeklyEndTime] = useState('')
 
-  const allocationsQuery = useAllocations({ perPage: 1000 })
+  const currentUserQuery = useCurrentUser()
+  const effectiveUser = currentUserQuery.data ?? getAuthSession()?.user ?? null
+  const isTutor = getUserRole(effectiveUser) === 'tutor'
+
+  const allocationsQuery = useAllocations({
+    // Backend caps per_page at 100 (TutorAssignmentController)
+    perPage: 100,
+    onlyMine: isTutor,
+  })
+
+  const tutorAssignmentOptions = useMemo(() => {
+    const rows = allocationsQuery.data?.data ?? []
+    if (!isTutor || effectiveUser?.id == null) return rows
+    return rows.filter(a => a.tutor_user_id === effectiveUser.id)
+  }, [allocationsQuery.data?.data, isTutor, effectiveUser])
   const tutorsQuery = useUsers({ perPage: 100, role_code: 'TUTOR' })
   const studentsQuery = useUsers({ perPage: 100, role_code: 'STUDENT' })
 
@@ -239,13 +256,19 @@ export function CreateMeetingModal({
                   required
                 >
                   <option value="">Select Tutor</option>
-                  {allocationsQuery.data?.data.map(allocation => {
+                  {tutorAssignmentOptions.map(allocation => {
                     const tutor = tutorsQuery.data?.data.find(
                       u => u.id === allocation.tutor_user_id
                     )
+                    const label =
+                      isTutor &&
+                      effectiveUser?.id === allocation.tutor_user_id &&
+                      effectiveUser.name
+                        ? effectiveUser.name
+                        : tutor?.name || `Tutor #${allocation.tutor_user_id}`
                     return (
                       <option key={allocation.id} value={allocation.id}>
-                        {tutor?.name || `Tutor #${allocation.tutor_user_id}`}
+                        {label}
                       </option>
                     )
                   })}

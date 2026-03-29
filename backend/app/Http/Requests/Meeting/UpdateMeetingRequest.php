@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Meeting;
 
+use App\Models\Meeting;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -10,7 +11,13 @@ class UpdateMeetingRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $meeting = $this->route('meeting');
+
+        if (! $meeting instanceof Meeting) {
+            return false;
+        }
+
+        return $this->user()?->can('update', $meeting) ?? false;
     }
 
     /**

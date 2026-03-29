@@ -19,6 +19,7 @@ use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Meetings', description: 'Meeting management endpoints.', weight: 7)]
 class MeetingController
@@ -27,9 +28,7 @@ class MeetingController
 
     public function __construct(
         private readonly AuditLogService $auditLogService
-    )
-    {
-    }
+    ) {}
 
     #[Endpoint(title: 'List Meetings')]
     #[QueryParameter('per_page', required: false, example: 15)]
@@ -73,6 +72,11 @@ class MeetingController
             ->when($currentUser?->hasRole(Role::TUTOR), function ($query) use ($currentUser) {
                 $query->whereHas('tutorAssignment', function ($assignmentQuery) use ($currentUser): void {
                     $assignmentQuery->where('tutor_user_id', (int) $currentUser->id);
+                });
+            })
+            ->when($currentUser?->hasRole(Role::STUDENT), function ($query) use ($currentUser) {
+                $query->whereHas('tutorAssignment', function ($assignmentQuery) use ($currentUser): void {
+                    $assignmentQuery->where('student_user_id', (int) $currentUser->id);
                 });
             })
             ->latest('id')
@@ -208,6 +212,8 @@ class MeetingController
     ]])]
     public function show(Meeting $meeting): JsonResponse
     {
+        Gate::authorize('view', $meeting);
+
         return response()->json(new MeetingResource(
             $meeting->load(['schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time')])
         ));
@@ -278,6 +284,8 @@ class MeetingController
     #[Response(status: 204, examples: [[null]])]
     public function destroy(Request $request, Meeting $meeting): JsonResponse
     {
+        Gate::authorize('delete', $meeting);
+
         $targetLabel = $this->meetingTargetLabel($meeting);
         $meeting->delete();
 

@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\Meeting;
 
+use App\Models\Role;
+use App\Models\TutorAssignment;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -10,7 +13,30 @@ class StoreMeetingRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+
+        if ($user === null || ! $user instanceof User) {
+            return false;
+        }
+
+        if ($user->hasRole(Role::ADMIN) || $user->hasRole(Role::STAFF)) {
+            return true;
+        }
+
+        if ($user->hasRole(Role::TUTOR)) {
+            $assignmentId = (int) $this->input('tutor_assignment_id');
+
+            if ($assignmentId < 1) {
+                return false;
+            }
+
+            return TutorAssignment::query()
+                ->whereKey($assignmentId)
+                ->where('tutor_user_id', (int) $user->id)
+                ->exists();
+        }
+
+        return false;
     }
 
     /**
