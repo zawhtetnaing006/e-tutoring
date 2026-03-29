@@ -6,6 +6,7 @@ type ListViewProps = {
   meetings: Meeting[]
   isLoading: boolean
   onViewDetails: (meeting: Meeting) => void
+  isStudent?: boolean
 }
 
 type MeetingWithNextSchedule = {
@@ -19,6 +20,7 @@ export function ListView({
   meetings,
   isLoading,
   onViewDetails,
+  isStudent = false,
 }: ListViewProps) {
   const meetingsWithSchedule = useMemo<MeetingWithNextSchedule[]>(() => {
     const now = new Date()
@@ -90,7 +92,9 @@ export function ListView({
         <div className="text-center">
           <p className="text-lg font-medium text-foreground">No meetings yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Create your first meeting to get started
+            {isStudent
+              ? 'When your tutor or staff schedules a session, it will appear here.'
+              : 'Create your first meeting to get started'}
           </p>
         </div>
       </div>

@@ -16,6 +16,8 @@ import { useUsers } from '@/features/users/useUsers'
 
 type MeetingDetailModalProps = {
   meeting: Meeting
+  /** Staff and tutors can reschedule and record attendance; students are read-only. */
+  canManageMeeting: boolean
   onClose: () => void
   onEdit: () => void
 }
@@ -24,6 +26,7 @@ type AttendanceStatus = 'PRESENCE' | 'ABSENCE' | 'ON_LEAVE'
 
 export function MeetingDetailModal({
   meeting,
+  canManageMeeting,
   onClose,
   onEdit,
 }: MeetingDetailModalProps) {
@@ -213,138 +216,150 @@ export function MeetingDetailModal({
             </div>
 
             <div className="mt-4 flex gap-3">
+              {canManageMeeting && (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Reschedule
+                </button>
+              )}
               <button
-                onClick={onEdit}
-                className="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20"
+                type="button"
+                onClick={onClose}
+                className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
               >
-                <RefreshCw className="h-4 w-4" />
-                Reschedule
+                {canManageMeeting ? 'Cancel' : 'Close'}
               </button>
+            </div>
+          </div>
+
+          {canManageMeeting && (
+            <div className="mt-6">
+              <h3 className="mb-3 font-medium text-foreground">
+                Student Attendance <span className="text-red-500">*</span>
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAttendance('PRESENCE')}
+                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                    selectedAttendance === 'PRESENCE'
+                      ? 'border-green-500 bg-green-500/10'
+                      : 'border-border bg-background hover:bg-muted'
+                  }`}
+                >
+                  <CheckCircle
+                    className={`h-6 w-6 ${
+                      selectedAttendance === 'PRESENCE'
+                        ? 'text-green-600'
+                        : 'text-muted-foreground'
+                    }`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${
+                      selectedAttendance === 'PRESENCE'
+                        ? 'text-green-600'
+                        : 'text-foreground'
+                    }`}
+                  >
+                    Present
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedAttendance('ABSENCE')}
+                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                    selectedAttendance === 'ABSENCE'
+                      ? 'border-red-500 bg-red-500/10'
+                      : 'border-border bg-background hover:bg-muted'
+                  }`}
+                >
+                  <XCircle
+                    className={`h-6 w-6 ${
+                      selectedAttendance === 'ABSENCE'
+                        ? 'text-red-600'
+                        : 'text-muted-foreground'
+                    }`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${
+                      selectedAttendance === 'ABSENCE'
+                        ? 'text-red-600'
+                        : 'text-foreground'
+                    }`}
+                  >
+                    Absent
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedAttendance('ON_LEAVE')}
+                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                    selectedAttendance === 'ON_LEAVE'
+                      ? 'border-orange-500 bg-orange-500/10'
+                      : 'border-border bg-background hover:bg-muted'
+                  }`}
+                >
+                  <MinusCircle
+                    className={`h-6 w-6 ${
+                      selectedAttendance === 'ON_LEAVE'
+                        ? 'text-orange-600'
+                        : 'text-muted-foreground'
+                    }`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${
+                      selectedAttendance === 'ON_LEAVE'
+                        ? 'text-orange-600'
+                        : 'text-foreground'
+                    }`}
+                  >
+                    On Leave
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {canManageMeeting && (
+            <div className="mt-6">
+              <h3 className="mb-3 font-medium text-foreground">
+                Meeting Notes
+              </h3>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                placeholder="Record key discussion points, action items, and follow-up tasks..."
+                rows={4}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          )}
+
+          {canManageMeeting && (
+            <div className="mt-6 flex justify-end gap-3">
               <button
+                type="button"
                 onClick={onClose}
                 className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
               >
                 Cancel
               </button>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <h3 className="mb-3 font-medium text-foreground">
-              Student Attendance <span className="text-red-500">*</span>
-            </h3>
-            <div className="grid grid-cols-3 gap-3">
               <button
                 type="button"
-                onClick={() => setSelectedAttendance('PRESENCE')}
-                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                  selectedAttendance === 'PRESENCE'
-                    ? 'border-green-500 bg-green-500/10'
-                    : 'border-border bg-background hover:bg-muted'
-                }`}
+                onClick={handleSave}
+                disabled={attendanceMutation.isPending}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                <CheckCircle
-                  className={`h-6 w-6 ${
-                    selectedAttendance === 'PRESENCE'
-                      ? 'text-green-600'
-                      : 'text-muted-foreground'
-                  }`}
-                />
-                <span
-                  className={`text-sm font-medium ${
-                    selectedAttendance === 'PRESENCE'
-                      ? 'text-green-600'
-                      : 'text-foreground'
-                  }`}
-                >
-                  Present
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedAttendance('ABSENCE')}
-                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                  selectedAttendance === 'ABSENCE'
-                    ? 'border-red-500 bg-red-500/10'
-                    : 'border-border bg-background hover:bg-muted'
-                }`}
-              >
-                <XCircle
-                  className={`h-6 w-6 ${
-                    selectedAttendance === 'ABSENCE'
-                      ? 'text-red-600'
-                      : 'text-muted-foreground'
-                  }`}
-                />
-                <span
-                  className={`text-sm font-medium ${
-                    selectedAttendance === 'ABSENCE'
-                      ? 'text-red-600'
-                      : 'text-foreground'
-                  }`}
-                >
-                  Absent
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setSelectedAttendance('ON_LEAVE')}
-                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                  selectedAttendance === 'ON_LEAVE'
-                    ? 'border-orange-500 bg-orange-500/10'
-                    : 'border-border bg-background hover:bg-muted'
-                }`}
-              >
-                <MinusCircle
-                  className={`h-6 w-6 ${
-                    selectedAttendance === 'ON_LEAVE'
-                      ? 'text-orange-600'
-                      : 'text-muted-foreground'
-                  }`}
-                />
-                <span
-                  className={`text-sm font-medium ${
-                    selectedAttendance === 'ON_LEAVE'
-                      ? 'text-orange-600'
-                      : 'text-foreground'
-                  }`}
-                >
-                  On Leave
-                </span>
+                {attendanceMutation.isPending ? 'Saving...' : 'Save'}
               </button>
             </div>
-          </div>
-
-          <div className="mt-6">
-            <h3 className="mb-3 font-medium text-foreground">Meeting Notes</h3>
-            <textarea
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="Record key discussion points, action items, and follow-up tasks..."
-              rows={4}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={attendanceMutation.isPending}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {attendanceMutation.isPending ? 'Saving...' : 'Save'}
-            </button>
-          </div>
+          )}
         </div>
       </div>
     </div>

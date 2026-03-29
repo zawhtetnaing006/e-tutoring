@@ -1,17 +1,17 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\HealthCheckController;
-use App\Http\Controllers\Api\TutorAssignmentController;
 use App\Http\Controllers\Api\MeetingAttendanceController;
 use App\Http\Controllers\Api\MeetingController;
 use App\Http\Controllers\Api\MeetingScheduleController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SubjectController;
+use App\Http\Controllers\Api\TutorAssignmentController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -107,11 +107,13 @@ Route::prefix('tutor-assignments')
 Route::prefix('meetings')
     ->controller(MeetingController::class)
     ->group(function () {
-        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])->get('/', 'index');
-
-        Route::middleware(['auth:sanctum', 'role:STAFF'])->group(function () {
-            Route::post('/', 'store');
+        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR,STUDENT'])->group(function () {
+            Route::get('/', 'index');
             Route::get('{meeting}', 'show');
+        });
+
+        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])->group(function () {
+            Route::post('/', 'store');
             Route::put('{meeting}', 'update');
             Route::delete('{meeting}', 'destroy');
         });

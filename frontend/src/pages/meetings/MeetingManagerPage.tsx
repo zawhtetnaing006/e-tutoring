@@ -1,6 +1,9 @@
 import { useState, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { List, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { getAuthSession } from '@/features/auth/storage'
+import { getUserRole } from '@/features/auth/role-utils'
+import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { useMeetings } from '@/features/meetings/useMeetings'
 import { type Meeting } from '@/features/meetings/api'
 import { CreateMeetingModal } from './components/CreateMeetingModal'
@@ -20,6 +23,11 @@ export function MeetingManagerPage() {
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
 
   const meetingsQuery = useMeetings({ per_page: 1000 })
+  const currentUserQuery = useCurrentUser()
+  const effectiveUser = currentUserQuery.data ?? getAuthSession()?.user ?? null
+  const role = getUserRole(effectiveUser)
+  const isStudent = role === 'student'
+  const canManageMeetings = role === 'staff' || role === 'tutor'
 
   const handlePrevious = () => {
     const newDate = new Date(currentDate)
@@ -64,17 +72,22 @@ export function MeetingManagerPage() {
             Meeting Manager
           </h1>
           <p className="text-xs text-muted-foreground sm:text-sm">
-            Manage your tutoring sessions
+            {isStudent
+              ? 'View your scheduled sessions'
+              : 'Manage your tutoring sessions'}
           </p>
         </div>
-        <button
-          onClick={() => setIsCreateOpen(true)}
-          className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 sm:justify-start"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">New Meeting</span>
-          <span className="sm:hidden">New</span>
-        </button>
+        {canManageMeetings && (
+          <button
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+            className="flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 sm:justify-start"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">New Meeting</span>
+            <span className="sm:hidden">New</span>
+          </button>
+        )}
       </div>
 
       <div className="border-b border-border bg-card p-3">
@@ -163,6 +176,7 @@ export function MeetingManagerPage() {
             meetings={meetingsQuery.data?.data ?? []}
             isLoading={meetingsQuery.isLoading}
             onViewDetails={setSelectedMeeting}
+            isStudent={isStudent}
           />
         ) : (
           <CalendarView
@@ -175,7 +189,7 @@ export function MeetingManagerPage() {
         )}
       </div>
 
-      {isCreateOpen && (
+      {isCreateOpen && canManageMeetings && (
         <CreateMeetingModal
           onClose={() => setIsCreateOpen(false)}
           onSuccess={() => {
@@ -185,7 +199,7 @@ export function MeetingManagerPage() {
         />
       )}
 
-      {editingMeeting && (
+      {editingMeeting && canManageMeetings && (
         <EditMeetingModal
           meeting={editingMeeting}
           onClose={() => setEditingMeeting(null)}
@@ -199,6 +213,7 @@ export function MeetingManagerPage() {
       {selectedMeeting && (
         <MeetingDetailModal
           meeting={selectedMeeting}
+          canManageMeeting={canManageMeetings}
           onClose={() => setSelectedMeeting(null)}
           onEdit={() => {
             setEditingMeeting(selectedMeeting)
