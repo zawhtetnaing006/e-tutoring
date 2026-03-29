@@ -4,13 +4,14 @@ import {
   Pencil,
   Trash2,
   MoreVertical,
-  ChevronsUpDown,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react'
-import { LoadingSpinner } from '@/components/ui'
+import { LoadingSpinner, SortColumnChevrons } from '@/components/ui'
 import { ROWS_PER_PAGE_OPTIONS } from '@/utils/constants'
 import type { Subject } from '@/features/subjects/api'
+
+export type SubjectSortColumn = 'name' | 'description' | 'status'
 
 export interface SubjectTableProps {
   filteredRows: Subject[]
@@ -36,6 +37,9 @@ export interface SubjectTableProps {
   end: number
   onPageChange: (page: number) => void
   onPerPageChange: (perPage: number) => void
+  sortKey: SubjectSortColumn | null
+  sortDir: 'asc' | 'desc'
+  onSort: (key: SubjectSortColumn) => void
 }
 
 export function SubjectTable({
@@ -62,6 +66,9 @@ export function SubjectTable({
   end,
   onPageChange,
   onPerPageChange,
+  sortKey,
+  sortDir,
+  onSort,
 }: SubjectTableProps) {
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm 2xl:rounded-xl">
@@ -80,19 +87,43 @@ export function SubjectTable({
                 />
               </th>
               <th className="whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[25%] 2xl:p-4">
-                <span className="inline-flex items-center gap-1 2xl:gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSort('name')}
+                  className="inline-flex w-full items-center gap-1 2xl:gap-2"
+                >
                   Name
-                  <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground 2xl:h-5 2xl:w-5" />
-                </span>
+                  <SortColumnChevrons
+                    active={sortKey === 'name'}
+                    direction={sortDir}
+                  />
+                </button>
               </th>
               <th className="w-2/3 whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[45%] 2xl:p-4">
-                Description
+                <button
+                  type="button"
+                  onClick={() => onSort('description')}
+                  className="inline-flex w-full items-center gap-1 2xl:gap-2"
+                >
+                  Description
+                  <SortColumnChevrons
+                    active={sortKey === 'description'}
+                    direction={sortDir}
+                  />
+                </button>
               </th>
               <th className="whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[12%] 2xl:p-4">
-                <span className="inline-flex items-center gap-1 2xl:gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSort('status')}
+                  className="inline-flex w-full items-center gap-1 2xl:gap-2"
+                >
                   Status
-                  <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground 2xl:h-5 2xl:w-5" />
-                </span>
+                  <SortColumnChevrons
+                    active={sortKey === 'status'}
+                    direction={sortDir}
+                  />
+                </button>
               </th>
               <th className="whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[18%] 2xl:p-4">
                 Actions
@@ -260,7 +291,7 @@ export function SubjectTable({
               type="button"
               disabled={page <= 1}
               onClick={() => onPageChange(Math.max(1, page - 1))}
-              className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none disabled:opacity-50 sm:p-2 2xl:p-2.5"
+              className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:p-2 2xl:p-2.5"
               aria-label="Previous page"
             >
               <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 2xl:h-5 2xl:w-5" />
@@ -269,7 +300,7 @@ export function SubjectTable({
               type="button"
               disabled={page >= totalPages}
               onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-              className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none disabled:opacity-50 sm:p-2 2xl:p-2.5"
+              className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:p-2 2xl:p-2.5"
               aria-label="Next page"
             >
               <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 2xl:h-5 2xl:w-5" />

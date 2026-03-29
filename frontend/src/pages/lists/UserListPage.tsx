@@ -8,7 +8,6 @@ import {
   Pencil,
   Trash2,
   MoreVertical,
-  ChevronsUpDown,
   ChevronLeft,
   ChevronRight,
   UserCheck,
@@ -34,13 +33,51 @@ import { EditUserModal } from '@/components/users/EditUserModal'
 import { ResetPasswordModal } from '@/components/users/ResetPasswordModal'
 import { DeleteUserConfirmation } from '@/components/users/DeleteUserConfirmation'
 import type { LayoutVariant } from '@/components/users/types'
+import { SortColumnChevrons } from '@/components/ui'
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100]
+
+type UserSortKey = 'name' | 'email' | 'phone' | 'address' | 'status'
+type SortDir = 'asc' | 'desc'
+type StatusFilter = 'all' | 'active' | 'inactive'
 
 function formatAddress(u: ListUser): string {
   const parts = [u.country, u.city, u.township].filter(Boolean) as string[]
   if (u.address) parts.unshift(u.address)
   return parts.length > 0 ? parts.join(', ') : '—'
+}
+
+function compareUsers(
+  a: ListUser,
+  b: ListUser,
+  key: UserSortKey,
+  dir: SortDir
+): number {
+  let cmp = 0
+  switch (key) {
+    case 'name':
+      cmp = a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      break
+    case 'email':
+      cmp = a.email.localeCompare(b.email, undefined, { sensitivity: 'base' })
+      break
+    case 'phone':
+      cmp = (a.phone ?? '').localeCompare(b.phone ?? '', undefined, {
+        sensitivity: 'base',
+      })
+      break
+    case 'address':
+      cmp = formatAddress(a).localeCompare(formatAddress(b), undefined, {
+        sensitivity: 'base',
+      })
+      break
+    case 'status':
+      cmp = Number(a.is_active) - Number(b.is_active)
+      break
+    default:
+      cmp = 0
+  }
+  return dir === 'asc' ? cmp : -cmp
 }
 
 function getRoleLabel(
@@ -112,6 +149,11 @@ export function UserListPage({
     null
   )
   const [deleteTarget, setDeleteTarget] = useState<ListUser | null>(null)
+  const [sortKey, setSortKey] = useState<UserSortKey | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterWrapRef = useRef<HTMLDivElement>(null)
 
   const queryClient = useQueryClient()
   const invalidateList = () =>
@@ -184,23 +226,56 @@ export function UserListPage({
     enabled: !!editUuid,
   })
 
+  useEffect(() => {
+    if (!filterOpen) return
+    const onDoc = (e: MouseEvent) => {
+      if (
+        filterWrapRef.current &&
+        !filterWrapRef.current.contains(e.target as Node)
+      ) {
+        setFilterOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [filterOpen])
+
+  const handleSort = (key: UserSortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortDir('asc')
+    }
+  }
+
   const totalItems = data?.total_items ?? 0
   const totalPages = data?.total_page ?? 1
   const start = (page - 1) * perPage + 1
   const end = Math.min(page * perPage, totalItems)
 
   const filteredRows = useMemo(() => {
-    const rows = data?.data ?? []
-    if (!search.trim()) return rows
-    const q = search.toLowerCase().trim()
-    return rows.filter(
-      r =>
-        r.name.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q) ||
-        (r.phone ?? '').toLowerCase().includes(q) ||
-        formatAddress(r).toLowerCase().includes(q)
-    )
-  }, [data?.data, search])
+    let rows = data?.data ?? []
+    if (statusFilter === 'active') {
+      rows = rows.filter(r => r.is_active)
+    } else if (statusFilter === 'inactive') {
+      rows = rows.filter(r => !r.is_active)
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase().trim()
+      rows = rows.filter(
+        r =>
+          r.name.toLowerCase().includes(q) ||
+          r.email.toLowerCase().includes(q) ||
+          (r.phone ?? '').toLowerCase().includes(q) ||
+          formatAddress(r).toLowerCase().includes(q)
+      )
+    }
+    if (sortKey) {
+      rows = [...rows].sort((a, b) => compareUsers(a, b, sortKey, sortDir))
+    }
+    return rows
+  }, [data?.data, search, statusFilter, sortKey, sortDir])
 
   const allSelected =
     filteredRows.length > 0 && filteredRows.every(r => selectedIds.has(r.uuid))
@@ -284,14 +359,55 @@ export function UserListPage({
           />
         </div>
         <div className="flex shrink-0 gap-2 sm:gap-3 2xl:gap-4">
-          <button
-            type="button"
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring sm:h-10 sm:gap-2 sm:px-3 sm:text-sm md:px-4 2xl:h-11 2xl:px-5 2xl:text-base"
-            aria-label="Filter"
-          >
-            <Filter className="h-4 w-4 2xl:h-5 2xl:w-5" />
-            <span className="hidden sm:inline">Filter</span>
-          </button>
+          <div ref={filterWrapRef} className="relative overflow-visible">
+            <button
+              type="button"
+              onClick={() => setFilterOpen(o => !o)}
+              className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring sm:h-10 sm:gap-2 sm:px-3 sm:text-sm md:px-4 2xl:h-11 2xl:px-5 2xl:text-base ${
+                statusFilter !== 'all' ? 'ring-2 ring-primary/30' : ''
+              }`}
+              aria-label="Filter"
+              aria-expanded={filterOpen}
+            >
+              <Filter className="h-4 w-4 2xl:h-5 2xl:w-5" />
+              <span className="hidden sm:inline">Filter</span>
+            </button>
+            {filterOpen && (
+              <div
+                className="absolute left-0 top-full z-[100] mt-1 max-w-[min(100vw-1.5rem,20rem)] rounded-lg border border-border bg-card p-3 shadow-lg sm:left-auto sm:right-0 sm:min-w-[200px] sm:max-w-none 2xl:min-w-[240px] 2xl:p-4"
+                role="dialog"
+                aria-label="Filters"
+              >
+                <p className="mb-2 text-xs font-medium text-foreground 2xl:text-sm">
+                  Status
+                </p>
+                <div className="flex flex-col gap-1">
+                  {[
+                    ['all', 'All'] as const,
+                    ['active', 'Active'] as const,
+                    ['inactive', 'Inactive'] as const,
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter(value)
+                        setPage(1)
+                        setFilterOpen(false)
+                      }}
+                      className={`rounded-md px-2 py-1.5 text-left text-xs 2xl:px-3 2xl:py-2 2xl:text-sm ${
+                        statusFilter === value
+                          ? 'bg-muted font-medium text-foreground'
+                          : 'text-muted-foreground hover:bg-muted/80'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={handleExport}
@@ -323,37 +439,72 @@ export function UserListPage({
                   />
                 </th>
                 <th className="whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[15%] 2xl:p-4">
-                  <span className="inline-flex items-center gap-1 2xl:gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('name')}
+                    className="inline-flex w-full items-center gap-1 2xl:gap-2"
+                  >
                     Name
-                    <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground 2xl:h-5 2xl:w-5" />
-                  </span>
+                    <SortColumnChevrons
+                      active={sortKey === 'name'}
+                      direction={sortDir}
+                    />
+                  </button>
                 </th>
                 <th className="whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[12%] 2xl:p-4">
                   Role
                 </th>
                 <th className="whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[20%] 2xl:p-4">
-                  <span className="inline-flex items-center gap-1 2xl:gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('email')}
+                    className="inline-flex w-full items-center gap-1 2xl:gap-2"
+                  >
                     Email
-                    <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground 2xl:h-5 2xl:w-5" />
-                  </span>
+                    <SortColumnChevrons
+                      active={sortKey === 'email'}
+                      direction={sortDir}
+                    />
+                  </button>
                 </th>
                 <th className="whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[13%] 2xl:p-4">
-                  <span className="inline-flex items-center gap-1 2xl:gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('phone')}
+                    className="inline-flex w-full items-center gap-1 2xl:gap-2"
+                  >
                     Phone
-                    <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground 2xl:h-5 2xl:w-5" />
-                  </span>
+                    <SortColumnChevrons
+                      active={sortKey === 'phone'}
+                      direction={sortDir}
+                    />
+                  </button>
                 </th>
                 <th className="whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[20%] 2xl:p-4">
-                  <span className="inline-flex items-center gap-1 2xl:gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('address')}
+                    className="inline-flex w-full items-center gap-1 2xl:gap-2"
+                  >
                     Address
-                    <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground 2xl:h-5 2xl:w-5" />
-                  </span>
+                    <SortColumnChevrons
+                      active={sortKey === 'address'}
+                      direction={sortDir}
+                    />
+                  </button>
                 </th>
                 <th className="whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[10%] 2xl:p-4">
-                  <span className="inline-flex items-center gap-1 2xl:gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSort('status')}
+                    className="inline-flex w-full items-center gap-1 2xl:gap-2"
+                  >
                     Status
-                    <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground 2xl:h-5 2xl:w-5" />
-                  </span>
+                    <SortColumnChevrons
+                      active={sortKey === 'status'}
+                      direction={sortDir}
+                    />
+                  </button>
                 </th>
                 <th className="whitespace-nowrap p-2 font-semibold text-foreground sm:p-3 2xl:w-[10%] 2xl:p-4">
                   Actions
@@ -546,7 +697,7 @@ export function UserListPage({
                 type="button"
                 disabled={page <= 1}
                 onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none disabled:opacity-50 sm:p-2 2xl:p-2.5"
+                className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:p-2 2xl:p-2.5"
                 aria-label="Previous page"
               >
                 <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 2xl:h-5 2xl:w-5" />
@@ -555,7 +706,7 @@ export function UserListPage({
                 type="button"
                 disabled={page >= totalPages}
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:pointer-events-none disabled:opacity-50 sm:p-2 2xl:p-2.5"
+                className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:p-2 2xl:p-2.5"
                 aria-label="Next page"
               >
                 <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 2xl:h-5 2xl:w-5" />
