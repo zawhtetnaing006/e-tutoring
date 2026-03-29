@@ -17,6 +17,7 @@ services:
     depends_on:
       - php
       - reverb
+      - adminer
     ports:
       - "127.0.0.1:8000:80"
     volumes:
@@ -142,6 +143,15 @@ services:
     image: redis:7-alpine
     volumes:
       - redis_data_prod:/data
+    networks:
+      - app
+    restart: unless-stopped
+
+  adminer:
+    image: adminer:4
+    depends_on:
+      mysql:
+        condition: service_healthy
     networks:
       - app
     restart: unless-stopped
