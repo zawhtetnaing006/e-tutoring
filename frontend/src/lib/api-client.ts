@@ -4,6 +4,8 @@
  * for Sanctum cookie/session auth. For token auth, set Authorization via options.
  */
 
+import { clearAuthSession } from '@/features/auth/storage'
+
 const getBaseUrl = (): string => {
   const url = import.meta.env.VITE_API_BASE_URL
   return typeof url === 'string' && url.length > 0 ? url.replace(/\/$/, '') : ''
@@ -85,6 +87,16 @@ export async function apiClient<T>(
   })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) {
+    // Expired or invalid token: clear local session and send user to login (skip unauthenticated calls e.g. login form).
+    if (res.status === 401 && token) {
+      clearAuthSession()
+      if (
+        typeof window !== 'undefined' &&
+        !window.location.pathname.startsWith('/login')
+      ) {
+        window.location.replace('/login')
+      }
+    }
     throw new ApiError(
       res.status,
       getApiErrorMessage(data, res.statusText),
