@@ -31,7 +31,11 @@ import {
   TUTOR_AXIS_MAX,
   truncateChartLabel,
 } from '@/utils/chart'
-import { useAnalytics, useMediaQuery } from '@/hooks'
+import {
+  useAnalytics,
+  useDashboardWelcomeFirstVisit,
+  useMediaQuery,
+} from '@/hooks'
 import { useCurrentUser } from '@/features/auth'
 import type {
   GaBrowserRow,
@@ -93,6 +97,7 @@ const allocationColumns: ResponsiveTableColumn<RecentAllocationRow>[] = [
 export function StaffDashboard() {
   const { data, loading, error } = useAnalytics()
   const { data: user } = useCurrentUser()
+  const showWelcomeCard = useDashboardWelcomeFirstVisit(user?.id)
   const analytics = data as StaffAnalyticsPayload | null
   const isSm = useMediaQuery('(min-width: 640px)')
 
@@ -149,22 +154,24 @@ export function StaffDashboard() {
     <div className="w-full min-w-0 space-y-4 sm:space-y-6">
       <LastLoginBanner lastLoginAt={analytics.lastLoginAt} />
 
-      <DashboardWelcomeCard
-        heading={
-          <>Welcome back, {analytics.displayName || user?.name || 'Staff'}</>
-        }
-      >
-        <p className="mt-1 text-xs text-gray-700 sm:text-sm">
-          We are glad to see you again. Your last login was on{' '}
-          <span className="font-medium">
-            {formatLastLoginDisplay(analytics.lastLoginAt)}
-          </span>
-          .
-        </p>
-        <p className="mt-1 text-xs text-gray-700 sm:text-sm">
-          {analytics.welcomeSubtitle}
-        </p>
-      </DashboardWelcomeCard>
+      {showWelcomeCard && (
+        <DashboardWelcomeCard
+          heading={
+            <>Welcome, {analytics.displayName || user?.name || 'Staff'}</>
+          }
+        >
+          <p className="mt-1 text-xs text-gray-700 sm:text-sm">
+            We are glad to see you again. Your last login was on{' '}
+            <span className="font-medium">
+              {formatLastLoginDisplay(analytics.lastLoginAt)}
+            </span>
+            .
+          </p>
+          <p className="mt-1 text-xs text-gray-700 sm:text-sm">
+            {analytics.welcomeSubtitle}
+          </p>
+        </DashboardWelcomeCard>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

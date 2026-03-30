@@ -25,6 +25,8 @@ type ConversationListSidebarProps = {
   onStartConversation: (targetUserId: number) => void
   onScroll: () => void
   listRef: RefObject<HTMLDivElement | null>
+  /** When true, the "search person" bar is hidden (e.g. students only chat with assigned tutor). */
+  hideSearchBar?: boolean
 }
 
 export function ConversationListSidebar({
@@ -43,6 +45,7 @@ export function ConversationListSidebar({
   onStartConversation,
   onScroll,
   listRef,
+  hideSearchBar = false,
 }: ConversationListSidebarProps) {
   const showSearchResults = search.trim().length > 0
   const hasConversationResults = conversations.length > 0
@@ -57,18 +60,20 @@ export function ConversationListSidebar({
 
   return (
     <aside className="flex min-h-0 flex-col border-r border-border lg:border-r">
-      <div className="border-b border-border p-3 sm:p-4">
-        <SearchInput
-          value={search}
-          onChange={event => onSearchChange(event.target.value)}
-          onKeyDown={handleSearchKeyDown}
-          placeholder="Search person..."
-          showClearButton={false}
-          className="w-full"
-          inputClassName="h-auto rounded-lg border-border bg-background py-2 pl-9 pr-3 text-xs text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 sm:pl-10 sm:text-sm"
-          iconClassName="left-2.5 size-4 text-muted-foreground sm:left-3"
-        />
-      </div>
+      {!hideSearchBar && (
+        <div className="border-b border-border p-3 sm:p-4">
+          <SearchInput
+            value={search}
+            onChange={event => onSearchChange(event.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="Search person..."
+            showClearButton={false}
+            className="w-full"
+            inputClassName="h-auto rounded-lg border-border bg-background py-2 pl-9 pr-3 text-xs text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/30 sm:pl-10 sm:text-sm"
+            iconClassName="left-2.5 size-4 text-muted-foreground sm:left-3"
+          />
+        </div>
+      )}
 
       <div
         ref={listRef}

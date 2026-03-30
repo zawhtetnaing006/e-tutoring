@@ -12,13 +12,14 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { formatLastLoginDisplay } from '@/utils/formatters'
-import { useAnalytics } from '@/hooks'
+import { useAnalytics, useDashboardWelcomeFirstVisit } from '@/hooks'
 import { useCurrentUser } from '@/features/auth'
 import type { StudentAnalyticsPayload } from '@/api/analytics'
 
 export function StudentDashboard() {
   const { data, loading, error } = useAnalytics()
   const { data: user } = useCurrentUser()
+  const showWelcomeCard = useDashboardWelcomeFirstVisit(user?.id)
   const analytics = data as StudentAnalyticsPayload | null
 
   if (loading) {
@@ -43,19 +44,21 @@ export function StudentDashboard() {
         lastLoginAt={analytics.lastLoginAt ?? analytics.lastActiveAt ?? null}
       />
 
-      <DashboardWelcomeCard
-        heading={<>Welcome back, {user?.name || 'Student'}</>}
-      >
-        <p className="mt-1 text-xs text-gray-700 sm:text-sm">
-          We are glad to see you again. Your last login was on{' '}
-          <span className="font-medium">{lastLoginDisplay}</span>.
-        </p>
-        <p className="mt-1 text-xs text-gray-700 sm:text-sm">
-          Please check your messages and upcoming{' '}
-          <span className="font-medium text-blue-700">meetings</span> with your
-          personal tutor.
-        </p>
-      </DashboardWelcomeCard>
+      {showWelcomeCard && (
+        <DashboardWelcomeCard
+          heading={<>Welcome back, {user?.name || 'Student'}</>}
+        >
+          <p className="mt-1 text-xs text-gray-700 sm:text-sm">
+            We are glad to see you again. Your last login was on{' '}
+            <span className="font-medium">{lastLoginDisplay}</span>.
+          </p>
+          <p className="mt-1 text-xs text-gray-700 sm:text-sm">
+            Please check your messages and upcoming{' '}
+            <span className="font-medium text-blue-700">meetings</span> with
+            your personal tutor.
+          </p>
+        </DashboardWelcomeCard>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

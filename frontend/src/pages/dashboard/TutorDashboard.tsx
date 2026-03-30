@@ -21,7 +21,7 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { formatLastLoginDisplay } from '@/utils/formatters'
-import { useAnalytics } from '@/hooks'
+import { useAnalytics, useDashboardWelcomeFirstVisit } from '@/hooks'
 import { useCurrentUser } from '@/features/auth'
 import type { TutorAnalyticsPayload, TutorStudentRow } from '@/api/analytics'
 
@@ -59,6 +59,7 @@ const studentColumns: ResponsiveTableColumn<TutorStudentRow>[] = [
 export function TutorDashboard() {
   const { data, loading, error } = useAnalytics()
   const { data: user } = useCurrentUser()
+  const showWelcomeCard = useDashboardWelcomeFirstVisit(user?.id)
   const analytics = data as TutorAnalyticsPayload | null
 
   if (loading) {
@@ -80,22 +81,24 @@ export function TutorDashboard() {
     <div className="w-full min-w-0 space-y-4 sm:space-y-6">
       <LastLoginBanner lastLoginAt={analytics.lastLoginAt} />
 
-      <DashboardWelcomeCard
-        heading={
-          <>Welcome back, {analytics.displayName || user?.name || 'Tutor'}</>
-        }
-      >
-        <p className="mt-1 text-xs text-gray-700 sm:text-sm">
-          We are glad to see you again. Your last login was on{' '}
-          <span className="font-medium">
-            {formatLastLoginDisplay(analytics.lastLoginAt)}
-          </span>
-          .
-        </p>
-        <p className="mt-1 text-xs text-gray-700 sm:text-sm">
-          {analytics.welcomeSubtitle}
-        </p>
-      </DashboardWelcomeCard>
+      {showWelcomeCard && (
+        <DashboardWelcomeCard
+          heading={
+            <>Welcome back, {analytics.displayName || user?.name || 'Tutor'}</>
+          }
+        >
+          <p className="mt-1 text-xs text-gray-700 sm:text-sm">
+            We are glad to see you again. Your last login was on{' '}
+            <span className="font-medium">
+              {formatLastLoginDisplay(analytics.lastLoginAt)}
+            </span>
+            .
+          </p>
+          <p className="mt-1 text-xs text-gray-700 sm:text-sm">
+            {analytics.welcomeSubtitle}
+          </p>
+        </DashboardWelcomeCard>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

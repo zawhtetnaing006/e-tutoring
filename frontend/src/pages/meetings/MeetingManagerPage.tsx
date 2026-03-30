@@ -201,6 +201,7 @@ export function MeetingManagerPage() {
 
       {editingMeeting && canManageMeetings && (
         <EditMeetingModal
+          key={editingMeeting.id}
           meeting={editingMeeting}
           onClose={() => setEditingMeeting(null)}
           onSuccess={() => {
@@ -212,6 +213,7 @@ export function MeetingManagerPage() {
 
       {selectedMeeting && (
         <MeetingDetailModal
+          key={selectedMeeting.id}
           meeting={selectedMeeting}
           canManageMeeting={canManageMeetings}
           onClose={() => setSelectedMeeting(null)}
