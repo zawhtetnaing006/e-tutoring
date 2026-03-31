@@ -22,6 +22,12 @@ export function ListView({
   onViewDetails,
   isStudent = false,
 }: ListViewProps) {
+  const getTutorLabel = (meeting: Meeting) =>
+    meeting.tutor_name ?? `Tutor Assignment #${meeting.tutor_assignment_id}`
+
+  const getStudentLabel = (meeting: Meeting) =>
+    meeting.student_name ?? `Student Assignment #${meeting.tutor_assignment_id}`
+
   const meetingsWithSchedule = useMemo<MeetingWithNextSchedule[]>(() => {
     const now = new Date()
     const nowStr = now.toISOString().split('T')[0]
@@ -133,8 +139,8 @@ export function ListView({
                         {meeting.title}
                       </h3>
                       <p className="mt-0.5 text-sm text-muted-foreground">
-                        Tutor: {meeting.tutor_assignment_id} • Student:{' '}
-                        {meeting.tutor_assignment_id}
+                        Tutor: {getTutorLabel(meeting)} • Student:{' '}
+                        {getStudentLabel(meeting)}
                       </p>
                     </div>
                     <div className="flex gap-2">

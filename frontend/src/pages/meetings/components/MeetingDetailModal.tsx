@@ -11,8 +11,6 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createMeetingAttendance, type Meeting } from '@/features/meetings/api'
-import { useAllocation } from '@/features/allocations/useAllocations'
-import { useUser } from '@/features/users/useUsers'
 
 type MeetingDetailModalProps = {
   meeting: Meeting
@@ -35,16 +33,9 @@ export function MeetingDetailModal({
   const [selectedAttendance, setSelectedAttendance] =
     useState<AttendanceStatus | null>(null)
 
-  const allocationQuery = useAllocation(meeting.tutor_assignment_id)
-  const allocation = allocationQuery.data
-  const tutorQuery = useUser(allocation?.tutor_user_id, allocation != null)
-  const studentQuery = useUser(allocation?.student_user_id, allocation != null)
-
-  const tutorName =
-    tutorQuery.data?.name ?? getTutorFallback(meeting, allocation)
-  const studentName =
-    studentQuery.data?.name ?? getStudentFallback(meeting, allocation)
-  const studentId = allocation?.student_user_id
+  const tutorName = meeting.tutor_name ?? getTutorFallback(meeting)
+  const studentName = meeting.student_name ?? getStudentFallback(meeting)
+  const studentId = meeting.student_user_id
 
   const recurrenceType =
     meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
@@ -345,22 +336,10 @@ export function MeetingDetailModal({
   )
 }
 
-function getTutorFallback(
-  meeting: Meeting,
-  allocation?: {
-    tutor_user_id: number
-  }
-) {
-  if (allocation) return `Tutor #${allocation.tutor_user_id}`
+function getTutorFallback(meeting: Meeting) {
   return `Tutor Assignment #${meeting.tutor_assignment_id}`
 }
 
-function getStudentFallback(
-  meeting: Meeting,
-  allocation?: {
-    student_user_id: number
-  }
-) {
-  if (allocation) return `Student #${allocation.student_user_id}`
+function getStudentFallback(meeting: Meeting) {
   return `Student Assignment #${meeting.tutor_assignment_id}`
 }
