@@ -9,6 +9,7 @@ import {
   type Meeting,
   type UpdateMeetingPayload,
 } from '@/features/meetings/api'
+import { getPresetVirtualPlatformLink } from '@/features/meetings/virtual-platform-links'
 import { getUserRole } from '@/features/auth/role-utils'
 import { getAuthSession } from '@/features/auth/storage'
 import { useCurrentUser } from '@/features/auth/useCurrentUser'
@@ -40,7 +41,9 @@ export function EditMeetingModal({
   const [description, setDescription] = useState(meeting.description || '')
   const [type, setType] = useState<'VIRTUAL' | 'PHYSICAL'>(meeting.type)
   const [platform, setPlatform] = useState(meeting.platform || '')
-  const [link, setLink] = useState(meeting.link || '')
+  const [link, setLink] = useState(
+    () => meeting.link ?? getPresetVirtualPlatformLink(meeting.platform) ?? ''
+  )
   const [location, setLocation] = useState(meeting.location || '')
   const [tutorAssignmentId, setTutorAssignmentId] = useState(
     meeting.tutor_assignment_id
@@ -349,7 +352,12 @@ export function EditMeetingModal({
                   <select
                     id="edit-platform-select"
                     value={platform}
-                    onChange={e => setPlatform(e.target.value)}
+                    onChange={e => {
+                      const next = e.target.value
+                      setPlatform(next)
+                      const preset = getPresetVirtualPlatformLink(next)
+                      setLink(preset ?? '')
+                    }}
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   >

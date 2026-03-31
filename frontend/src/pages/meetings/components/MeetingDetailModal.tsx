@@ -18,6 +18,7 @@ import {
   type MeetingAttendance,
   type MeetingSchedule,
 } from '@/features/meetings/api'
+import { resolveVirtualJoinUrl } from '@/features/meetings/virtual-platform-links'
 import {
   useDeleteMeeting,
   useMeetingDetails,
@@ -115,6 +116,7 @@ function MeetingDetailModalDraft({
     meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
   const firstSchedule = meeting.meeting_schedules[0]
   const isVirtual = meeting.type === 'VIRTUAL'
+  const virtualJoinUrl = isVirtual ? resolveVirtualJoinUrl(meeting) : null
 
   const updateScheduleMutation = useUpdateMeetingSchedule()
   const deleteMeetingMutation = useDeleteMeeting()
@@ -318,15 +320,15 @@ function MeetingDetailModalDraft({
                 <div>
                   <div className="text-muted-foreground">Meet</div>
                   <div className="mt-1">
-                    {meeting.link ? (
+                    {virtualJoinUrl ? (
                       <a
-                        href={meeting.link}
+                        href={virtualJoinUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 font-medium text-green-600 hover:underline"
+                        className="inline-flex items-center gap-1 font-medium text-blue-500 hover:underline"
                       >
                         <LinkIcon className="h-3 w-3" />
-                        Connect Meet
+                        Join Meeting
                       </a>
                     ) : (
                       <span className="text-muted-foreground">—</span>
