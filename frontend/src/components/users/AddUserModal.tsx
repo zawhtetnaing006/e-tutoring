@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { User, X } from 'lucide-react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSubjects } from '@/features/subjects/useSubjects'
 import { useUsersList } from '@/features/users/useUsersList'
-import { createClassRooms } from '@/features/class-rooms/api'
+import { createAllocation } from '@/features/allocations/api'
 import {
   createUser,
   type UserResource,
@@ -32,6 +32,7 @@ export function AddUserModal({
   useStaffLayout = false,
   layoutVariant,
 }: AddUserModalProps) {
+  const queryClient = useQueryClient()
   const { data: subjectsData } = useSubjects({ perPage: 100 })
   const subjects = (subjectsData?.data ?? []).filter(s => s.is_active)
   const { data: tutorsData } = useUsersList({
@@ -68,17 +69,25 @@ export function AddUserModal({
         data.id
       ) {
         try {
-          await createClassRooms({
+          await createAllocation({
             tutor_user_id: assignedTutorId,
             student_user_ids: [data.id],
             from_date: semesterFrom,
             to_date: semesterTo,
           })
         } catch (err) {
-          onError(err instanceof Error ? err.message : 'Failed to assign tutor')
+          await queryClient.invalidateQueries({ queryKey: ['users'] })
+          onClose()
+          onError(
+            err instanceof Error
+              ? `Student created, but failed to create allocation: ${err.message}`
+              : 'Student created, but failed to create allocation.'
+          )
           return
         }
       }
+
+      await queryClient.invalidateQueries({ queryKey: ['allocations'] })
       onSuccess()
     },
     onError: (err: Error) => onError(err.message || 'Failed to create user'),
