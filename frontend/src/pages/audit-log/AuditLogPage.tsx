@@ -7,6 +7,7 @@ import { filterAuditLogsByRoleSlugs } from '@/features/audit-logs/filterAuditLog
 import {
   formatAuditLogDateTime,
   auditLogRowKey,
+  formatAuditLogTarget,
 } from '@/features/audit-logs/format'
 import {
   compareAuditLogRows,

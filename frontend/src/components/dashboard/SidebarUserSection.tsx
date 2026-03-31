@@ -55,6 +55,7 @@ export function SidebarUserSection({
   const displayName = user?.name ?? 'User'
   const displayEmail = user?.email ?? ''
   const initials = getInitials(displayName)
+  const profileImageUrl = user?.profile_image_url
 
   if (isCollapsed) {
     return (
@@ -95,10 +96,20 @@ export function SidebarUserSection({
           title={displayName}
         >
           <div
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-subtext font-semibold text-foreground transition-transform duration-200 hover:scale-105"
+            className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-subtext font-semibold text-foreground transition-transform duration-200 hover:scale-105"
             aria-hidden
           >
-            {isLoading ? '…' : initials}
+            {profileImageUrl ? (
+              <img
+                src={profileImageUrl}
+                alt={displayName}
+                className="h-full w-full object-cover"
+              />
+            ) : isLoading ? (
+              '…'
+            ) : (
+              initials
+            )}
           </div>
         </button>
       </div>
@@ -139,10 +150,20 @@ export function SidebarUserSection({
         aria-haspopup="menu"
       >
         <div
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-subtext font-semibold text-foreground transition-transform duration-200 hover:scale-105"
+          className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-subtext font-semibold text-foreground transition-transform duration-200 hover:scale-105"
           aria-hidden
         >
-          {isLoading ? '…' : initials}
+          {profileImageUrl ? (
+            <img
+              src={profileImageUrl}
+              alt={displayName}
+              className="h-full w-full object-cover"
+            />
+          ) : isLoading ? (
+            '…'
+          ) : (
+            initials
+          )}
         </div>
         <div className="min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left transition-all duration-300 ease-in-out">
           <p className="truncate text-body font-semibold text-foreground">

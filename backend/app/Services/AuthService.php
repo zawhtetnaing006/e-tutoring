@@ -15,6 +15,9 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthService
 {
+    private const LOGIN_MAX_ATTEMPTS = 3;
+    private const LOGIN_LOCKOUT_MINUTES = 15;
+
     /**
      * @param array{name:string,email:string,password:string} $data
      * @return array{token:string,token_type:string,user:UserResource}
@@ -38,19 +41,38 @@ class AuthService
 
     /**
      * @param array{email:string,password:string} $credentials
-     * @return array{token:string,token_type:string,user:UserResource}|null
+     * @return array{status:'success',token:string,token_type:string,user:UserResource}|array{status:'locked',available_in:int}|array{status:'invalid_credentials'}
      */
-    public function login(array $credentials, ?string $tokenName = null): ?array
+    public function login(array $credentials, ?string $tokenName = null): array
     {
-        $user = User::firstWhere('email', $credentials['email']);
+        $email = $this->normalizeEmail($credentials['email']);
+        $user = User::firstWhere('email', $email);
 
-        if (! $user || ! $user->is_active || ! Hash::check($credentials['password'], $user->password)) {
-            return null;
+        if (! $user || ! $user->is_active) {
+            return [
+                'status' => 'invalid_credentials',
+            ];
         }
+
+        $this->clearExpiredLoginLock($user);
+
+        if ($this->isLoginLocked($user)) {
+            return [
+                'status' => 'locked',
+                'available_in' => $this->lockAvailableIn($user),
+            ];
+        }
+
+        if (! Hash::check($credentials['password'], $user->password)) {
+            return $this->recordFailedLoginAttempt($user);
+        }
+
+        $this->resetLoginLockState($user);
 
         $token = $user->createToken($tokenName ?? 'api')->plainTextToken;
 
         return [
+            'status' => 'success',
             'token' => $token,
             'token_type' => 'Bearer',
             'user' => new UserResource($user),
@@ -197,5 +219,82 @@ class AuthService
         $throttle = (int) config("auth.passwords.{$broker}.throttle", 60);
 
         return $throttle > 0 ? $throttle : 0;
+    }
+
+    /**
+     * @return array{status:'locked',available_in:int}|array{status:'invalid_credentials'}
+     */
+    private function recordFailedLoginAttempt(User $user): array
+    {
+        $attempts = max(0, (int) $user->failed_login_attempts) + 1;
+
+        if ($attempts >= self::LOGIN_MAX_ATTEMPTS) {
+            $lockedAt = now();
+            $lockedUntil = $lockedAt->copy()->addMinutes(self::LOGIN_LOCKOUT_MINUTES);
+
+            $user->forceFill([
+                'failed_login_attempts' => $attempts,
+                'locked_until' => $lockedUntil,
+            ])->save();
+
+            $user->failed_login_attempts = $attempts;
+            $user->locked_until = $lockedUntil;
+
+            return [
+                'status' => 'locked',
+                'available_in' => $lockedAt->diffInSeconds($lockedUntil),
+            ];
+        }
+
+        $user->forceFill([
+            'failed_login_attempts' => $attempts,
+        ])->save();
+
+        $user->failed_login_attempts = $attempts;
+
+        return [
+            'status' => 'invalid_credentials',
+        ];
+    }
+
+    private function clearExpiredLoginLock(User $user): void
+    {
+        if ($user->locked_until instanceof Carbon && ! $user->locked_until->isFuture()) {
+            $this->resetLoginLockState($user);
+        }
+    }
+
+    private function resetLoginLockState(User $user): void
+    {
+        if ((int) $user->failed_login_attempts === 0 && $user->locked_until === null) {
+            return;
+        }
+
+        $user->forceFill([
+            'failed_login_attempts' => 0,
+            'locked_until' => null,
+        ])->save();
+
+        $user->failed_login_attempts = 0;
+        $user->locked_until = null;
+    }
+
+    private function isLoginLocked(User $user): bool
+    {
+        return $user->locked_until instanceof Carbon && $user->locked_until->isFuture();
+    }
+
+    private function lockAvailableIn(User $user): int
+    {
+        if (! ($user->locked_until instanceof Carbon)) {
+            return 0;
+        }
+
+        return now()->diffInSeconds($user->locked_until);
+    }
+
+    private function normalizeEmail(string $email): string
+    {
+        return Str::lower(trim($email));
     }
 }

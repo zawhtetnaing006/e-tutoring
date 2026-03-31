@@ -35,6 +35,8 @@ export function useBlog(blogId: number | null) {
     queryKey: ['blogs', 'detail', blogId],
     queryFn: () => getBlog(blogId as number),
     enabled: blogId != null,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 }
 

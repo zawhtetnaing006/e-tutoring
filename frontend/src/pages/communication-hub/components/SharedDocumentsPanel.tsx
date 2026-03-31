@@ -88,6 +88,16 @@ export function SharedDocumentsPanel({
     onSelectDocument(null)
   }
 
+  const handleDownloadDocument = (fileUrl: string, fileName: string) => {
+    const link = document.createElement('a')
+    link.href = fileUrl
+    link.download = fileName
+    link.rel = 'noreferrer'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
+
   return (
     <>
       <div className="flex min-h-0 flex-1 flex-col px-4 py-4 sm:px-5 sm:py-5">
@@ -165,15 +175,19 @@ export function SharedDocumentsPanel({
                               <MessageSquareText className="size-4" />
                             </button>
                             {document.file_url ? (
-                              <a
-                                href={document.file_url}
-                                target="_blank"
-                                rel="noreferrer"
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleDownloadDocument(
+                                    document.file_url as string,
+                                    document.file_name
+                                  )
+                                }
                                 className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition hover:border-blue-200 hover:text-blue-600"
                                 aria-label={`Download ${document.file_name}`}
                               >
                                 <Download className="size-4" />
-                              </a>
+                              </button>
                             ) : (
                               <span className="inline-flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground/60">
                                 <Download className="size-4" />

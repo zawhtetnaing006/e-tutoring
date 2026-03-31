@@ -19,6 +19,7 @@ export type UserResource = {
   country: string | null
   city: string | null
   township: string | null
+  profile_image_url: string | null
   is_active: boolean
   role_code: UserRoleCode | null
   role_name: string | null
@@ -129,9 +130,52 @@ export type UpdateUserPayload = {
   country?: string | null
   city?: string | null
   township?: string | null
+  profileImageFile?: File | null
+  removeProfileImage?: boolean
   is_active?: boolean
   subject_ids?: number[]
   role_code?: 'ADMIN' | 'STAFF' | 'STUDENT' | 'TUTOR'
+}
+
+function toUserFormData(payload: UpdateUserPayload): FormData {
+  const formData = new FormData()
+
+  if (payload.name != null) formData.append('name', payload.name)
+  if (payload.email != null) formData.append('email', payload.email)
+  if (payload.password != null) formData.append('password', payload.password)
+  if (payload.password_confirmation != null) {
+    formData.append('password_confirmation', payload.password_confirmation)
+  }
+  if (payload.phone !== undefined) formData.append('phone', payload.phone ?? '')
+  if (payload.address !== undefined) {
+    formData.append('address', payload.address ?? '')
+  }
+  if (payload.country !== undefined) {
+    formData.append('country', payload.country ?? '')
+  }
+  if (payload.city !== undefined) formData.append('city', payload.city ?? '')
+  if (payload.township !== undefined) {
+    formData.append('township', payload.township ?? '')
+  }
+  if (payload.is_active != null) {
+    formData.append('is_active', payload.is_active ? '1' : '0')
+  }
+  if (payload.role_code != null) formData.append('role_code', payload.role_code)
+  if (payload.subject_ids != null) {
+    payload.subject_ids.forEach(subjectId => {
+      formData.append('subject_ids[]', String(subjectId))
+    })
+  }
+  if (payload.profileImageFile) {
+    formData.append('profile_image', payload.profileImageFile)
+  }
+  if (payload.removeProfileImage) {
+    formData.append('remove_profile_image', '1')
+  }
+
+  formData.append('_method', 'PUT')
+
+  return formData
 }
 
 export async function updateUser(
@@ -142,10 +186,16 @@ export async function updateUser(
   if (!session?.token) {
     throw new ApiError(401, 'Not authenticated')
   }
+
+  const requiresMultipart =
+    payload.profileImageFile != null || payload.removeProfileImage === true
+
   return apiClient<UserResource>(`users/${userIdentifier}`, {
-    method: 'PUT',
+    method: requiresMultipart ? 'POST' : 'PUT',
     token: session.token,
-    body: payload as Record<string, unknown>,
+    body: requiresMultipart
+      ? toUserFormData(payload)
+      : (payload as Record<string, unknown>),
   })
 }
 

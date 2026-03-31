@@ -59,13 +59,22 @@ class BlogApiTest extends TestCase
 
     public function test_authenticated_user_can_list_blogs(): void
     {
-        $author = User::factory()->create();
-        Sanctum::actingAs($author);
+        $student = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::STUDENT)->value('id'),
+        ]);
+        Sanctum::actingAs($student);
 
-        $blog = Blog::query()->create([
-            'author_user_id' => $author->id,
+        $activeBlog = Blog::query()->create([
+            'author_user_id' => $student->id,
             'title' => 'Authenticated Blog List',
             'content' => 'Only signed-in users should see this list.',
+            'is_active' => true,
+        ]);
+        Blog::query()->create([
+            'author_user_id' => $student->id,
+            'title' => 'Hidden Inactive Blog',
+            'content' => 'Students should not see inactive blogs.',
+            'is_active' => false,
         ]);
 
         $response = $this->getJson('/api/blogs');
@@ -79,14 +88,17 @@ class BlogApiTest extends TestCase
                 'total_items',
             ]);
 
-        $this->assertSame($blog->id, $response->json('data.0.id'));
+        $this->assertSame($activeBlog->id, $response->json('data.0.id'));
         $this->assertSame('Authenticated Blog List', $response->json('data.0.title'));
+        $this->assertCount(1, $response->json('data'));
     }
 
-    public function test_authenticated_user_can_create_blog(): void
+    public function test_staff_can_create_blog(): void
     {
-        $user = User::factory()->create();
-        Sanctum::actingAs($user);
+        $staff = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::STAFF)->value('id'),
+        ]);
+        Sanctum::actingAs($staff);
 
         $response = $this->postJson('/api/blogs', [
             'title' => 'Authenticated Blog',
@@ -101,15 +113,33 @@ class BlogApiTest extends TestCase
             ]);
 
         $this->assertDatabaseHas('blogs', [
-            'author_user_id' => $user->id,
+            'author_user_id' => $staff->id,
             'title' => 'Authenticated Blog',
         ]);
     }
 
-    public function test_author_can_update_own_blog(): void
+    public function test_tutor_cannot_create_blog(): void
     {
+        $tutor = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::TUTOR)->value('id'),
+        ]);
+        Sanctum::actingAs($tutor);
+
+        $response = $this->postJson('/api/blogs', [
+            'title' => 'Tutor Blog',
+            'content' => 'Tutors should be read-only here.',
+        ]);
+
+        $response->assertForbidden();
+    }
+
+    public function test_staff_can_update_blog(): void
+    {
+        $staff = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::STAFF)->value('id'),
+        ]);
         $author = User::factory()->create();
-        Sanctum::actingAs($author);
+        Sanctum::actingAs($staff);
 
         $blog = Blog::query()->create([
             'author_user_id' => $author->id,
@@ -134,11 +164,11 @@ class BlogApiTest extends TestCase
         ]);
     }
 
-    public function test_non_author_non_staff_cannot_update_blog(): void
+    public function test_tutor_cannot_update_blog(): void
     {
         $author = User::factory()->create();
-        $anotherUser = User::factory()->create([
-            'role_id' => Role::query()->where('code', Role::STUDENT)->value('id'),
+        $tutor = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::TUTOR)->value('id'),
         ]);
 
         $blog = Blog::query()->create([
@@ -147,7 +177,7 @@ class BlogApiTest extends TestCase
             'content' => 'Protected content',
         ]);
 
-        Sanctum::actingAs($anotherUser);
+        Sanctum::actingAs($tutor);
 
         $response = $this->putJson('/api/blogs/' . $blog->id, [
             'title' => 'Attempted Edit',
@@ -156,10 +186,13 @@ class BlogApiTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_author_can_toggle_blog_status(): void
+    public function test_staff_can_toggle_blog_status(): void
     {
+        $staff = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::STAFF)->value('id'),
+        ]);
         $author = User::factory()->create();
-        Sanctum::actingAs($author);
+        Sanctum::actingAs($staff);
 
         $blog = Blog::query()->create([
             'author_user_id' => $author->id,
@@ -183,10 +216,13 @@ class BlogApiTest extends TestCase
         ]);
     }
 
-    public function test_author_can_delete_own_blog(): void
+    public function test_staff_can_delete_blog(): void
     {
+        $staff = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::STAFF)->value('id'),
+        ]);
         $author = User::factory()->create();
-        Sanctum::actingAs($author);
+        Sanctum::actingAs($staff);
 
         $blog = Blog::query()->create([
             'author_user_id' => $author->id,
@@ -203,17 +239,39 @@ class BlogApiTest extends TestCase
         ]);
     }
 
-    public function test_authenticated_user_can_comment_on_blog(): void
+    public function test_student_cannot_view_inactive_blog_details(): void
     {
         $author = User::factory()->create();
-        $commenter = User::factory()->create();
+        $student = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::STUDENT)->value('id'),
+        ]);
+        $blog = Blog::query()->create([
+            'author_user_id' => $author->id,
+            'title' => 'Inactive Blog',
+            'content' => 'Students should not open inactive blogs.',
+            'is_active' => false,
+        ]);
+
+        Sanctum::actingAs($student);
+
+        $response = $this->getJson('/api/blogs/' . $blog->id);
+
+        $response->assertNotFound();
+    }
+
+    public function test_staff_can_comment_on_blog(): void
+    {
+        $author = User::factory()->create();
+        $staff = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::STAFF)->value('id'),
+        ]);
         $blog = Blog::query()->create([
             'author_user_id' => $author->id,
             'title' => 'Commentable Blog',
-            'content' => 'Users can comment on this blog.',
+            'content' => 'Staff can comment on this blog.',
         ]);
 
-        Sanctum::actingAs($commenter);
+        Sanctum::actingAs($staff);
 
         $response = $this->postJson('/api/blogs/' . $blog->id . '/comments', [
             'comment_text' => 'Great article!',
@@ -228,16 +286,39 @@ class BlogApiTest extends TestCase
 
         $this->assertDatabaseHas('blog_comments', [
             'blog_id' => $blog->id,
-            'commenter_user_id' => $commenter->id,
+            'commenter_user_id' => $staff->id,
             'comment_text' => 'Great article!',
         ]);
     }
 
-    public function test_authenticated_user_can_view_blog_comments(): void
+    public function test_tutor_cannot_comment_on_blog(): void
+    {
+        $author = User::factory()->create();
+        $tutor = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::TUTOR)->value('id'),
+        ]);
+        $blog = Blog::query()->create([
+            'author_user_id' => $author->id,
+            'title' => 'Commentable Blog',
+            'content' => 'Tutors should be read-only here.',
+        ]);
+
+        Sanctum::actingAs($tutor);
+
+        $response = $this->postJson('/api/blogs/' . $blog->id . '/comments', [
+            'comment_text' => 'Attempted comment',
+        ]);
+
+        $response->assertForbidden();
+    }
+
+    public function test_student_can_view_blog_comments(): void
     {
         $author = User::factory()->create();
         $commenter = User::factory()->create();
-        $viewer = User::factory()->create();
+        $viewer = User::factory()->create([
+            'role_id' => Role::query()->where('code', Role::STUDENT)->value('id'),
+        ]);
 
         $blog = Blog::query()->create([
             'author_user_id' => $author->id,

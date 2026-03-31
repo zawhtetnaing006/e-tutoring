@@ -21,6 +21,7 @@ use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -294,18 +295,43 @@ class UserController
     )]
     public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
+        $this->ensureCanUpdateUser($request, $user);
+
         $validated = $request->validated();
         $before = $this->userAuditAttributes($user);
+        /** @var User|null $currentUser */
+        $currentUser = $request->user();
+        $canManagePrivilegedFields = $currentUser?->hasAnyRole([Role::ADMIN, Role::STAFF]) ?? false;
         $hasSubjectIds = array_key_exists('subject_ids', $validated);
         $subjectIds = $validated['subject_ids'] ?? [];
         $hasRoleCode = array_key_exists('role_code', $validated);
         $roleCode = $validated['role_code'] ?? null;
         $passwordChanged = array_key_exists('password', $validated);
+        $profileImageChanged = false;
 
-        unset($validated['subject_ids'], $validated['role_code']);
+        if (! $canManagePrivilegedFields && ($hasRoleCode || array_key_exists('is_active', $validated))) {
+            abort(403, 'You are not allowed to change account role or status.');
+        }
+
+        unset($validated['subject_ids'], $validated['role_code'], $validated['remove_profile_image'], $validated['profile_image']);
 
         if (array_key_exists('password', $validated)) {
             $validated['password'] = Hash::make((string) $validated['password']);
+        }
+
+        if ($request->boolean('remove_profile_image', false) && $user->profile_image_path) {
+            Storage::disk('public')->delete($user->profile_image_path);
+            $validated['profile_image_path'] = null;
+            $profileImageChanged = true;
+        }
+
+        if ($request->hasFile('profile_image')) {
+            if ($user->profile_image_path) {
+                Storage::disk('public')->delete($user->profile_image_path);
+            }
+
+            $validated['profile_image_path'] = $request->file('profile_image')?->store('profile-images', 'public');
+            $profileImageChanged = true;
         }
 
         $user->update($validated);
@@ -321,7 +347,7 @@ class UserController
         $loadedUser = $this->loadUserRelations($user->fresh());
         $changes = $this->auditLogService->diff($before, $this->userAuditAttributes($loadedUser));
 
-        if ($changes['old'] !== [] || $changes['attributes'] !== [] || $passwordChanged) {
+        if ($changes['old'] !== [] || $changes['attributes'] !== [] || $passwordChanged || $profileImageChanged) {
             $targetLabel = $this->userTargetLabel($loadedUser);
 
             $this->auditLogService->log(
@@ -349,6 +375,11 @@ class UserController
     public function destroy(Request $request, User $user): JsonResponse
     {
         $targetLabel = $this->userTargetLabel($user);
+
+        if ($user->profile_image_path) {
+            Storage::disk('public')->delete($user->profile_image_path);
+        }
+
         $user->delete();
 
         $this->auditLogService->log(
@@ -426,6 +457,7 @@ class UserController
             'role_code' => 'role',
             'subject_ids' => 'subjects',
             'is_active' => 'status',
+            'profile_image_path' => 'profile image',
             default => strtolower(str_replace('_', ' ', $field)),
         };
     }
@@ -446,6 +478,7 @@ class UserController
             'country' => $loadedUser->country,
             'city' => $loadedUser->city,
             'township' => $loadedUser->township,
+            'profile_image_path' => $loadedUser->profile_image_path,
             'is_active' => $loadedUser->is_active,
             'role_code' => $loadedUser->role?->code,
             'subject_ids' => $loadedUser->subjects
@@ -454,5 +487,19 @@ class UserController
                 ->values()
                 ->all(),
         ];
+    }
+
+    private function ensureCanUpdateUser(Request $request, User $user): void
+    {
+        /** @var User|null $currentUser */
+        $currentUser = $request->user();
+
+        abort_if($currentUser === null, 401, 'Unauthenticated.');
+
+        if ($currentUser->hasAnyRole([Role::ADMIN, Role::STAFF]) || (int) $currentUser->id === (int) $user->id) {
+            return;
+        }
+
+        abort(403, 'You are not allowed to update this user.');
     }
 }

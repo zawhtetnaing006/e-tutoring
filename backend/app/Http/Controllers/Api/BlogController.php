@@ -40,6 +40,10 @@ class BlogController
     #[QueryParameter('page', required: false, example: 1)]
     public function index(Request $request): JsonResponse
     {
+        /** @var User|null $user */
+        $user = $request->user();
+        abort_if($user === null, 401, 'Unauthenticated.');
+
         $data = $request->validate([
             'search' => ['sometimes', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
@@ -62,7 +66,9 @@ class BlogController
             });
         }
 
-        if ($isActive !== null) {
+        if (! $this->canManageBlogs($user)) {
+            $query->where('is_active', true);
+        } elseif ($isActive !== null) {
             $query->where('is_active', $isActive);
         }
 
@@ -124,8 +130,10 @@ class BlogController
 
     #[Endpoint(title: 'Get Blog')]
     #[Response(status: 200)]
-    public function show(Blog $blog): JsonResponse
+    public function show(Request $request, Blog $blog): JsonResponse
     {
+        $this->ensureCanReadBlog($request, $blog);
+
         $blog->increment('view_count');
         $blog->refresh();
 
@@ -294,6 +302,8 @@ class BlogController
     #[QueryParameter('page', required: false, example: 1)]
     public function listComments(Request $request, Blog $blog): JsonResponse
     {
+        $this->ensureCanReadBlog($request, $blog);
+
         $perPage = max(1, min(100, (int) $request->integer('per_page', 15)));
         $page = max(1, (int) $request->integer('page', 1));
 
@@ -336,11 +346,30 @@ class BlogController
 
         abort_if($user === null, 401, 'Unauthenticated.');
 
-        if ($user->hasAnyRole([Role::ADMIN, Role::STAFF]) || (int) $user->id === (int) $blog->author_user_id) {
+        if ($this->canManageBlogs($user)) {
             return;
         }
 
         abort(403, 'You are not allowed to modify this blog.');
+    }
+
+    private function ensureCanReadBlog(Request $request, Blog $blog): void
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        abort_if($user === null, 401, 'Unauthenticated.');
+
+        if ($blog->is_active || $this->canManageBlogs($user)) {
+            return;
+        }
+
+        abort(404, 'Blog not found.');
+    }
+
+    private function canManageBlogs(User $user): bool
+    {
+        return $user->hasAnyRole([Role::ADMIN, Role::STAFF]);
     }
 
     /**

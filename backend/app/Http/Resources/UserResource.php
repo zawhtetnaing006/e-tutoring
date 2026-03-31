@@ -2,8 +2,10 @@
 
 namespace App\Http\Resources;
 
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * @property \App\Models\User $resource
@@ -17,6 +19,9 @@ class UserResource extends JsonResource
     {
         $this->resource->loadMissing('role:id,code,name');
         $role = $this->resource->role;
+        $profileImagePath = $this->resource->profile_image_path;
+        /** @var FilesystemAdapter $publicDisk */
+        $publicDisk = Storage::disk('public');
 
         return [
             'id' => $this->resource->id,
@@ -28,6 +33,7 @@ class UserResource extends JsonResource
             'country' => $this->resource->country,
             'city' => $this->resource->city,
             'township' => $this->resource->township,
+            'profile_image_url' => $profileImagePath ? $publicDisk->url($profileImagePath) : null,
             'is_active' => $this->resource->is_active,
             'role_code' => $role?->code,
             'role_name' => $role?->name,
