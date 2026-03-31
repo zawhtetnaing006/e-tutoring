@@ -19,6 +19,7 @@ import { CommunicationHubPage } from '@/pages/communication-hub'
 import { BlogsPage } from '@/pages/blogs'
 import { NotificationsPage } from '@/pages/notifications'
 import { AuditLogPage } from '@/pages/audit-log'
+import { TestGaEnvPage } from '@/pages/test-ga-env'
 
 /**
  * Routes: login (public); root is dashboard (protected, redirects to login if unauthenticated).
@@ -34,6 +35,7 @@ export function AppRoutes() {
           element={<PasswordResetCodePage />}
         />
         <Route path="/password-reset/new" element={<ResetPasswordPage />} />
+        <Route path="/test-ga-env" element={<TestGaEnvPage />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>
