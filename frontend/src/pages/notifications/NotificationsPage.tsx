@@ -1,5 +1,4 @@
 import { createElement, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   Calendar,
   FileText,
@@ -80,23 +79,11 @@ function NotificationItem({
   notification,
   onMarkAsRead,
 }: NotificationItemProps) {
-  const navigate = useNavigate()
   const iconColor = getNotificationIconColor(notification.type)
 
   const handleClick = () => {
     if (!notification.is_read) {
       onMarkAsRead(notification.id)
-    }
-
-    if (notification.action?.route) {
-      if (notification.action.conversation_id) {
-        navigate({
-          pathname: notification.action.route,
-          search: `?conversation=${notification.action.conversation_id}`,
-        })
-      } else {
-        navigate(notification.action.route)
-      }
     }
   }
 

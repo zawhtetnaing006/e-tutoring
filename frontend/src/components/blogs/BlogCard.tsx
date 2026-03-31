@@ -1,38 +1,44 @@
-import { Calendar, Check, Eye, MoreVertical, User } from 'lucide-react'
+import {
+  Calendar,
+  Check,
+  Edit,
+  Eye,
+  MoreVertical,
+  Power,
+  Trash2,
+  User,
+} from 'lucide-react'
 import type { Blog } from '@/features/blogs/api'
+import { Dropdown, DropdownItem } from '@/components/ui'
 import { formatDateTimeShort } from '@/utils/formatters'
 import { getExcerpt, stripHtml } from '@/utils/string'
+import { BLOG_STATUS_STYLES } from './types'
 
 export interface BlogCardProps {
   blog: Blog
   canManage: boolean
   isSelected: boolean
-  isMenuOpen: boolean
   onOpenDetail: () => void
   onToggleSelect: (event: React.MouseEvent) => void
-  onToggleMenu: (event: React.MouseEvent) => void
   onViewDetails: () => void
   onEdit: () => void
   onToggleStatus: () => void
   onDelete: () => void
-  onMenuEscape: () => void
 }
 
 export function BlogCard({
   blog,
   canManage,
   isSelected,
-  isMenuOpen,
   onOpenDetail,
   onToggleSelect,
-  onToggleMenu,
   onViewDetails,
   onEdit,
   onToggleStatus,
   onDelete,
-  onMenuEscape,
 }: BlogCardProps) {
   return (
+    // biome-ignore lint/a11y/useSemanticElements: Clickable card pattern
     <div
       onClick={onOpenDetail}
       onKeyDown={e => {
@@ -43,131 +49,128 @@ export function BlogCard({
       }}
       role="button"
       tabIndex={0}
-      className="cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white"
+      className="group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white"
     >
       <div className="relative">
-        <button
-          type="button"
-          onClick={onToggleSelect}
-          className={`absolute left-3 top-3 z-10 inline-flex size-6 items-center justify-center rounded border ${
-            isSelected
-              ? 'border-slate-600 bg-slate-600 text-white'
-              : 'border-white/80 bg-white/80 text-slate-700'
-          }`}
-          aria-label={`Select blog ${blog.title}`}
-        >
-          {isSelected ? <Check className="size-4" /> : null}
-        </button>
+        {canManage ? (
+          <button
+            type="button"
+            onClick={onToggleSelect}
+            className={`absolute left-3 top-3 z-10 inline-flex size-6 items-center justify-center rounded border transition-opacity ${
+              isSelected
+                ? 'border-slate-600 bg-slate-600 text-white opacity-100'
+                : 'border-white/80 bg-white/80 text-slate-700 opacity-0 group-hover:opacity-100'
+            }`}
+            aria-label={`Select blog ${blog.title}`}
+          >
+            {isSelected ? <Check className="size-4" /> : null}
+          </button>
+        ) : null}
 
         {blog.cover_image_url ? (
           <img
             src={blog.cover_image_url}
             alt={blog.title}
-            className="h-64 w-full object-cover"
+            className="h-40 w-full object-cover sm:h-52 md:h-64"
           />
         ) : (
-          <div className="h-64 w-full bg-gradient-to-br from-indigo-950 via-indigo-800 to-blue-700" />
+          <div className="h-40 w-full bg-gradient-to-br from-indigo-950 via-indigo-800 to-blue-700 sm:h-52 md:h-64" />
         )}
 
-        <div className="absolute right-3 top-3">
-          <button
-            type="button"
-            onClick={onToggleMenu}
-            className="inline-flex size-10 items-center justify-center rounded-full bg-slate-500/70 text-white hover:bg-slate-600"
-            aria-label={`Open actions for ${blog.title}`}
-          >
-            <MoreVertical className="size-5" />
-          </button>
-
-          {isMenuOpen ? (
-            <div
-              onClick={event => event.stopPropagation()}
-              onKeyDown={e => {
-                if (e.key === 'Escape') {
-                  onMenuEscape()
-                }
-              }}
-              role="menu"
-              tabIndex={-1}
-              className="absolute right-0 z-20 mt-2 w-44 rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- event propagation only; controls inside handle a11y */}
+        <div
+          className="absolute right-3 top-3"
+          onClick={e => e.stopPropagation()}
+        >
+          {canManage ? (
+            <Dropdown
+              trigger={
+                <span className="inline-flex size-10 items-center justify-center rounded-full bg-slate-500/70 text-white hover:bg-slate-600">
+                  <MoreVertical className="size-5" />
+                </span>
+              }
+              align="right"
             >
-              <button
-                type="button"
+              <DropdownItem
+                icon={<Eye className="size-4" />}
                 onClick={onViewDetails}
-                className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
               >
                 View Details
-              </button>
+              </DropdownItem>
 
-              {canManage ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={onEdit}
-                    className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                  >
-                    Edit Blog
-                  </button>
+              <DropdownItem icon={<Edit className="size-4" />} onClick={onEdit}>
+                Edit Blog
+              </DropdownItem>
 
-                  <button
-                    type="button"
-                    onClick={onToggleStatus}
-                    className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
-                  >
-                    {blog.is_active ? 'Inactive Blog' : 'Active Blog'}
-                  </button>
+              <DropdownItem
+                icon={<Power className="size-4" />}
+                onClick={onToggleStatus}
+              >
+                {blog.is_active ? 'Deactivate' : 'Activate'}
+              </DropdownItem>
 
-                  <button
-                    type="button"
-                    onClick={onDelete}
-                    className="block w-full px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50"
-                  >
-                    Delete Record
-                  </button>
-                </>
-              ) : null}
-            </div>
-          ) : null}
+              <DropdownItem
+                icon={<Trash2 className="size-4" />}
+                onClick={onDelete}
+                variant="danger"
+              >
+                Delete
+              </DropdownItem>
+            </Dropdown>
+          ) : (
+            <button
+              type="button"
+              onClick={onViewDetails}
+              className="inline-flex size-10 items-center justify-center rounded-full bg-slate-500/70 text-white hover:bg-slate-600"
+              aria-label="View blog details"
+            >
+              <Eye className="size-5" />
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="space-y-3 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-3xl font-medium text-slate-700">{blog.title}</h3>
+      <div className="space-y-2 p-3 sm:space-y-3 sm:p-4">
+        <div className="flex items-start justify-between gap-2 sm:items-center sm:gap-3">
+          <h3 className="line-clamp-2 text-sm font-medium text-slate-700">
+            {blog.title}
+          </h3>
           <span
-            className={`rounded-full px-3 py-1 text-sm font-medium ${
+            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium sm:px-3 sm:py-1 sm:text-sm ${
               blog.is_active
-                ? 'bg-emerald-100 text-emerald-600'
-                : 'bg-rose-100 text-rose-600'
+                ? BLOG_STATUS_STYLES.active
+                : BLOG_STATUS_STYLES.inactive
             }`}
           >
             {blog.is_active ? 'Active' : 'Inactive'}
           </span>
         </div>
 
-        <p className="text-2xl leading-8 text-slate-600">
+        <p className="line-clamp-3 text-xs leading-6 text-slate-600 sm:leading-8">
           {getExcerpt(stripHtml(blog.content))}
         </p>
 
-        <p className="min-h-7 text-base font-medium text-slate-500">
+        <p className="line-clamp-1 min-h-5 text-xs font-medium text-slate-500 sm:min-h-7">
           {blog.hashtags.length > 0
             ? blog.hashtags.map(tag => `#${tag}`).join(' ')
             : '#blog #learning'}
         </p>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3 text-sm text-slate-500">
-          <span className="inline-flex items-center gap-1.5">
-            <User className="size-4" />
-            {blog.author?.name ?? 'Unknown'}
+        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2 text-slate-500 sm:justify-between sm:gap-3 sm:pt-3">
+          <span className="inline-flex items-center gap-1 text-[10px] sm:gap-1.5">
+            <User className="size-3 sm:size-4" />
+            <span className="max-w-[80px] truncate sm:max-w-none">
+              {blog.author?.name ?? 'Unknown'}
+            </span>
           </span>
 
-          <div className="ml-auto flex items-center gap-4">
-            <span className="inline-flex items-center gap-1.5">
-              <Calendar className="size-4" />
+          <div className="ml-auto flex items-center gap-2 text-[10px] sm:gap-4">
+            <span className="hidden items-center gap-1 xs:inline-flex sm:gap-1.5">
+              <Calendar className="size-3 sm:size-3.5" />
               {formatDateTimeShort(blog.created_at)}
             </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Eye className="size-4" />
+            <span className="inline-flex items-center gap-1 sm:gap-1.5">
+              <Eye className="size-3 sm:size-3.5" />
               {blog.view_count.toLocaleString()}
             </span>
           </div>

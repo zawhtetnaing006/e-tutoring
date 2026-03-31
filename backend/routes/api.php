@@ -50,28 +50,32 @@ Route::middleware('auth:sanctum')
 
 Route::prefix('blogs')
     ->controller(BlogController::class)
-    ->middleware('auth:sanctum')
     ->group(function () {
-        Route::get('/', 'index');
-        Route::get('{blog}', 'show');
-        Route::get('{blog}/comments', 'listComments');
-        Route::post('/', 'store');
-        Route::put('{blog}', 'update');
-        Route::post('{blog}/toggle-status', 'toggleStatus');
-        Route::delete('{blog}', 'destroy');
-        Route::post('{blog}/comments', 'storeComment');
+        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR,STUDENT'])->group(function () {
+            Route::get('/', 'index');
+            Route::get('{blog}', 'show');
+            Route::get('{blog}/comments', 'listComments');
+            Route::post('{blog}/comments', 'storeComment');
+        });
+
+        Route::middleware(['auth:sanctum', 'role:STAFF'])->group(function () {
+            Route::post('/', 'store');
+            Route::put('{blog}', 'update');
+            Route::post('{blog}/toggle-status', 'toggleStatus');
+            Route::delete('{blog}', 'destroy');
+        });
     });
 
 Route::prefix('users')
     ->controller(UserController::class)
     ->group(function () {
         Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])->get('/', 'index');
+        Route::middleware('auth:sanctum')->put('{user}', 'update');
 
         Route::middleware(['auth:sanctum', 'role:STAFF'])->group(function () {
             Route::post('/', 'store');
             Route::post('export', 'export');
             Route::get('{user}', 'show');
-            Route::put('{user}', 'update');
             Route::delete('{user}', 'destroy');
         });
     });

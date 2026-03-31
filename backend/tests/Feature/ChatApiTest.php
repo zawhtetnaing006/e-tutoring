@@ -9,6 +9,7 @@ use App\Models\ConversationMember;
 use App\Models\Document;
 use App\Models\Message;
 use App\Models\Role;
+use App\Models\TutorAssignment;
 use App\Models\User;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -160,6 +161,138 @@ class ChatApiTest extends TestCase
             ->assertJsonPath('data.0.other_user_last_seen_message_id', $studentReply->id);
     }
 
+    public function test_tutor_can_search_any_active_user(): void
+    {
+        $tutor = $this->createUserWithRole(Role::TUTOR, [
+            'name' => 'Tutor Owner',
+        ]);
+        $otherTutor = $this->createUserWithRole(Role::TUTOR, [
+            'name' => 'Jordan Tutor',
+        ]);
+        $staff = $this->createUserWithRole(Role::STAFF, [
+            'name' => 'Jordan Staff',
+        ]);
+        $student = $this->createUserWithRole(Role::STUDENT, [
+            'name' => 'Jordan Student',
+        ]);
+
+        Sanctum::actingAs($tutor);
+
+        $response = $this->getJson('/api/chat/search?search=Jordan');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(3, 'data')
+            ->assertJsonFragment([
+                'id' => $otherTutor->id,
+                'name' => 'Jordan Tutor',
+                'role_code' => Role::TUTOR,
+            ])
+            ->assertJsonFragment([
+                'id' => $staff->id,
+                'name' => 'Jordan Staff',
+                'role_code' => Role::STAFF,
+            ])
+            ->assertJsonFragment([
+                'id' => $student->id,
+                'name' => 'Jordan Student',
+                'role_code' => Role::STUDENT,
+            ]);
+    }
+
+    public function test_tutor_can_start_conversation_with_other_tutor(): void
+    {
+        $tutor = $this->createUserWithRole(Role::TUTOR);
+        $otherTutor = $this->createUserWithRole(Role::TUTOR);
+
+        Sanctum::actingAs($tutor);
+
+        $response = $this->postJson('/api/chat/conversations', [
+            'target_user_id' => $otherTutor->id,
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $tutor->id,
+            ])
+            ->assertJsonFragment([
+                'id' => $otherTutor->id,
+            ]);
+
+        $conversationId = $response->json('id');
+
+        $this->assertDatabaseHas('conversation_members', [
+            'conversation_id' => $conversationId,
+            'user_id' => $tutor->id,
+        ]);
+        $this->assertDatabaseHas('conversation_members', [
+            'conversation_id' => $conversationId,
+            'user_id' => $otherTutor->id,
+        ]);
+    }
+
+    public function test_student_search_only_returns_assigned_tutor(): void
+    {
+        $student = $this->createUserWithRole(Role::STUDENT, [
+            'name' => 'Student Owner',
+        ]);
+        $assignedTutor = $this->createUserWithRole(Role::TUTOR, [
+            'name' => 'Taylor Match',
+        ]);
+        $unassignedTutor = $this->createUserWithRole(Role::TUTOR, [
+            'name' => 'Taylor Other',
+        ]);
+        $staff = $this->createUserWithRole(Role::STAFF, [
+            'name' => 'Taylor Staff',
+        ]);
+
+        $this->createTutorAssignment($assignedTutor, $student);
+
+        Sanctum::actingAs($student);
+
+        $response = $this->getJson('/api/chat/search?search=Taylor');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonFragment([
+                'id' => $assignedTutor->id,
+                'name' => 'Taylor Match',
+                'role_code' => Role::TUTOR,
+            ])
+            ->assertJsonMissing([
+                'id' => $unassignedTutor->id,
+            ])
+            ->assertJsonMissing([
+                'id' => $staff->id,
+            ]);
+    }
+
+    public function test_student_can_only_start_conversation_with_assigned_tutor(): void
+    {
+        $student = $this->createUserWithRole(Role::STUDENT);
+        $assignedTutor = $this->createUserWithRole(Role::TUTOR);
+        $unassignedTutor = $this->createUserWithRole(Role::TUTOR);
+        $staff = $this->createUserWithRole(Role::STAFF);
+
+        $this->createTutorAssignment($assignedTutor, $student);
+
+        Sanctum::actingAs($student);
+
+        $this->postJson('/api/chat/conversations', [
+            'target_user_id' => $assignedTutor->id,
+        ])->assertOk();
+
+        $this->postJson('/api/chat/conversations', [
+            'target_user_id' => $unassignedTutor->id,
+        ])->assertForbidden();
+
+        $this->postJson('/api/chat/conversations', [
+            'target_user_id' => $staff->id,
+        ])->assertForbidden();
+    }
+
     public function test_add_document_comment_response_includes_conversation_id(): void
     {
         [$tutor, $student] = $this->createTutorStudentPair();
@@ -224,10 +357,11 @@ class ChatApiTest extends TestCase
         ];
     }
 
-    private function createUserWithRole(string $roleCode): User
+    private function createUserWithRole(string $roleCode, array $attributes = []): User
     {
         $user = User::factory()->create([
             'is_active' => true,
+            ...$attributes,
         ]);
 
         $roleId = Role::query()
@@ -239,6 +373,17 @@ class ChatApiTest extends TestCase
         ]);
 
         return $user->load('role');
+    }
+
+    private function createTutorAssignment(User $tutor, User $student): TutorAssignment
+    {
+        return TutorAssignment::query()->create([
+            'tutor_user_id' => $tutor->id,
+            'student_user_id' => $student->id,
+            'start_date' => now()->subDay()->toDateString(),
+            'end_date' => now()->addDay()->toDateString(),
+            'status' => TutorAssignment::STATUS_ACTIVE,
+        ]);
     }
 
     private function createConversation(User $firstUser, User $secondUser): Conversation

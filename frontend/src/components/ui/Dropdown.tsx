@@ -1,4 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
+
+const DropdownContext = createContext<{ close: () => void } | null>(null)
 
 export interface DropdownProps {
   trigger: ReactNode
@@ -15,6 +24,8 @@ export function Dropdown({
 }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const close = () => setIsOpen(false)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -44,28 +55,30 @@ export function Dropdown({
   }, [isOpen])
 
   return (
-    <div ref={dropdownRef} className={`relative ${className}`}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full"
-        aria-expanded={isOpen}
-        aria-haspopup="true"
-      >
-        {trigger}
-      </button>
-
-      {isOpen && (
-        <div
-          className={`absolute z-10 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none ${
-            align === 'right' ? 'right-0' : 'left-0'
-          }`}
-          role="menu"
+    <DropdownContext.Provider value={{ close }}>
+      <div ref={dropdownRef} className={`relative ${className}`}>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full"
+          aria-expanded={isOpen}
+          aria-haspopup="true"
         >
-          <div className="py-1">{children}</div>
-        </div>
-      )}
-    </div>
+          {trigger}
+        </button>
+
+        {isOpen && (
+          <div
+            className={`absolute z-10 mt-2 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none ${
+              align === 'right' ? 'right-0' : 'left-0'
+            }`}
+            role="menu"
+          >
+            <div className="py-1">{children}</div>
+          </div>
+        )}
+      </div>
+    </DropdownContext.Provider>
   )
 }
 
@@ -89,12 +102,19 @@ export function DropdownItem({
   variant = 'default',
   disabled = false,
 }: DropdownItemProps) {
+  const context = useContext(DropdownContext)
   // eslint-disable-next-line security/detect-object-injection
   const variantClasses = VARIANT_CLASSES[variant]
 
+  const handleClick = () => {
+    onClick?.()
+    context?.close()
+  }
+
   return (
     <button
-      onClick={onClick}
+      type="button"
+      onClick={handleClick}
       disabled={disabled}
       className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm ${variantClasses} disabled:cursor-not-allowed disabled:opacity-50`}
       role="menuitem"

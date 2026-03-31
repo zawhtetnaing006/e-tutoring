@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { z } from 'zod'
@@ -66,6 +65,12 @@ function userToProfileValues(user: User): ProfileFormValues {
 
 export function ProfilePage() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
+    null
+  )
+  const [removeProfileImage, setRemoveProfileImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const queryClient = useQueryClient()
   const { data: user, isLoading } = useCurrentUser()
   const normalizedRole = getUserRole(user)
@@ -89,17 +94,20 @@ export function ProfilePage() {
   useEffect(() => {
     if (user) {
       profileForm.reset(userToProfileValues(user))
+      setProfileImageFile(null)
+      setProfileImagePreview(user.profile_image_url)
+      setRemoveProfileImage(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when user loads; profileForm.reset is stable
   }, [user])
 
   useEffect(() => {
-    if (!isPasswordModalOpen) return
-    document.body.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = ''
+      if (profileImagePreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(profileImagePreview)
+      }
     }
-  }, [isPasswordModalOpen])
+  }, [profileImagePreview])
 
   const passwordForm = useZodForm(passwordSchema, {
     defaultValues: {
@@ -136,6 +144,16 @@ export function ProfilePage() {
     }
   )
 
+  const handleCancelProfile = () => {
+    if (user) profileForm.reset(userToProfileValues(user))
+    if (profileImagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+    setProfileImageFile(null)
+    setProfileImagePreview(user?.profile_image_url ?? null)
+    setRemoveProfileImage(false)
+  }
+
   const handleClosePasswordModal = () => {
     setIsPasswordModalOpen(false)
     passwordForm.reset()
@@ -153,6 +171,8 @@ export function ProfilePage() {
         ? subjectsData?.data.find(subject => subject.name === values.subject)
             ?.id
         : undefined
+      const shouldSyncSubjectIds =
+        shouldShowSubject && subjectsData != null && !isSubjectsLoading
 
       return updateUser(values.userId, {
         name: values.name,
@@ -162,7 +182,9 @@ export function ProfilePage() {
         country: values.country || null,
         city: values.city || null,
         township: values.township || null,
-        ...(shouldShowSubject
+        profileImageFile,
+        removeProfileImage,
+        ...(shouldSyncSubjectIds
           ? {
               subject_ids: selectedSubjectId != null ? [selectedSubjectId] : [],
             }
@@ -171,6 +193,9 @@ export function ProfilePage() {
     },
     onSuccess: updatedUser => {
       profileForm.reset(userToProfileValues(updatedUser))
+      setProfileImageFile(null)
+      setProfileImagePreview(updatedUser.profile_image_url)
+      setRemoveProfileImage(false)
       queryClient.setQueryData(['auth', 'me'], updatedUser)
 
       const session = getAuthSession()
@@ -196,6 +221,38 @@ export function ProfilePage() {
     profileMutation.mutate(values)
   })
 
+  const handleOpenProfileImagePicker = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleProfileImageChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0] ?? null
+
+    if (profileImagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+
+    setProfileImageFile(file)
+    setRemoveProfileImage(false)
+    setProfileImagePreview(
+      file ? URL.createObjectURL(file) : (user?.profile_image_url ?? null)
+    )
+
+    event.target.value = ''
+  }
+
+  const handleRemoveProfileImage = () => {
+    if (profileImagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+
+    setProfileImageFile(null)
+    setProfileImagePreview(null)
+    setRemoveProfileImage(true)
+  }
+
   return (
     <div className="max-w-5xl space-y-6">
       <section>
@@ -206,17 +263,25 @@ export function ProfilePage() {
           <form className="space-y-6" onSubmit={handleProfileSubmit} noValidate>
             <div className="flex flex-col gap-6 md:flex-row md:items-center">
               <div className="flex items-center gap-4">
-                <div className="relative flex size-20 items-center justify-center rounded-full bg-muted text-xl font-semibold text-foreground">
-                  {isLoading
-                    ? '…'
-                    : user
-                      ? user.name
-                          .split(/\s+/)
-                          .map(p => p[0])
-                          .join('')
-                          .toUpperCase()
-                          .slice(0, 2) || '?'
-                      : '?'}
+                <div className="relative flex size-20 items-center justify-center overflow-hidden rounded-full bg-muted text-xl font-semibold text-foreground">
+                  {profileImagePreview ? (
+                    <img
+                      src={profileImagePreview}
+                      alt={user?.name ?? 'Profile'}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : isLoading ? (
+                    '…'
+                  ) : user ? (
+                    user.name
+                      .split(/\s+/)
+                      .map(p => p[0])
+                      .join('')
+                      .toUpperCase()
+                      .slice(0, 2) || '?'
+                  ) : (
+                    '?'
+                  )}
                 </div>
                 <div className="space-y-1">
                   <h2 className="text-lg font-semibold text-foreground">
@@ -225,12 +290,30 @@ export function ProfilePage() {
                   <p className="text-subtext text-muted-foreground">
                     {isLoading ? '…' : roleLabel}
                   </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleProfileImageChange}
+                    className="hidden"
+                  />
                   <button
                     type="button"
-                    className="cursor-pointer text-sm font-medium text-blue-500 underline-offset-2 hover:underline"
+                    onClick={handleOpenProfileImagePicker}
+                    className="text-sm font-medium text-primary underline-offset-2 hover:underline"
                   >
                     Change Profile Picture
                   </button>
+                  {(profileImagePreview ||
+                    (!removeProfileImage && user?.profile_image_url)) && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveProfileImage}
+                      className="block text-sm font-medium text-destructive underline-offset-2 hover:underline"
+                    >
+                      Remove Profile Picture
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -388,18 +471,25 @@ export function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setIsPasswordModalOpen(true)}
-                className="mt-6 text-sm font-medium text-blue-500 underline-offset-2 hover:underline"
+                className="mt-6 text-sm font-medium text-primary underline-offset-2 hover:underline"
               >
                 Update Password
               </button>
 
-              <div className="mt-4 flex justify-start gap-3">
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancelProfile}
+                  className="inline-flex w-24 items-center justify-center rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
                   disabled={profileMutation.isPending}
-                  className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 sm:max-w-56 lg:max-w-full"
+                  className="inline-flex w-28 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
                 >
-                  {profileMutation.isPending ? 'Updating...' : 'Update Profile'}
+                  {profileMutation.isPending ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
@@ -407,118 +497,116 @@ export function ProfilePage() {
         </div>
       </section>
 
-      {isPasswordModalOpen &&
-        createPortal(
-          <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 px-4">
-            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
-              <div className="mb-4 flex items-start justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Update Password
-                  </h2>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Use a minimum of 8 characters with a mix of letters,
-                    numbers, and special symbols to ensure better protection.
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Update Password
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Use a minimum of 8 characters with a mix of letters, numbers,
+                  and special symbols to ensure better protection.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleClosePasswordModal}
+                className="rounded-full p-1 text-muted-foreground hover:bg-muted"
+                aria-label="Close"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <form
+              className="space-y-4"
+              onSubmit={handlePasswordSubmit}
+              noValidate
+            >
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="currentPassword"
+                  className="text-subtext font-medium text-foreground"
+                >
+                  Current Password
+                </label>
+                <input
+                  id="currentPassword"
+                  type="password"
+                  autoComplete="current-password"
+                  {...passwordForm.register('currentPassword')}
+                  className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
+                />
+                {passwordForm.formState.errors.currentPassword && (
+                  <p className="text-xs text-destructive">
+                    {passwordForm.formState.errors.currentPassword.message}
                   </p>
-                </div>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="newPassword"
+                  className="text-subtext font-medium text-foreground"
+                >
+                  New Password
+                </label>
+                <input
+                  id="newPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  {...passwordForm.register('newPassword')}
+                  className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
+                />
+                {passwordForm.formState.errors.newPassword && (
+                  <p className="text-xs text-destructive">
+                    {passwordForm.formState.errors.newPassword.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="confirmNewPassword"
+                  className="text-subtext font-medium text-foreground"
+                >
+                  Confirm New Password
+                </label>
+                <input
+                  id="confirmNewPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  {...passwordForm.register('confirmNewPassword')}
+                  className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
+                />
+                {passwordForm.formState.errors.confirmNewPassword && (
+                  <p className="text-xs text-destructive">
+                    {passwordForm.formState.errors.confirmNewPassword.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-2 flex justify-end gap-3">
                 <button
                   type="button"
                   onClick={handleClosePasswordModal}
-                  className="rounded-full p-1 text-muted-foreground hover:bg-muted"
-                  aria-label="Close"
+                  className="inline-flex items-center justify-center rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
                 >
-                  <X className="size-4" />
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+                >
+                  Continue
                 </button>
               </div>
-
-              <form
-                className="space-y-4"
-                onSubmit={handlePasswordSubmit}
-                noValidate
-              >
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="currentPassword"
-                    className="text-subtext font-medium text-foreground"
-                  >
-                    Current Password
-                  </label>
-                  <input
-                    id="currentPassword"
-                    type="password"
-                    autoComplete="current-password"
-                    {...passwordForm.register('currentPassword')}
-                    className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
-                  />
-                  {passwordForm.formState.errors.currentPassword && (
-                    <p className="text-xs text-destructive">
-                      {passwordForm.formState.errors.currentPassword.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="newPassword"
-                    className="text-subtext font-medium text-foreground"
-                  >
-                    New Password
-                  </label>
-                  <input
-                    id="newPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    {...passwordForm.register('newPassword')}
-                    className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
-                  />
-                  {passwordForm.formState.errors.newPassword && (
-                    <p className="text-xs text-destructive">
-                      {passwordForm.formState.errors.newPassword.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="confirmNewPassword"
-                    className="text-subtext font-medium text-foreground"
-                  >
-                    Confirm New Password
-                  </label>
-                  <input
-                    id="confirmNewPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    {...passwordForm.register('confirmNewPassword')}
-                    className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
-                  />
-                  {passwordForm.formState.errors.confirmNewPassword && (
-                    <p className="text-xs text-destructive">
-                      {passwordForm.formState.errors.confirmNewPassword.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-2 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={handleClosePasswordModal}
-                    className="inline-flex items-center justify-center rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
-                  >
-                    Continue
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body
-        )}
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,3 +1,8 @@
+import { useState } from 'react'
+import { toast } from 'sonner'
+import type { Blog } from '@/features/blogs/api'
+import { getUserRole } from '@/features/auth/role-utils'
+import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import {
   BlogDetailModal,
   BlogEditorModal,
@@ -5,120 +10,196 @@ import {
   BlogGrid,
   BlogListPagination,
 } from '@/components/blogs'
-import { BLOGS_PAGE_SIZE, useBlogsPage } from './useBlogsPage'
+import { ConfirmDialog } from '@/components/ui'
+import { buildCsv, formatDateTimeShort } from '@/utils/formatters'
+import { BLOGS_PAGE_SIZE, useBlogList } from './useBlogList'
+import { useBlogActions } from './useBlogActions'
+
+type DeleteTarget =
+  | { type: 'single'; blogId: number }
+  | { type: 'bulk'; blogIds: number[] }
+  | null
+type ToggleStatusTarget = { blogId: number; currentlyActive: boolean } | null
 
 export function BlogsPage() {
+  const { data: currentUser } = useCurrentUser()
+  const currentUserRole = getUserRole(currentUser)
+  const canManageBlogs = currentUserRole === 'staff'
+
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editingBlog, setEditingBlog] = useState<Blog | null>(null)
+  const [detailBlogId, setDetailBlogId] = useState<number | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null)
+  const [toggleStatusTarget, setToggleStatusTarget] =
+    useState<ToggleStatusTarget>(null)
+
   const {
-    currentUser,
-    currentUserRole,
+    blogs,
+    isLoading,
     page,
     setPage,
     search,
-    setSearch,
     statusFilter,
-    selectedIds,
-    menuOpenBlogId,
-    setMenuOpenBlogId,
-    isEditorModalOpen,
-    editingBlog,
-    formTitle,
-    setFormTitle,
-    formHashtags,
-    setFormHashtags,
-    formCoverPreview,
-    editorRef,
-    detailBlogId,
-    setDetailBlogId,
-    closeDetailModal,
-    commentDraft,
-    setCommentDraft,
-    commentPage,
-    setCommentPage,
-    blogsQuery,
-    blogs,
-    detailQuery,
-    detailBlog,
-    commentsQuery,
-    comments,
-    commentsTotalPages,
     totalPages,
     totalItems,
-    createMutation,
-    updateMutation,
-    createCommentMutation,
-    closeEditorModal,
-    openNewModal,
-    openEditModal,
-    handleFileChange,
-    applyEditorCommand,
-    handleSaveBlog,
-    handleDeleteBlog,
-    handleDeleteSelected,
-    handleToggleStatus,
-    handleToggleSelect,
-    toggleFilter,
-    handleExportCsv,
-    handlePostComment,
-    handleRemoveCover,
-    setFormContent,
-  } = useBlogsPage()
+    handleSearchChange,
+    handleStatusFilterChange,
+  } = useBlogList(canManageBlogs)
+
+  const actions = useBlogActions({
+    onCreateSuccess: () => {
+      setEditorOpen(false)
+      setPage(1)
+    },
+    onUpdateSuccess: () => {
+      setEditorOpen(false)
+      setEditingBlog(null)
+    },
+    onDeleteSuccess: blogId => {
+      setSelectedIds(ids => ids.filter(id => id !== blogId))
+      if (detailBlogId === blogId) {
+        setDetailBlogId(null)
+      }
+    },
+  })
+
+  const openNewEditor = () => {
+    setEditingBlog(null)
+    setEditorOpen(true)
+  }
+
+  const openEditEditor = (blog: Blog) => {
+    setEditingBlog(blog)
+    setEditorOpen(true)
+  }
+
+  const closeEditor = () => {
+    setEditorOpen(false)
+    setEditingBlog(null)
+  }
+
+  const handleToggleSelect = (blogId: number) => {
+    setSelectedIds(ids =>
+      ids.includes(blogId) ? ids.filter(id => id !== blogId) : [...ids, blogId]
+    )
+  }
+
+  const handleRequestDelete = (blogId: number) => {
+    setDeleteTarget({ type: 'single', blogId })
+  }
+
+  const handleRequestDeleteSelected = () => {
+    if (selectedIds.length === 0) {
+      toast.error('No selected blogs.')
+      return
+    }
+    setDeleteTarget({ type: 'bulk', blogIds: [...selectedIds] })
+  }
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return
+
+    if (deleteTarget.type === 'single') {
+      actions.handleDelete(deleteTarget.blogId)
+    } else {
+      deleteTarget.blogIds.forEach(blogId => {
+        actions.handleDelete(blogId)
+      })
+    }
+    setDeleteTarget(null)
+  }
+
+  const handleCancelDelete = () => {
+    setDeleteTarget(null)
+  }
+
+  const handleRequestToggleStatus = (blogId: number) => {
+    const blog = blogs.find(b => b.id === blogId)
+    if (blog) {
+      setToggleStatusTarget({ blogId, currentlyActive: blog.is_active })
+    }
+  }
+
+  const handleConfirmToggleStatus = () => {
+    if (!toggleStatusTarget) return
+    actions.handleToggleStatus(toggleStatusTarget.blogId)
+    setToggleStatusTarget(null)
+  }
+
+  const handleCancelToggleStatus = () => {
+    setToggleStatusTarget(null)
+  }
+
+  const handleExportCsv = () => {
+    if (blogs.length === 0) {
+      toast.error('No blog data to export.')
+      return
+    }
+
+    const rows: unknown[][] = [
+      [
+        'Title',
+        'Author',
+        'Status',
+        'Created At',
+        'Views',
+        'Comments',
+        'Hashtags',
+      ],
+      ...blogs.map(blog => [
+        blog.title,
+        blog.author?.name ?? 'Unknown',
+        blog.is_active ? 'Active' : 'Inactive',
+        formatDateTimeShort(blog.created_at),
+        String(blog.view_count),
+        String(blog.comment_count ?? 0),
+        blog.hashtags.map(tag => `#${tag}`).join(' '),
+      ]),
+    ]
+
+    const csv = buildCsv(rows)
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'blogs.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <div className="flex h-full max-h-screen w-full flex-col overflow-hidden bg-background">
       <div className="flex h-full flex-col overflow-hidden p-4 sm:p-6">
         <BlogFilters
           search={search}
-          onSearchChange={value => {
-            setSearch(value)
-            setPage(1)
-          }}
+          onSearchChange={handleSearchChange}
           statusFilter={statusFilter}
+          onStatusFilterChange={handleStatusFilterChange}
           onExportCsv={handleExportCsv}
-          onToggleStatusFilter={toggleFilter}
-          onDeleteSelected={handleDeleteSelected}
-          onNewBlog={openNewModal}
+          onDeleteSelected={handleRequestDeleteSelected}
+          onNewBlog={openNewEditor}
+          hasSelection={selectedIds.length > 0}
+          canManageBlogs={canManageBlogs}
         />
 
-        <div className="mt-8 min-h-0 flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="mt-4 min-h-0 flex-1 overflow-y-auto sm:mt-8">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
             <BlogGrid
               blogs={blogs}
-              isLoading={blogsQuery.isLoading}
-              menuOpenBlogId={menuOpenBlogId}
+              isLoading={isLoading}
               currentUserId={currentUser?.id}
               currentUserRole={currentUserRole}
               selectedIds={selectedIds}
-              onOpenDetail={blogId => {
-                setDetailBlogId(blogId)
-                setMenuOpenBlogId(null)
-              }}
+              onOpenDetail={setDetailBlogId}
               onToggleSelect={(blogId, event) => {
                 event.stopPropagation()
                 handleToggleSelect(blogId)
               }}
-              onToggleMenu={(blogId, event) => {
-                event.stopPropagation()
-                setMenuOpenBlogId(current =>
-                  current === blogId ? null : blogId
-                )
-              }}
-              onViewDetails={blogId => {
-                setDetailBlogId(blogId)
-                setMenuOpenBlogId(null)
-              }}
-              onEdit={blog => {
-                openEditModal(blog)
-                setMenuOpenBlogId(null)
-              }}
-              onToggleStatus={blogId => {
-                handleToggleStatus(blogId)
-                setMenuOpenBlogId(null)
-              }}
-              onDelete={blogId => {
-                handleDeleteBlog(blogId)
-                setMenuOpenBlogId(null)
-              }}
-              onMenuEscape={() => setMenuOpenBlogId(null)}
+              onViewDetails={setDetailBlogId}
+              onEdit={openEditEditor}
+              onToggleStatus={handleRequestToggleStatus}
+              onDelete={handleRequestDelete}
             />
           </div>
         </div>
@@ -131,46 +212,63 @@ export function BlogsPage() {
           selectedCount={selectedIds.length}
           visibleCount={blogs.length}
           onPageChange={setPage}
+          canManageBlogs={canManageBlogs}
         />
       </div>
 
       <BlogEditorModal
-        isOpen={isEditorModalOpen}
-        onClose={closeEditorModal}
+        isOpen={editorOpen}
+        onClose={closeEditor}
         editingBlog={editingBlog}
-        formTitle={formTitle}
-        onTitleChange={setFormTitle}
-        formHashtags={formHashtags}
-        onHashtagsChange={setFormHashtags}
-        formCoverPreview={formCoverPreview}
-        onCoverFileChange={handleFileChange}
-        onRemoveCover={handleRemoveCover}
-        editorRef={editorRef}
-        onEditorInput={setFormContent}
-        applyEditorCommand={applyEditorCommand}
-        onSave={handleSaveBlog}
-        isSaving={createMutation.isPending || updateMutation.isPending}
+        onSave={data => actions.handleSave(data, editingBlog?.id)}
+        isSaving={actions.isSaving}
       />
 
       <BlogDetailModal
-        isOpen={detailBlogId != null}
-        onClose={closeDetailModal}
-        isLoading={detailBlogId != null && detailQuery.isLoading}
-        blog={detailBlog ?? null}
-        comments={comments}
-        commentsLoading={commentsQuery.isLoading}
-        commentsTotalPages={commentsTotalPages}
-        commentPage={commentPage}
-        onCommentPagePrev={() =>
-          setCommentPage(current => Math.max(1, current - 1))
+        blogId={detailBlogId}
+        onClose={() => setDetailBlogId(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title={
+          deleteTarget?.type === 'bulk'
+            ? `Delete ${deleteTarget.blogIds.length} blog(s)?`
+            : 'Delete blog?'
         }
-        onCommentPageNext={() =>
-          setCommentPage(current => Math.min(commentsTotalPages, current + 1))
+        description={
+          deleteTarget?.type === 'bulk'
+            ? 'This will permanently delete all selected blogs. This action cannot be undone.'
+            : 'This will permanently delete this blog post. This action cannot be undone.'
         }
-        commentDraft={commentDraft}
-        onCommentDraftChange={setCommentDraft}
-        onPostComment={handlePostComment}
-        isPostingComment={createCommentMutation.isPending}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={actions.isDeleting}
+      />
+
+      <ConfirmDialog
+        isOpen={toggleStatusTarget !== null}
+        onClose={handleCancelToggleStatus}
+        onConfirm={handleConfirmToggleStatus}
+        title={
+          toggleStatusTarget?.currentlyActive
+            ? 'Deactivate blog?'
+            : 'Activate blog?'
+        }
+        description={
+          toggleStatusTarget?.currentlyActive
+            ? 'This blog will no longer be visible to users. You can reactivate it later.'
+            : 'This blog will become visible to users.'
+        }
+        confirmLabel={
+          toggleStatusTarget?.currentlyActive ? 'Deactivate' : 'Activate'
+        }
+        cancelLabel="Cancel"
+        variant={toggleStatusTarget?.currentlyActive ? 'warning' : 'info'}
+        isLoading={actions.isTogglingStatus}
       />
     </div>
   )

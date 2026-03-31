@@ -17,6 +17,7 @@ use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 #[Group('Auth', description: 'Authentication endpoints.', weight: 1)]
 class AuthController
@@ -59,6 +60,15 @@ class AuthController
             ],
         ],
     )]
+    #[Response(
+        status: 423,
+        examples: [
+            [
+                'message' => 'Account locked. Try again in 15 minutes.',
+                'available_in' => 900,
+            ],
+        ],
+    )]
     /** @unauthenticated */
     public function login(LoginRequest $request): JsonResponse
     {
@@ -66,14 +76,28 @@ class AuthController
 
         $payload = $this->authService->login($validated, $request->userAgent());
 
-        if ($payload === null) {
+        if ($payload['status'] === 'locked') {
+            $availableIn = max(1, (int) $payload['available_in']);
+            $minutes = (int) ceil($availableIn / 60);
+
+            return response()->json([
+                'message' => sprintf(
+                    'Account locked. Try again in %d minute%s.',
+                    $minutes,
+                    $minutes === 1 ? '' : 's',
+                ),
+                'available_in' => $availableIn,
+            ], 423);
+        }
+
+        if ($payload['status'] === 'invalid_credentials') {
             return response()->json([
                 'message' => 'Invalid credentials.',
             ], 422);
         }
 
         $user = User::query()
-            ->where('email', $validated['email'])
+            ->where('email', Str::lower(trim((string) $validated['email'])))
             ->first();
 
         if ($user instanceof User) {
@@ -93,7 +117,11 @@ class AuthController
             );
         }
 
-        return response()->json($payload);
+        return response()->json([
+            'token' => $payload['token'],
+            'token_type' => $payload['token_type'],
+            'user' => $payload['user'],
+        ]);
     }
 
     #[Endpoint(title: 'Current User')]

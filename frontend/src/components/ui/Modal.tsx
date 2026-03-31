@@ -13,6 +13,7 @@ export interface ModalProps {
   closeOnEscape?: boolean
   className?: string
   overlayClassName?: string
+  contentClassName?: string
 }
 
 const SIZE_CLASSES = {
@@ -37,6 +38,7 @@ export function Modal({
   closeOnEscape = true,
   className = '',
   overlayClassName = 'fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-4',
+  contentClassName = 'max-h-[calc(100vh-200px)] overflow-y-auto',
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
 
@@ -72,7 +74,13 @@ export function Modal({
       onClick={handleOverlayClick}
       role="presentation"
       onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
+        const target = e.target as HTMLElement
+        const isInputElement =
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable
+
+        if (!isInputElement && (e.key === 'Enter' || e.key === ' ')) {
           e.preventDefault()
         }
       }}
@@ -106,9 +114,7 @@ export function Modal({
           </div>
         )}
 
-        <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
-          {children}
-        </div>
+        <div className={contentClassName}>{children}</div>
       </div>
     </div>,
     document.body

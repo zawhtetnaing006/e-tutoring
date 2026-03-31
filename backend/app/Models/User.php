@@ -31,6 +31,7 @@ class User extends Authenticatable
         'country',
         'city',
         'township',
+        'profile_image_path',
         'role_id',
         'is_active',
         'password',
@@ -56,6 +57,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'is_active' => 'boolean',
+            'failed_login_attempts' => 'integer',
+            'locked_until' => 'datetime',
             'password' => 'hashed',
         ];
     }

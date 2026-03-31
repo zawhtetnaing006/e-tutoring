@@ -14,6 +14,7 @@ export interface BlogListPaginationProps {
   selectedCount: number
   visibleCount: number
   onPageChange: (page: number) => void
+  canManageBlogs?: boolean
 }
 
 export function BlogListPagination({
@@ -24,21 +25,26 @@ export function BlogListPagination({
   selectedCount,
   visibleCount,
   onPageChange,
+  canManageBlogs = false,
 }: BlogListPaginationProps) {
   const fromItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1
   const toItem = Math.min(page * pageSize, totalItems)
 
   return (
-    <div className="mt-8 flex flex-col gap-3 text-lg text-slate-400 md:flex-row md:items-center md:justify-between">
-      <p>
-        {selectedCount} of {visibleCount} row(s) selected.
-      </p>
-
-      <div className="flex items-center gap-4">
-        <p>
-          Showing {fromItem}-{toItem} of {totalItems}
+    <div className="mt-4 flex flex-col gap-2 text-xs text-slate-400 sm:mt-8 sm:gap-3 sm:text-sm md:flex-row md:items-center md:justify-between md:text-base">
+      {canManageBlogs ? (
+        <p className="text-center md:text-left">
+          {selectedCount} of {visibleCount} row(s) selected.
         </p>
-        <div className="flex items-center gap-2">
+      ) : (
+        <div />
+      )}
+
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 md:justify-end">
+        <p className="whitespace-nowrap">
+          {fromItem}-{toItem} of {totalItems}
+        </p>
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             type="button"
             variant="outline"
@@ -48,7 +54,7 @@ export function BlogListPagination({
             className="h-auto rounded-full border-slate-300 p-1 text-slate-500 disabled:opacity-40"
             aria-label="First page"
           >
-            <ChevronsLeft className="size-4" />
+            <ChevronsLeft className="size-3.5 sm:size-4" />
           </Button>
           <Button
             type="button"
@@ -59,7 +65,7 @@ export function BlogListPagination({
             className="h-auto rounded-full border-slate-300 p-1 text-slate-500 disabled:opacity-40"
             aria-label="Previous page"
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeft className="size-3.5 sm:size-4" />
           </Button>
           <Button
             type="button"
@@ -70,7 +76,7 @@ export function BlogListPagination({
             className="h-auto rounded-full border-slate-300 p-1 text-slate-500 disabled:opacity-40"
             aria-label="Next page"
           >
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-3.5 sm:size-4" />
           </Button>
           <Button
             type="button"
@@ -81,7 +87,7 @@ export function BlogListPagination({
             className="h-auto rounded-full border-slate-300 p-1 text-slate-500 disabled:opacity-40"
             aria-label="Last page"
           >
-            <ChevronsRight className="size-4" />
+            <ChevronsRight className="size-3.5 sm:size-4" />
           </Button>
         </div>
       </div>

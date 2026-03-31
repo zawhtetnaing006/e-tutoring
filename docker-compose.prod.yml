@@ -22,7 +22,7 @@ services:
     ports:
       - "127.0.0.1:8000:80"
     volumes:
-      - app_storage:/var/www/storage:ro
+      - ./backend/storage:/var/www/storage:ro
     networks:
       - app
     restart: unless-stopped
@@ -47,7 +47,7 @@ services:
       APP_MIGRATION_RETRY_DELAY: "2"
     volumes:
       - ./backend/.env:/var/www/.env:ro
-      - app_storage:/var/www/storage
+      - ./backend/storage:/var/www/storage
       - app_bootstrap_cache:/var/www/bootstrap/cache
     networks:
       - app
@@ -67,7 +67,7 @@ services:
         condition: service_started
     volumes:
       - ./backend/.env:/var/www/.env:ro
-      - app_storage:/var/www/storage
+      - ./backend/storage:/var/www/storage
       - app_bootstrap_cache:/var/www/bootstrap/cache
     command: ["php", "artisan", "schedule:work"]
     networks:
@@ -90,7 +90,7 @@ services:
         condition: service_started
     volumes:
       - ./backend/.env:/var/www/.env:ro
-      - app_storage:/var/www/storage
+      - ./backend/storage:/var/www/storage
       - app_bootstrap_cache:/var/www/bootstrap/cache
     command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=1", "--timeout=60"]
     networks:
@@ -111,7 +111,7 @@ services:
         condition: service_started
     volumes:
       - ./backend/.env:/var/www/.env:ro
-      - app_storage:/var/www/storage
+      - ./backend/storage:/var/www/storage
       - app_bootstrap_cache:/var/www/bootstrap/cache
     command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
     expose:
@@ -175,5 +175,4 @@ networks:
 
 volumes:
   redis_data_prod:
-  app_storage:
   app_bootstrap_cache:
