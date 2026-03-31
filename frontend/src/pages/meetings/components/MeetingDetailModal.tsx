@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   X,
@@ -11,8 +11,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { createMeetingAttendance, type Meeting } from '@/features/meetings/api'
-import { useAllocations } from '@/features/allocations/useAllocations'
-import { useUsers } from '@/features/users/useUsers'
+import { useAllocation } from '@/features/allocations/useAllocations'
+import { useUser } from '@/features/users/useUsers'
 
 type MeetingDetailModalProps = {
   meeting: Meeting
@@ -35,37 +35,16 @@ export function MeetingDetailModal({
   const [selectedAttendance, setSelectedAttendance] =
     useState<AttendanceStatus | null>(null)
 
-  const allocationsQuery = useAllocations({ perPage: 1000 })
-  const tutorsQuery = useUsers({ perPage: 100, role_code: 'TUTOR' })
-  const studentsQuery = useUsers({ perPage: 100, role_code: 'STUDENT' })
+  const allocationQuery = useAllocation(meeting.tutor_assignment_id)
+  const allocation = allocationQuery.data
+  const tutorQuery = useUser(allocation?.tutor_user_id, allocation != null)
+  const studentQuery = useUser(allocation?.student_user_id, allocation != null)
 
-  const selectedAllocation = useMemo(() => {
-    return allocationsQuery.data?.data.find(
-      a => a.id === meeting.tutor_assignment_id
-    )
-  }, [meeting.tutor_assignment_id, allocationsQuery.data?.data])
-
-  const tutorName = useMemo(() => {
-    if (!selectedAllocation) return `Tutor #${meeting.tutor_assignment_id}`
-    const tutor = tutorsQuery.data?.data.find(
-      u => u.id === selectedAllocation.tutor_user_id
-    )
-    return tutor?.name || `Tutor #${selectedAllocation.tutor_user_id}`
-  }, [selectedAllocation, tutorsQuery.data?.data, meeting.tutor_assignment_id])
-
-  const studentName = useMemo(() => {
-    if (!selectedAllocation) return `Student #${meeting.tutor_assignment_id}`
-    const student = studentsQuery.data?.data.find(
-      u => u.id === selectedAllocation.student_user_id
-    )
-    return student?.name || `Student #${selectedAllocation.student_user_id}`
-  }, [
-    selectedAllocation,
-    studentsQuery.data?.data,
-    meeting.tutor_assignment_id,
-  ])
-
-  const studentId = selectedAllocation?.student_user_id
+  const tutorName =
+    tutorQuery.data?.name ?? getTutorFallback(meeting, allocation)
+  const studentName =
+    studentQuery.data?.name ?? getStudentFallback(meeting, allocation)
+  const studentId = allocation?.student_user_id
 
   const recurrenceType =
     meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
@@ -364,4 +343,24 @@ export function MeetingDetailModal({
       </div>
     </div>
   )
+}
+
+function getTutorFallback(
+  meeting: Meeting,
+  allocation?: {
+    tutor_user_id: number
+  }
+) {
+  if (allocation) return `Tutor #${allocation.tutor_user_id}`
+  return `Tutor Assignment #${meeting.tutor_assignment_id}`
+}
+
+function getStudentFallback(
+  meeting: Meeting,
+  allocation?: {
+    student_user_id: number
+  }
+) {
+  if (allocation) return `Student #${allocation.student_user_id}`
+  return `Student Assignment #${meeting.tutor_assignment_id}`
 }

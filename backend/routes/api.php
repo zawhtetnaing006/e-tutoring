@@ -75,9 +75,10 @@ Route::prefix('users')
         Route::middleware(['auth:sanctum', 'role:STAFF'])->group(function () {
             Route::post('/', 'store');
             Route::post('export', 'export');
-            Route::get('{user}', 'show');
             Route::delete('{user}', 'destroy');
         });
+
+        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])->get('{user}', 'show');
     });
 
 Route::middleware(['auth:sanctum', 'role:STAFF'])

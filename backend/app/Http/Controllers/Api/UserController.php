@@ -252,8 +252,10 @@ class UserController
             'updated_at' => '2026-02-05T00:00:00.000000Z',
         ]],
     )]
-    public function show(User $user): JsonResponse
+    public function show(Request $request, User $user): JsonResponse
     {
+        $this->ensureCanViewUser($request, $user);
+
         return response()->json(new UserResource($this->loadUserRelations($user)));
     }
 
@@ -416,6 +418,39 @@ class UserController
         $user->update([
             'role_id' => $roleId,
         ]);
+    }
+
+    private function ensureCanViewUser(Request $request, User $user): void
+    {
+        /** @var User|null $currentUser */
+        $currentUser = $request->user();
+
+        if (! $currentUser) {
+            abort(401, 'Unauthenticated.');
+        }
+
+        if ($currentUser->hasAnyRole([Role::ADMIN, Role::STAFF])) {
+            return;
+        }
+
+        if (! $currentUser->hasRole(Role::TUTOR)) {
+            abort(403, 'You are not allowed to view this user.');
+        }
+
+        if ((int) $currentUser->id === (int) $user->id) {
+            return;
+        }
+
+        $isAssignedStudent = TutorAssignment::query()
+            ->where('tutor_user_id', (int) $currentUser->id)
+            ->where('student_user_id', (int) $user->id)
+            ->exists();
+
+        if ($isAssignedStudent) {
+            return;
+        }
+
+        abort(403, 'You are not allowed to view this user.');
     }
 
     private function loadUserRelations(User $user): User
