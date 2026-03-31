@@ -14,12 +14,9 @@ export function auditLogRowKey(row: AuditLogItem): string {
 
 function humanizeAuditText(value: string | null | undefined): string {
   const normalized = (value ?? '').trim()
-  if (!normalized) return 'â€”'
+  if (!normalized) return '—'
 
-  return normalized
-    .replace(/#(\d+)/g, ' $1')
-    .replace(/\s+/g, ' ')
-    .trim()
+  return normalized.replace(/\s+/g, ' ').trim()
 }
 
 export function formatAuditLogTarget(

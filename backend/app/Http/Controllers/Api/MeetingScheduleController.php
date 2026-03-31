@@ -140,7 +140,7 @@ class MeetingScheduleController
 
     private function meetingScheduleTargetLabel(MeetingSchedule $meetingSchedule): string
     {
-        return sprintf('Meeting Schedule#%d', (int) $meetingSchedule->id);
+        return sprintf('MeetingSchedule#%d', (int) $meetingSchedule->id);
     }
 
     /**

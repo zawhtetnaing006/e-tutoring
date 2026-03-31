@@ -63,7 +63,7 @@ class LogInactiveUsersCommand extends Command
                     }
 
                     $daysInactive = $latestActivityAt->diffInDays($now);
-                    $targetLabel = sprintf('User#%d', (int) $user->id);
+                    $targetLabel = $this->userTargetLabel($user);
 
                     activity('audit')
                         ->performedOn($user)
@@ -312,5 +312,14 @@ class LogInactiveUsersCommand extends Command
     private function canReceiveMail(User $user): bool
     {
         return is_string($user->email) && trim($user->email) !== '';
+    }
+
+    private function userTargetLabel(User $user): string
+    {
+        $user->loadMissing('role:id,code,name');
+        $role = trim((string) ($user->role?->name ?? $user->role?->code ?? 'User'));
+        $role = str_replace(' ', '', $role);
+
+        return sprintf('%s#%d', $role === '' ? 'User' : $role, (int) $user->id);
     }
 }

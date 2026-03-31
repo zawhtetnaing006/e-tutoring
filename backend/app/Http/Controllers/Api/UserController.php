@@ -464,7 +464,11 @@ class UserController
 
     private function userTargetLabel(User $user): string
     {
-        return sprintf('User#%d', (int) $user->id);
+        $user->loadMissing('role:id,code,name');
+        $role = trim((string) ($user->role?->name ?? $user->role?->code ?? 'User'));
+        $role = str_replace(' ', '', $role);
+
+        return sprintf('%s#%d', $role === '' ? 'User' : $role, (int) $user->id);
     }
 
     /**

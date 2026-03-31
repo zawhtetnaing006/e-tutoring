@@ -491,7 +491,7 @@ class TutorAssignmentController
 
     private function tutorAssignmentTargetLabel(TutorAssignment $tutorAssignment): string
     {
-        return sprintf('Tutor Assignment#%d', (int) $tutorAssignment->id);
+        return sprintf('TutorAssignment#%d', (int) $tutorAssignment->id);
     }
 
     /**

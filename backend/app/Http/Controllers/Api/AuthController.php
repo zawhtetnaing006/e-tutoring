@@ -101,19 +101,15 @@ class AuthController
             ->first();
 
         if ($user instanceof User) {
-            $targetLabel = sprintf('User#%d', (int) $user->id);
+            $targetLabel = $this->userTargetLabel($user);
 
-            $this->auditLogService->log(
+            $this->auditLogService->logAction(
                 request: $request,
                 description: 'auth.login',
                 subject: $user,
-                properties: [
-                    'meta' => [
-                        'action_label' => 'LOGIN_SUCCESS',
-                        'target_label' => $targetLabel,
-                        'description' => sprintf('%s logged in successfully.', $user->name),
-                    ],
-                ],
+                actionLabel: 'LOGIN_SUCCESS',
+                targetLabel: $targetLabel,
+                operation: 'login',
             );
         }
 
@@ -165,19 +161,15 @@ class AuthController
         $this->authService->logout($user);
 
         if ($user instanceof User) {
-            $targetLabel = sprintf('User#%d', (int) $user->id);
+            $targetLabel = $this->userTargetLabel($user);
 
-            $this->auditLogService->log(
+            $this->auditLogService->logAction(
                 request: $request,
                 description: 'auth.logout',
                 subject: $user,
-                properties: [
-                    'meta' => [
-                        'action_label' => 'LOGOUT',
-                        'target_label' => $targetLabel,
-                        'description' => sprintf('%s logged out.', $user->name),
-                    ],
-                ],
+                actionLabel: 'LOGOUT',
+                targetLabel: $targetLabel,
+                operation: 'logout',
             );
         }
 
@@ -292,24 +284,29 @@ class AuthController
             ->first();
 
         if ($user instanceof User) {
-            $targetLabel = sprintf('User#%d', (int) $user->id);
+            $targetLabel = $this->userTargetLabel($user);
 
-            $this->auditLogService->log(
+            $this->auditLogService->logAction(
                 request: $request,
                 description: 'auth.password_reset',
                 subject: $user,
-                properties: [
-                    'meta' => [
-                        'action_label' => 'RESET_PASSWORD',
-                        'target_label' => $targetLabel,
-                        'description' => sprintf('%s reset password successfully.', $user->name),
-                    ],
-                ],
+                actionLabel: 'RESET_PASSWORD',
+                targetLabel: $targetLabel,
+                operation: 'reset_password',
             );
         }
 
         return response()->json([
             'message' => __($status),
         ]);
+    }
+
+    private function userTargetLabel(User $user): string
+    {
+        $user->loadMissing('role:id,code,name');
+        $role = trim((string) ($user->role?->name ?? $user->role?->code ?? 'User'));
+        $role = str_replace(' ', '', $role);
+
+        return sprintf('%s#%d', $role === '' ? 'User' : $role, (int) $user->id);
     }
 }

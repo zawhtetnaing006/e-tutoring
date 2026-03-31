@@ -58,6 +58,6 @@ class MeetingAttendanceController
 
     private function meetingAttendanceTargetLabel(MeetingAttendee $attendance): string
     {
-        return sprintf('Meeting Attendance#%d', (int) $attendance->id);
+        return sprintf('MeetingAttendance#%d', (int) $attendance->id);
     }
 }
