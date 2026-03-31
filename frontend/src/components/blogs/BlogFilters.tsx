@@ -11,6 +11,7 @@ export interface BlogFiltersProps {
 	onDeleteSelected: () => void;
 	onNewBlog: () => void;
 	hasSelection?: boolean;
+	canManageBlogs?: boolean;
 }
 
 export function BlogFilters({
@@ -22,10 +23,11 @@ export function BlogFilters({
 	onDeleteSelected,
 	onNewBlog,
 	hasSelection = false,
+	canManageBlogs = false,
 }: BlogFiltersProps) {
 	return (
 		<>
-			<BlogPageHeader onNewBlog={onNewBlog} />
+			<BlogPageHeader onNewBlog={onNewBlog} canManageBlogs={canManageBlogs} />
 			<BlogToolbar
 				search={search}
 				onSearchChange={onSearchChange}
@@ -34,6 +36,7 @@ export function BlogFilters({
 				onExportCsv={onExportCsv}
 				onDeleteSelected={onDeleteSelected}
 				hasSelection={hasSelection}
+				canManageBlogs={canManageBlogs}
 			/>
 		</>
 	);

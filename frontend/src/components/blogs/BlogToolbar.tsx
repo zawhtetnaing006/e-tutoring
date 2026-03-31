@@ -11,6 +11,7 @@ export interface BlogToolbarProps {
 	onExportCsv: () => void;
 	onDeleteSelected: () => void;
 	hasSelection?: boolean;
+	canManageBlogs?: boolean;
 }
 
 export function BlogToolbar({
@@ -21,9 +22,10 @@ export function BlogToolbar({
 	onExportCsv,
 	onDeleteSelected,
 	hasSelection = false,
+	canManageBlogs = false,
 }: BlogToolbarProps) {
 	return (
-		<div className="mt-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
+		<div className="mt-4 flex flex-col gap-2 sm:mt-8 sm:gap-3 md:flex-row md:items-center md:justify-end">
 			<SearchInput
 				value={search}
 				onChange={(e) => onSearchChange(e.target.value)}
@@ -32,31 +34,35 @@ export function BlogToolbar({
 				showClearButton={false}
 			/>
 
-			<Button
-				type="button"
-				variant="outline"
-				onClick={onExportCsv}
-				className="rounded-xl border-slate-200 px-4 py-2.5 text-lg text-slate-700 hover:bg-slate-50"
-				leftIcon={<Download className="size-5" />}
-			>
-				Excel
-			</Button>
+			<div className="flex items-center gap-2 sm:gap-3">
+				<Button
+					type="button"
+					variant="outline"
+					onClick={onExportCsv}
+					className="flex-1 rounded-xl border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:flex-none sm:px-4 sm:py-2.5 sm:text-lg"
+					leftIcon={<Download className="size-4 sm:size-5" />}
+				>
+					<span className="hidden xs:inline">Excel</span>
+				</Button>
 
-			<StatusFilterDropdown
-				value={statusFilter}
-				onChange={onStatusFilterChange}
-			/>
+				<StatusFilterDropdown
+					value={statusFilter}
+					onChange={onStatusFilterChange}
+				/>
 
-			<Button
-				type="button"
-				variant="outline"
-				onClick={onDeleteSelected}
-				disabled={!hasSelection}
-				className="rounded-xl border-slate-200 px-3 py-2.5 text-lg text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-				aria-label="Delete selected blogs"
-			>
-				<Trash2 className="size-5" />
-			</Button>
+				{canManageBlogs ? (
+					<Button
+						type="button"
+						variant="outline"
+						onClick={onDeleteSelected}
+						disabled={!hasSelection}
+						className="rounded-xl border-slate-200 px-2.5 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 sm:px-3 sm:py-2.5 sm:text-lg"
+						aria-label="Delete selected blogs"
+					>
+						<Trash2 className="size-4 sm:size-5" />
+					</Button>
+				) : null}
+			</div>
 		</div>
 	);
 }

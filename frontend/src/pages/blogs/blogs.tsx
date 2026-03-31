@@ -24,6 +24,7 @@ type ToggleStatusTarget = { blogId: number; currentlyActive: boolean } | null;
 export function BlogsPage() {
 	const { data: currentUser } = useCurrentUser();
 	const currentUserRole = getUserRole(currentUser);
+	const canManageBlogs = currentUserRole === "staff";
 
 	const [selectedIds, setSelectedIds] = useState<number[]>([]);
 	const [editorOpen, setEditorOpen] = useState(false);
@@ -181,10 +182,11 @@ export function BlogsPage() {
 					onDeleteSelected={handleRequestDeleteSelected}
 					onNewBlog={openNewEditor}
 					hasSelection={selectedIds.length > 0}
+					canManageBlogs={canManageBlogs}
 				/>
 
-				<div className="mt-8 min-h-0 flex-1 overflow-y-auto">
-					<div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+				<div className="mt-4 min-h-0 flex-1 overflow-y-auto sm:mt-8">
+					<div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
 						<BlogGrid
 							blogs={blogs}
 							isLoading={isLoading}
@@ -212,6 +214,7 @@ export function BlogsPage() {
 					selectedCount={selectedIds.length}
 					visibleCount={blogs.length}
 					onPageChange={setPage}
+					canManageBlogs={canManageBlogs}
 				/>
 			</div>
 

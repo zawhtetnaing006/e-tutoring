@@ -20,9 +20,9 @@ export function StatusFilterDropdown({
 				<Button
 					type="button"
 					variant="outline"
-					className="rounded-xl border-slate-200 px-3 py-2.5 text-lg text-slate-700 hover:bg-slate-50"
-					leftIcon={<Filter className="size-5" />}
-					rightIcon={<ChevronDown className="size-4" />}
+					className="rounded-xl border-slate-200 px-2.5 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:px-3 sm:py-2.5 sm:text-lg"
+					leftIcon={<Filter className="size-4 sm:size-5" />}
+					rightIcon={<ChevronDown className="size-3.5 sm:size-4" />}
 				>
 					<span className="hidden sm:inline">{currentLabel}</span>
 				</Button>
