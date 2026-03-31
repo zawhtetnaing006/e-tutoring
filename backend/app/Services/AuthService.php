@@ -10,14 +10,13 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthService
 {
     private const LOGIN_MAX_ATTEMPTS = 3;
-    private const LOGIN_LOCKOUT_SECONDS = 900;
+    private const LOGIN_LOCKOUT_MINUTES = 15;
 
     /**
      * @param array{name:string,email:string,password:string} $data
@@ -47,33 +46,28 @@ class AuthService
     public function login(array $credentials, ?string $tokenName = null): array
     {
         $email = $this->normalizeEmail($credentials['email']);
-        $rateLimitKey = $this->loginRateLimitKey($email);
-
-        if (RateLimiter::tooManyAttempts($rateLimitKey, self::LOGIN_MAX_ATTEMPTS)) {
-            return [
-                'status' => 'locked',
-                'available_in' => RateLimiter::availableIn($rateLimitKey),
-            ];
-        }
-
         $user = User::firstWhere('email', $email);
 
-        if (! $user || ! $user->is_active || ! Hash::check($credentials['password'], $user->password)) {
-            RateLimiter::hit($rateLimitKey, self::LOGIN_LOCKOUT_SECONDS);
-
-            if (RateLimiter::tooManyAttempts($rateLimitKey, self::LOGIN_MAX_ATTEMPTS)) {
-                return [
-                    'status' => 'locked',
-                    'available_in' => RateLimiter::availableIn($rateLimitKey),
-                ];
-            }
-
+        if (! $user || ! $user->is_active) {
             return [
                 'status' => 'invalid_credentials',
             ];
         }
 
-        RateLimiter::clear($rateLimitKey);
+        $this->clearExpiredLoginLock($user);
+
+        if ($this->isLoginLocked($user)) {
+            return [
+                'status' => 'locked',
+                'available_in' => $this->lockAvailableIn($user),
+            ];
+        }
+
+        if (! Hash::check($credentials['password'], $user->password)) {
+            return $this->recordFailedLoginAttempt($user);
+        }
+
+        $this->resetLoginLockState($user);
 
         $token = $user->createToken($tokenName ?? 'api')->plainTextToken;
 
@@ -227,9 +221,76 @@ class AuthService
         return $throttle > 0 ? $throttle : 0;
     }
 
-    private function loginRateLimitKey(string $email): string
+    /**
+     * @return array{status:'locked',available_in:int}|array{status:'invalid_credentials'}
+     */
+    private function recordFailedLoginAttempt(User $user): array
     {
-        return 'login:email:' . $email;
+        $attempts = max(0, (int) $user->failed_login_attempts) + 1;
+
+        if ($attempts >= self::LOGIN_MAX_ATTEMPTS) {
+            $lockedAt = now();
+            $lockedUntil = $lockedAt->copy()->addMinutes(self::LOGIN_LOCKOUT_MINUTES);
+
+            $user->forceFill([
+                'failed_login_attempts' => $attempts,
+                'locked_until' => $lockedUntil,
+            ])->save();
+
+            $user->failed_login_attempts = $attempts;
+            $user->locked_until = $lockedUntil;
+
+            return [
+                'status' => 'locked',
+                'available_in' => $lockedAt->diffInSeconds($lockedUntil),
+            ];
+        }
+
+        $user->forceFill([
+            'failed_login_attempts' => $attempts,
+        ])->save();
+
+        $user->failed_login_attempts = $attempts;
+
+        return [
+            'status' => 'invalid_credentials',
+        ];
+    }
+
+    private function clearExpiredLoginLock(User $user): void
+    {
+        if ($user->locked_until instanceof Carbon && ! $user->locked_until->isFuture()) {
+            $this->resetLoginLockState($user);
+        }
+    }
+
+    private function resetLoginLockState(User $user): void
+    {
+        if ((int) $user->failed_login_attempts === 0 && $user->locked_until === null) {
+            return;
+        }
+
+        $user->forceFill([
+            'failed_login_attempts' => 0,
+            'locked_until' => null,
+        ])->save();
+
+        $user->failed_login_attempts = 0;
+        $user->locked_until = null;
+    }
+
+    private function isLoginLocked(User $user): bool
+    {
+        return $user->locked_until instanceof Carbon && $user->locked_until->isFuture();
+    }
+
+    private function lockAvailableIn(User $user): int
+    {
+        if (! ($user->locked_until instanceof Carbon)) {
+            return 0;
+        }
+
+        return now()->diffInSeconds($user->locked_until);
     }
 
     private function normalizeEmail(string $email): string
