@@ -48,12 +48,16 @@ export function ConfirmDialog({
   variant = 'danger',
   isLoading = false,
 }: ConfirmDialogProps) {
-  const config =
-    variant === 'danger'
-      ? VARIANT_CONFIG.danger
-      : variant === 'warning'
-        ? VARIANT_CONFIG.warning
-        : VARIANT_CONFIG.info
+  const config = (() => {
+    switch (variant) {
+      case 'danger':
+        return VARIANT_CONFIG.danger
+      case 'warning':
+        return VARIANT_CONFIG.warning
+      default:
+        return VARIANT_CONFIG.info
+    }
+  })()
   const Icon = config.icon
 
   const handleConfirm = () => {

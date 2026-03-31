@@ -37,16 +37,27 @@ export function BlogCard({
   onToggleStatus,
   onDelete,
 }: BlogCardProps) {
+  const isToolbarTarget = (target: EventTarget | null) =>
+    target instanceof Element &&
+    target.closest('[data-blog-card-toolbar]') !== null
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (isToolbarTarget(e.target)) return
+    onOpenDetail()
+  }
+
+  const handleCardKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    if (isToolbarTarget(e.target)) return
+    e.preventDefault()
+    onOpenDetail()
+  }
+
   return (
     // biome-ignore lint/a11y/useSemanticElements: Clickable card pattern
     <div
-      onClick={onOpenDetail}
-      onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onOpenDetail()
-        }
-      }}
+      onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
       role="button"
       tabIndex={0}
       className="group cursor-pointer overflow-hidden rounded-xl border border-slate-200 bg-white"
@@ -77,11 +88,7 @@ export function BlogCard({
           <div className="h-40 w-full bg-gradient-to-br from-indigo-950 via-indigo-800 to-blue-700 sm:h-52 md:h-64" />
         )}
 
-        {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- event propagation only; controls inside handle a11y */}
-        <div
-          className="absolute right-3 top-3"
-          onClick={e => e.stopPropagation()}
-        >
+        <div className="absolute right-3 top-3" data-blog-card-toolbar>
           {canManage ? (
             <Dropdown
               trigger={
