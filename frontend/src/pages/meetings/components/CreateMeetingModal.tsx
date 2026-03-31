@@ -3,6 +3,7 @@ import { X, Video, MapPin, Calendar, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateMeeting } from '@/features/meetings/useMeetings'
 import { type CreateMeetingPayload } from '@/features/meetings/api'
+import { getPresetVirtualPlatformLink } from '@/features/meetings/virtual-platform-links'
 import { getUserRole } from '@/features/auth/role-utils'
 import { getAuthSession } from '@/features/auth/storage'
 import { useCurrentUser } from '@/features/auth/useCurrentUser'
@@ -16,7 +17,7 @@ type CreateMeetingModalProps = {
   onSuccess: () => void
 }
 
-const PLATFORMS = ['Zoom', 'Google Meet', 'Microsoft Teams', 'Skype', 'Other']
+const PLATFORMS = ['Zoom', 'Google Meet', 'Microsoft Teams', 'Other']
 const WEEKDAYS = [
   'Sunday',
   'Monday',
@@ -417,7 +418,12 @@ export function CreateMeetingModal({
                   <select
                     id="platform-select"
                     value={platform}
-                    onChange={e => setPlatform(e.target.value)}
+                    onChange={e => {
+                      const next = e.target.value
+                      setPlatform(next)
+                      const preset = getPresetVirtualPlatformLink(next)
+                      setLink(preset ?? '')
+                    }}
                     className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                     required
                   >
