@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import type { Blog } from '@/features/blogs/api'
 import { getUserRole } from '@/features/auth/role-utils'
@@ -26,10 +27,34 @@ export function BlogsPage() {
   const currentUserRole = getUserRole(currentUser)
   const canManageBlogs = currentUserRole === 'staff'
 
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const detailBlogId = useMemo(() => {
+    const raw = searchParams.get('blog')
+    if (raw == null || raw === '') return null
+    const id = Number.parseInt(raw, 10)
+    return Number.isFinite(id) && id > 0 ? id : null
+  }, [searchParams])
+
+  const openBlogDetail = (blogId: number) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.set('blog', String(blogId))
+      return next
+    })
+  }
+
+  const closeBlogDetail = () => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      next.delete('blog')
+      return next
+    })
+  }
+
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [editorOpen, setEditorOpen] = useState(false)
   const [editingBlog, setEditingBlog] = useState<Blog | null>(null)
-  const [detailBlogId, setDetailBlogId] = useState<number | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null)
   const [toggleStatusTarget, setToggleStatusTarget] =
     useState<ToggleStatusTarget>(null)
@@ -59,7 +84,7 @@ export function BlogsPage() {
     onDeleteSuccess: blogId => {
       setSelectedIds(ids => ids.filter(id => id !== blogId))
       if (detailBlogId === blogId) {
-        setDetailBlogId(null)
+        closeBlogDetail()
       }
     },
   })
@@ -191,12 +216,12 @@ export function BlogsPage() {
               currentUserId={currentUser?.id}
               currentUserRole={currentUserRole}
               selectedIds={selectedIds}
-              onOpenDetail={setDetailBlogId}
+              onOpenDetail={openBlogDetail}
               onToggleSelect={(blogId, event) => {
                 event.stopPropagation()
                 handleToggleSelect(blogId)
               }}
-              onViewDetails={setDetailBlogId}
+              onViewDetails={openBlogDetail}
               onEdit={openEditEditor}
               onToggleStatus={handleRequestToggleStatus}
               onDelete={handleRequestDelete}
@@ -224,10 +249,7 @@ export function BlogsPage() {
         isSaving={actions.isSaving}
       />
 
-      <BlogDetailModal
-        blogId={detailBlogId}
-        onClose={() => setDetailBlogId(null)}
-      />
+      <BlogDetailModal blogId={detailBlogId} onClose={closeBlogDetail} />
 
       <ConfirmDialog
         isOpen={deleteTarget !== null}

@@ -16,10 +16,15 @@ function humanizeAuditText(value: string | null | undefined): string {
   const normalized = (value ?? '').trim()
   if (!normalized) return 'â€”'
 
-  return normalized.replace(/#(\d+)/g, ' $1').replace(/\s+/g, ' ').trim()
+  return normalized
+    .replace(/#(\d+)/g, ' $1')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
-export function formatAuditLogTarget(target: string | null | undefined): string {
+export function formatAuditLogTarget(
+  target: string | null | undefined
+): string {
   return humanizeAuditText(target)
 }
 

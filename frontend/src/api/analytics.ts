@@ -42,6 +42,8 @@ export type StudentPersonalTutor = {
     to: string
     status: string
   }
+  /** DM with tutor; null if no conversation exists yet */
+  conversationId: number | null
 }
 
 export type UpcomingMeetingItem = {

@@ -1,11 +1,17 @@
 import { useState, useMemo } from 'react'
 import { X, Video, MapPin, Calendar, Clock } from 'lucide-react'
 import { toast } from 'sonner'
-import { useUpdateMeeting } from '@/features/meetings/useMeetings'
+import {
+  useUpdateMeeting,
+  useUpdateMeetingSchedule,
+} from '@/features/meetings/useMeetings'
 import {
   type Meeting,
   type UpdateMeetingPayload,
 } from '@/features/meetings/api'
+import { getUserRole } from '@/features/auth/role-utils'
+import { getAuthSession } from '@/features/auth/storage'
+import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { useAllocations } from '@/features/allocations/useAllocations'
 import { useUsers } from '@/features/users/useUsers'
 
@@ -16,6 +22,14 @@ type EditMeetingModalProps = {
 }
 
 const PLATFORMS = ['Zoom', 'Google Meet', 'Microsoft Teams', 'Skype', 'Other']
+
+function firstActiveSchedule(meeting: Meeting) {
+  return (
+    meeting.meeting_schedules.find(s => !s.cancel_at) ??
+    meeting.meeting_schedules[0] ??
+    null
+  )
+}
 
 export function EditMeetingModal({
   meeting,
@@ -28,24 +42,41 @@ export function EditMeetingModal({
   const [platform, setPlatform] = useState(meeting.platform || '')
   const [link, setLink] = useState(meeting.link || '')
   const [location, setLocation] = useState(meeting.location || '')
+  const [tutorAssignmentId, setTutorAssignmentId] = useState(
+    meeting.tutor_assignment_id
+  )
 
-  const allocationsQuery = useAllocations({ perPage: 1000 })
+  const initialSchedule = firstActiveSchedule(meeting)
+  const [scheduleDate, setScheduleDate] = useState(initialSchedule?.date ?? '')
+  const [scheduleStart, setScheduleStart] = useState(
+    initialSchedule ? initialSchedule.start_time.substring(0, 5) : ''
+  )
+  const [scheduleEnd, setScheduleEnd] = useState(
+    initialSchedule ? initialSchedule.end_time.substring(0, 5) : ''
+  )
+
+  const currentUserQuery = useCurrentUser()
+  const effectiveUser = currentUserQuery.data ?? getAuthSession()?.user ?? null
+  const isTutor = getUserRole(effectiveUser) === 'tutor'
+
+  const allocationsQuery = useAllocations({
+    perPage: 100,
+    onlyMine: isTutor,
+  })
+
+  const tutorAssignmentOptions = useMemo(() => {
+    const rows = allocationsQuery.data?.data ?? []
+    if (!isTutor || effectiveUser?.id == null) return rows
+    return rows.filter(a => a.tutor_user_id === effectiveUser.id)
+  }, [allocationsQuery.data?.data, isTutor, effectiveUser])
+
   const tutorsQuery = useUsers({ perPage: 100, role_code: 'TUTOR' })
   const studentsQuery = useUsers({ perPage: 100, role_code: 'STUDENT' })
 
   const selectedAllocation = useMemo(() => {
-    return allocationsQuery.data?.data.find(
-      a => a.id === meeting.tutor_assignment_id
-    )
-  }, [meeting.tutor_assignment_id, allocationsQuery.data?.data])
-
-  const tutorName = useMemo(() => {
-    if (!selectedAllocation) return ''
-    const tutor = tutorsQuery.data?.data.find(
-      u => u.id === selectedAllocation.tutor_user_id
-    )
-    return tutor?.name || `Tutor #${selectedAllocation.tutor_user_id}`
-  }, [selectedAllocation, tutorsQuery.data?.data])
+    if (!tutorAssignmentId) return null
+    return allocationsQuery.data?.data.find(a => a.id === tutorAssignmentId)
+  }, [tutorAssignmentId, allocationsQuery.data?.data])
 
   const studentName = useMemo(() => {
     if (!selectedAllocation) return ''
@@ -56,6 +87,11 @@ export function EditMeetingModal({
   }, [selectedAllocation, studentsQuery.data?.data])
 
   const updateMutation = useUpdateMeeting()
+  const updateScheduleMutation = useUpdateMeetingSchedule()
+
+  const recurrenceType =
+    meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
+  const editableSchedule = firstActiveSchedule(meeting)
 
   const handleMutationSuccess = () => {
     toast.success('Meeting updated', {
@@ -70,11 +106,26 @@ export function EditMeetingModal({
     toast.error('Failed to update meeting', { description })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!title.trim()) {
       toast.error('Title is required')
+      return
+    }
+
+    if (!tutorAssignmentId) {
+      toast.error('Please select a tutor and student')
+      return
+    }
+
+    if (!editableSchedule) {
+      toast.error('No active schedule to update')
+      return
+    }
+
+    if (!scheduleDate || !scheduleStart || !scheduleEnd) {
+      toast.error('Please fill in date and time for the schedule')
       return
     }
 
@@ -85,20 +136,33 @@ export function EditMeetingModal({
       platform: type === 'VIRTUAL' ? platform.trim() || null : null,
       link: type === 'VIRTUAL' ? link.trim() || null : null,
       location: type === 'PHYSICAL' ? location.trim() || null : null,
+      tutor_assignment_id: tutorAssignmentId,
     }
 
-    updateMutation.mutate(
-      { id: meeting.id, payload },
-      {
-        onSuccess: handleMutationSuccess,
-        onError: handleMutationError,
-      }
-    )
-  }
+    try {
+      await updateMutation.mutateAsync({ id: meeting.id, payload })
 
-  const recurrenceType =
-    meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
-  const firstSchedule = meeting.meeting_schedules[0]
+      const scheduleChanged =
+        scheduleDate !== editableSchedule.date ||
+        scheduleStart !== editableSchedule.start_time.substring(0, 5) ||
+        scheduleEnd !== editableSchedule.end_time.substring(0, 5)
+
+      if (scheduleChanged) {
+        await updateScheduleMutation.mutateAsync({
+          scheduleId: editableSchedule.id,
+          payload: {
+            date: scheduleDate,
+            start_time: scheduleStart,
+            end_time: scheduleEnd,
+          },
+        })
+      }
+
+      handleMutationSuccess()
+    } catch (err) {
+      handleMutationError(err instanceof Error ? err : new Error(String(err)))
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
@@ -109,7 +173,7 @@ export function EditMeetingModal({
               Edit Meeting
             </h2>
             <p className="text-sm text-muted-foreground">
-              Eid Schedule a meeting with tutor and student
+              Update schedule and meeting details with tutor and student
             </p>
           </div>
           <button
@@ -171,13 +235,30 @@ export function EditMeetingModal({
                 </label>
                 <select
                   id="edit-tutor-select"
-                  value={meeting.tutor_assignment_id}
-                  disabled
-                  className="mt-1 w-full cursor-not-allowed rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground"
+                  value={tutorAssignmentId || ''}
+                  onChange={e =>
+                    setTutorAssignmentId(Number(e.target.value) || 0)
+                  }
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
                 >
-                  <option value={meeting.tutor_assignment_id}>
-                    {tutorName}
-                  </option>
+                  <option value="">Select Tutor</option>
+                  {tutorAssignmentOptions.map(allocation => {
+                    const tutor = tutorsQuery.data?.data.find(
+                      u => u.id === allocation.tutor_user_id
+                    )
+                    const label =
+                      isTutor &&
+                      effectiveUser?.id === allocation.tutor_user_id &&
+                      effectiveUser.name
+                        ? effectiveUser.name
+                        : tutor?.name || `Tutor #${allocation.tutor_user_id}`
+                    return (
+                      <option key={allocation.id} value={allocation.id}>
+                        {label}
+                      </option>
+                    )
+                  })}
                 </select>
               </div>
 
@@ -190,13 +271,18 @@ export function EditMeetingModal({
                 </label>
                 <select
                   id="edit-student-select"
-                  value={meeting.tutor_assignment_id}
-                  disabled
-                  className="mt-1 w-full cursor-not-allowed rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground"
+                  value={tutorAssignmentId || ''}
+                  onChange={e =>
+                    setTutorAssignmentId(Number(e.target.value) || 0)
+                  }
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                  disabled={!tutorAssignmentId}
                 >
-                  <option value={meeting.tutor_assignment_id}>
-                    {studentName}
-                  </option>
+                  <option value="">Select Student</option>
+                  {selectedAllocation && (
+                    <option value={tutorAssignmentId}>{studentName}</option>
+                  )}
                 </select>
               </div>
             </div>
@@ -326,8 +412,8 @@ export function EditMeetingModal({
                     type="radio"
                     name="recurrence-type"
                     checked={recurrenceType === 'one-time'}
-                    disabled
-                    className="h-4 w-4 cursor-not-allowed text-primary"
+                    readOnly
+                    className="h-4 w-4 text-primary"
                   />
                   <span className="text-sm text-muted-foreground">
                     One-time
@@ -338,15 +424,21 @@ export function EditMeetingModal({
                     type="radio"
                     name="recurrence-type"
                     checked={recurrenceType === 'weekly'}
-                    disabled
-                    className="h-4 w-4 cursor-not-allowed text-primary"
+                    readOnly
+                    className="h-4 w-4 text-primary"
                   />
                   <span className="text-sm text-muted-foreground">Weekly</span>
                 </label>
               </div>
+              {recurrenceType === 'weekly' && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Date and time below apply to the next active occurrence. Other
+                  weekly instances are updated separately if needed.
+                </p>
+              )}
             </div>
 
-            {recurrenceType === 'one-time' && firstSchedule && (
+            {editableSchedule && (
               <>
                 <div>
                   <label
@@ -360,9 +452,10 @@ export function EditMeetingModal({
                     <input
                       id="edit-schedule-date"
                       type="date"
-                      value={firstSchedule.date}
-                      disabled
-                      className="w-full cursor-not-allowed rounded-lg border border-border bg-muted px-3 py-2 pl-10 text-sm text-muted-foreground"
+                      value={scheduleDate}
+                      onChange={e => setScheduleDate(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
                     />
                   </div>
                 </div>
@@ -379,9 +472,10 @@ export function EditMeetingModal({
                       <input
                         id="edit-schedule-start-time"
                         type="time"
-                        value={firstSchedule.start_time.substring(0, 5)}
-                        disabled
-                        className="w-full cursor-not-allowed rounded-lg border border-border bg-muted px-3 py-2 pl-10 text-sm text-muted-foreground"
+                        value={scheduleStart}
+                        onChange={e => setScheduleStart(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        required
                       />
                     </div>
                   </div>
@@ -397,9 +491,10 @@ export function EditMeetingModal({
                       <input
                         id="edit-schedule-end-time"
                         type="time"
-                        value={firstSchedule.end_time.substring(0, 5)}
-                        disabled
-                        className="w-full cursor-not-allowed rounded-lg border border-border bg-muted px-3 py-2 pl-10 text-sm text-muted-foreground"
+                        value={scheduleEnd}
+                        onChange={e => setScheduleEnd(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        required
                       />
                     </div>
                   </div>
@@ -418,10 +513,14 @@ export function EditMeetingModal({
             </button>
             <button
               type="submit"
-              disabled={updateMutation.isPending}
+              disabled={
+                updateMutation.isPending || updateScheduleMutation.isPending
+              }
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
-              {updateMutation.isPending ? 'Saving...' : 'Save'}
+              {updateMutation.isPending || updateScheduleMutation.isPending
+                ? 'Saving...'
+                : 'Save'}
             </button>
           </div>
         </form>

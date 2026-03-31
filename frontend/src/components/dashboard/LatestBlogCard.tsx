@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Calendar, Eye, MessageCircle, User } from 'lucide-react'
 import type { LatestBlogPost } from '@/api/analytics'
 
@@ -28,9 +29,12 @@ type LatestBlogCardProps = {
 
 export function LatestBlogCard({ blog }: LatestBlogCardProps) {
   return (
-    <article className="flex min-w-0 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
+    <Link
+      to={`/blogs?blog=${blog.id}`}
+      className="flex min-w-0 flex-col gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-colors hover:border-blue-200 hover:bg-blue-50/40 sm:flex-row sm:items-center"
+    >
       <img
-        src={blog.coverImageUrl ?? '/assets/blog-placeholder.jpg'}
+        src={blog.coverImageUrl ?? './assets/blog_placeholder_view.png'}
         alt=""
         className="h-36 w-full shrink-0 rounded-lg object-cover sm:h-auto sm:w-40"
         onError={e => {
@@ -73,6 +77,6 @@ export function LatestBlogCard({ blog }: LatestBlogCardProps) {
           </span>
         </div>
       </div>
-    </article>
+    </Link>
   )
 }

@@ -67,6 +67,7 @@ export type UpdateMeetingPayload = {
   platform?: string | null
   link?: string | null
   location?: string | null
+  tutor_assignment_id?: number
 }
 
 export type UpdateMeetingSchedulePayload = {

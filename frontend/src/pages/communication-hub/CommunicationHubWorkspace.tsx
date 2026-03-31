@@ -2,6 +2,7 @@ import { ConversationListSidebar } from './components/ConversationListSidebar'
 import { ChatThread } from './components/ChatThread'
 import { SharedDocumentsPanel } from './components/SharedDocumentsPanel'
 import type { CommunicationHubState } from './useCommunicationHub'
+import { getUserRole } from '@/features/auth/role-utils'
 
 type CommunicationHubWorkspaceProps = {
   hub: CommunicationHubState
@@ -51,10 +52,13 @@ export function CommunicationHubWorkspace({
     handleSelectDocument,
   } = hub
 
+  const hideSearchBar = getUserRole(currentUser) === 'student'
+
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-lg border border-border bg-background sm:rounded-xl lg:grid-cols-[320px_minmax(0,1fr)] lg:rounded-2xl">
       <ConversationListSidebar
         currentUserId={currentUser?.id}
+        hideSearchBar={hideSearchBar}
         conversations={filteredConversations}
         activeConversationId={activeConversation?.id ?? null}
         isLoading={isLoadingConversations}

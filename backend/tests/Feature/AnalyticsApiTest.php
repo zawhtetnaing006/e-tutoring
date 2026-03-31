@@ -194,6 +194,7 @@ class AnalyticsApiTest extends TestCase
                     'avatar' => ['url', 'initials'],
                     'subjects',
                     'assignment' => ['id', 'from', 'to', 'status'],
+                    'conversationId',
                 ],
                 'upcomingMeetings' => [
                     '*' => ['id', 'title', 'date', 'from', 'to', 'platform'],
