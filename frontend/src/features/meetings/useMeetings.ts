@@ -11,11 +11,14 @@ import {
   createMeeting,
   updateMeeting,
   deleteMeeting,
+  updateMeetingSchedule,
   type MeetingsResponse,
   type Meeting,
+  type MeetingSchedule,
   type GetMeetingsParams,
   type CreateMeetingPayload,
   type UpdateMeetingPayload,
+  type UpdateMeetingSchedulePayload,
 } from './api'
 
 export function useMeetings(
@@ -70,6 +73,22 @@ export function useDeleteMeeting(): UseMutationResult<void, Error, number> {
 
   return useMutation({
     mutationFn: deleteMeeting,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+    },
+  })
+}
+
+export function useUpdateMeetingSchedule(): UseMutationResult<
+  MeetingSchedule,
+  Error,
+  { scheduleId: number; payload: UpdateMeetingSchedulePayload }
+> {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ scheduleId, payload }) =>
+      updateMeetingSchedule(scheduleId, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['meetings'] })
     },

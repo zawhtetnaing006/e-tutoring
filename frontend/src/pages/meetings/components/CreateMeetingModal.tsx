@@ -40,6 +40,9 @@ export function CreateMeetingModal({
   const [tutorAssignmentId, setTutorAssignmentId] = useState<number | null>(
     null
   )
+  const [selectedTutorUserId, setSelectedTutorUserId] = useState<number | null>(
+    null
+  )
   const [recurrence, setRecurrence] = useState<RecurrenceType>('weekly')
 
   const [oneTimeDate, setOneTimeDate] = useState('')
@@ -70,18 +73,58 @@ export function CreateMeetingModal({
   const tutorsQuery = useUsers({ perPage: 100, role_code: 'TUTOR' })
   const studentsQuery = useUsers({ perPage: 100, role_code: 'STUDENT' })
 
-  const selectedAllocation = useMemo(() => {
-    if (!tutorAssignmentId) return null
-    return allocationsQuery.data?.data.find(a => a.id === tutorAssignmentId)
-  }, [tutorAssignmentId, allocationsQuery.data?.data])
+  const effectiveTutorUserId =
+    isTutor && effectiveUser?.id != null
+      ? effectiveUser.id
+      : selectedTutorUserId
 
-  const studentName = useMemo(() => {
-    if (!selectedAllocation) return ''
-    const student = studentsQuery.data?.data.find(
-      u => u.id === selectedAllocation.student_user_id
+  const uniqueTutorOptions = useMemo(() => {
+    const rows = tutorAssignmentOptions
+    const tutorIds: number[] = []
+    const seen = new Set<number>()
+    for (const a of rows) {
+      if (!seen.has(a.tutor_user_id)) {
+        seen.add(a.tutor_user_id)
+        tutorIds.push(a.tutor_user_id)
+      }
+    }
+    const tutors = tutorsQuery.data?.data ?? []
+    return tutorIds
+      .map(tutorUserId => {
+        const label =
+          isTutor && effectiveUser?.id === tutorUserId && effectiveUser.name
+            ? effectiveUser.name
+            : (tutors.find(u => u.id === tutorUserId)?.name ??
+              `Tutor #${tutorUserId}`)
+        return { tutorUserId, label }
+      })
+      .sort((a, b) =>
+        a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
+      )
+  }, [tutorAssignmentOptions, tutorsQuery.data?.data, isTutor, effectiveUser])
+
+  const allocationsForSelectedTutor = useMemo(() => {
+    if (effectiveTutorUserId == null) return []
+    return tutorAssignmentOptions.filter(
+      a => a.tutor_user_id === effectiveTutorUserId
     )
-    return student?.name || `Student #${selectedAllocation.student_user_id}`
-  }, [selectedAllocation, studentsQuery.data?.data])
+  }, [effectiveTutorUserId, tutorAssignmentOptions])
+
+  const resolvedTutorAssignmentId = useMemo(() => {
+    if (effectiveTutorUserId == null) return null
+    const list = tutorAssignmentOptions.filter(
+      a => a.tutor_user_id === effectiveTutorUserId
+    )
+    if (list.length === 0) return null
+    if (list.length === 1) return list[0].id
+    if (
+      tutorAssignmentId != null &&
+      list.some(a => a.id === tutorAssignmentId)
+    ) {
+      return tutorAssignmentId
+    }
+    return null
+  }, [effectiveTutorUserId, tutorAssignmentOptions, tutorAssignmentId])
 
   const createMutation = useCreateMeeting()
 
@@ -106,7 +149,7 @@ export function CreateMeetingModal({
       return
     }
 
-    if (!tutorAssignmentId) {
+    if (!resolvedTutorAssignmentId) {
       toast.error('Please select a tutor and student')
       return
     }
@@ -167,7 +210,7 @@ export function CreateMeetingModal({
       platform: type === 'VIRTUAL' ? platform.trim() || null : null,
       link: type === 'VIRTUAL' ? link.trim() || null : null,
       location: type === 'PHYSICAL' ? location.trim() || null : null,
-      tutor_assignment_id: tutorAssignmentId,
+      tutor_assignment_id: resolvedTutorAssignmentId,
       meeting_schedules: meetingSchedules,
     }
 
@@ -238,42 +281,35 @@ export function CreateMeetingModal({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label
-                  htmlFor="tutor-select"
-                  className="block text-sm font-medium text-foreground"
-                >
-                  Select Tutor <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="tutor-select"
-                  value={tutorAssignmentId || ''}
-                  onChange={e =>
-                    setTutorAssignmentId(Number(e.target.value) || null)
-                  }
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                  required
-                >
-                  <option value="">Select Tutor</option>
-                  {tutorAssignmentOptions.map(allocation => {
-                    const tutor = tutorsQuery.data?.data.find(
-                      u => u.id === allocation.tutor_user_id
-                    )
-                    const label =
-                      isTutor &&
-                      effectiveUser?.id === allocation.tutor_user_id &&
-                      effectiveUser.name
-                        ? effectiveUser.name
-                        : tutor?.name || `Tutor #${allocation.tutor_user_id}`
-                    return (
-                      <option key={allocation.id} value={allocation.id}>
+            <div className={isTutor ? undefined : 'grid grid-cols-2 gap-4'}>
+              {!isTutor && (
+                <div>
+                  <label
+                    htmlFor="tutor-select"
+                    className="block text-sm font-medium text-foreground"
+                  >
+                    Select Tutor <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="tutor-select"
+                    value={selectedTutorUserId ?? ''}
+                    onChange={e => {
+                      const v = e.target.value
+                      setSelectedTutorUserId(v === '' ? null : Number(v))
+                      setTutorAssignmentId(null)
+                    }}
+                    className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  >
+                    <option value="">Select Tutor</option>
+                    {uniqueTutorOptions.map(({ tutorUserId, label }) => (
+                      <option key={tutorUserId} value={tutorUserId}>
                         {label}
                       </option>
-                    )
-                  })}
-                </select>
-              </div>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label
@@ -284,18 +320,37 @@ export function CreateMeetingModal({
                 </label>
                 <select
                   id="student-select"
-                  value={tutorAssignmentId || ''}
-                  onChange={e =>
-                    setTutorAssignmentId(Number(e.target.value) || null)
-                  }
-                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={resolvedTutorAssignmentId ?? ''}
+                  onChange={e => {
+                    const v = e.target.value
+                    setTutorAssignmentId(v === '' ? null : Number(v))
+                  }}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                   required
-                  disabled={!tutorAssignmentId}
+                  disabled={
+                    effectiveTutorUserId == null ||
+                    allocationsForSelectedTutor.length === 0
+                  }
                 >
-                  <option value="">Select Student</option>
-                  {selectedAllocation && (
-                    <option value={tutorAssignmentId!}>{studentName}</option>
-                  )}
+                  <option value="">
+                    {effectiveTutorUserId == null && !isTutor
+                      ? 'Select a tutor first'
+                      : allocationsForSelectedTutor.length === 0
+                        ? 'No students assigned'
+                        : 'Select Student'}
+                  </option>
+                  {allocationsForSelectedTutor.map(allocation => {
+                    const student = studentsQuery.data?.data.find(
+                      u => u.id === allocation.student_user_id
+                    )
+                    const label =
+                      student?.name || `Student #${allocation.student_user_id}`
+                    return (
+                      <option key={allocation.id} value={allocation.id}>
+                        {label}
+                      </option>
+                    )
+                  })}
                 </select>
               </div>
             </div>

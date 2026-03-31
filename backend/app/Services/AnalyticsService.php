@@ -335,6 +335,11 @@ class AnalyticsService
             return null;
         }
 
+        $interaction = $this->resolveTutorStudentInteraction(
+            (int) $tutor->id,
+            (int) $assignment->student_user_id
+        );
+
         return [
             'id' => (int) $tutor->id,
             'uuid' => $tutor->uuid,
@@ -354,6 +359,7 @@ class AnalyticsService
                 'to' => $assignment->end_date,
                 'status' => $assignment->status,
             ],
+            'conversationId' => $interaction['conversationId'],
         ];
     }
 

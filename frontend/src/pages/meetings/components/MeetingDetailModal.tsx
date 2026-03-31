@@ -10,7 +10,14 @@ import {
   Link as LinkIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ApiError } from '@/lib/api-client'
 import { createMeetingAttendance, type Meeting } from '@/features/meetings/api'
+import {
+  useDeleteMeeting,
+  useUpdateMeetingSchedule,
+} from '@/features/meetings/useMeetings'
+import { useAllocations } from '@/features/allocations/useAllocations'
+import { useUsers } from '@/features/users/useUsers'
 
 type MeetingDetailModalProps = {
   meeting: Meeting
@@ -29,9 +36,18 @@ export function MeetingDetailModal({
   onEdit,
 }: MeetingDetailModalProps) {
   const queryClient = useQueryClient()
-  const [notes, setNotes] = useState('')
+  const primarySchedule = useMemo(() => {
+    return (
+      meeting.meeting_schedules.find(s => !s.cancel_at) ??
+      meeting.meeting_schedules[0] ??
+      null
+    )
+  }, [meeting.meeting_schedules])
+
+  const [notes, setNotes] = useState(() => primarySchedule?.note ?? '')
   const [selectedAttendance, setSelectedAttendance] =
     useState<AttendanceStatus | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   const tutorName = meeting.tutor_name ?? getTutorFallback(meeting)
   const studentName = meeting.student_name ?? getStudentFallback(meeting)
@@ -40,6 +56,9 @@ export function MeetingDetailModal({
   const recurrenceType =
     meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
   const firstSchedule = meeting.meeting_schedules[0]
+
+  const updateScheduleMutation = useUpdateMeetingSchedule()
+  const deleteMeetingMutation = useDeleteMeeting()
 
   const attendanceMutation = useMutation({
     mutationFn: createMeetingAttendance,
@@ -56,7 +75,32 @@ export function MeetingDetailModal({
     },
   })
 
-  const handleSave = () => {
+  const confirmDeleteMeeting = () => {
+    deleteMeetingMutation.mutate(meeting.id, {
+      onSuccess: () => {
+        toast.success('Meeting deleted successfully', {
+          description:
+            'The meeting and its scheduled sessions have been removed from the system.',
+        })
+        void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+        setDeleteConfirmOpen(false)
+        onClose()
+      },
+      onError: error => {
+        const description =
+          error instanceof ApiError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : 'Please try again later.'
+        toast.error('Failed to delete meeting', {
+          description,
+        })
+      },
+    })
+  }
+
+  const handleSave = async () => {
     if (!selectedAttendance) {
       toast.error('Please select attendance status')
       return
@@ -67,11 +111,24 @@ export function MeetingDetailModal({
       return
     }
 
-    attendanceMutation.mutate({
-      meeting_id: meeting.id,
-      user_id: studentId,
-      status: selectedAttendance,
-    })
+    try {
+      if (primarySchedule) {
+        await updateScheduleMutation.mutateAsync({
+          scheduleId: primarySchedule.id,
+          payload: { note: notes.trim() || null },
+        })
+      }
+
+      await attendanceMutation.mutateAsync({
+        meeting_id: meeting.id,
+        user_id: studentId,
+        status: selectedAttendance,
+      })
+
+      onClose()
+    } catch {
+      // toasts handled by mutations
+    }
   }
 
   const getTimezone = () => {
@@ -82,8 +139,52 @@ export function MeetingDetailModal({
     return `UCT ${sign}${hours}:${minutes.toString().padStart(2, '0')}`
   }
 
+  const isVirtual = meeting.type === 'VIRTUAL'
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
+      {deleteConfirmOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-meeting-dialog-title"
+        >
+          <div className="my-auto w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
+            <h3
+              id="delete-meeting-dialog-title"
+              className="text-lg font-semibold text-foreground"
+            >
+              Delete this meeting?
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This will permanently remove &quot;{meeting.title}&quot; and all
+              of its scheduled sessions. This action cannot be undone.
+            </p>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmOpen(false)}
+                disabled={deleteMeetingMutation.isPending}
+                className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+              >
+                Keep meeting
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteMeeting}
+                disabled={deleteMeetingMutation.isPending}
+                className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+              >
+                {deleteMeetingMutation.isPending
+                  ? 'Deleting…'
+                  : 'Delete meeting'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="my-auto w-full max-w-2xl rounded-xl border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
           <div className="flex items-center gap-3">
@@ -111,7 +212,9 @@ export function MeetingDetailModal({
             <h3 className="mb-3 font-medium text-foreground">
               Meeting Information
             </h3>
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div
+              className={`grid gap-4 text-sm ${isVirtual ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}
+            >
               <div>
                 <div className="text-muted-foreground">Tutor</div>
                 <div className="mt-1 font-medium text-foreground">
@@ -124,25 +227,36 @@ export function MeetingDetailModal({
                   {studentName}
                 </div>
               </div>
-              <div>
-                <div className="text-muted-foreground">Meet</div>
-                <div className="mt-1">
-                  {meeting.type === 'VIRTUAL' && meeting.link ? (
-                    <a
-                      href={meeting.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 font-medium text-green-600 hover:underline"
-                    >
-                      <LinkIcon className="h-3 w-3" />
-                      Connect Meet
-                    </a>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
+              {isVirtual && (
+                <div>
+                  <div className="text-muted-foreground">Meet</div>
+                  <div className="mt-1">
+                    {meeting.link ? (
+                      <a
+                        href={meeting.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-medium text-green-600 hover:underline"
+                      >
+                        <LinkIcon className="h-3 w-3" />
+                        Connect Meet
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {!isVirtual && meeting.location && (
+              <div className="mt-4 border-t border-border pt-4 text-sm">
+                <div className="text-muted-foreground">Location</div>
+                <div className="mt-1 font-medium text-foreground">
+                  {meeting.location}
                 </div>
               </div>
-            </div>
+            )}
 
             {firstSchedule && (
               <div className="mt-4 grid grid-cols-2 gap-4 border-t border-border pt-4 text-sm">
@@ -172,6 +286,15 @@ export function MeetingDetailModal({
               </div>
             )}
 
+            {primarySchedule?.note && !canManageMeeting && (
+              <div className="mt-4 border-t border-border pt-4 text-sm">
+                <div className="text-muted-foreground">Meeting notes</div>
+                <div className="mt-1 whitespace-pre-wrap text-foreground">
+                  {primarySchedule.note}
+                </div>
+              </div>
+            )}
+
             <div className="mt-4 border-t border-border pt-4 text-sm">
               <div className="text-muted-foreground">Created At</div>
               <div className="mt-1 text-foreground">
@@ -185,7 +308,7 @@ export function MeetingDetailModal({
               </div>
             </div>
 
-            <div className="mt-4 flex gap-3">
+            <div className="mt-4 flex flex-wrap gap-3">
               {canManageMeeting && (
                 <button
                   type="button"
@@ -196,13 +319,16 @@ export function MeetingDetailModal({
                   Reschedule
                 </button>
               )}
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
-              >
-                {canManageMeeting ? 'Cancel' : 'Close'}
-              </button>
+              {canManageMeeting && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmOpen(true)}
+                  disabled={deleteMeetingMutation.isPending}
+                  className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                >
+                  Cancel Meeting
+                </button>
+              )}
             </div>
           </div>
 
@@ -322,11 +448,17 @@ export function MeetingDetailModal({
               </button>
               <button
                 type="button"
-                onClick={handleSave}
-                disabled={attendanceMutation.isPending}
+                onClick={() => void handleSave()}
+                disabled={
+                  attendanceMutation.isPending ||
+                  updateScheduleMutation.isPending
+                }
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {attendanceMutation.isPending ? 'Saving...' : 'Save'}
+                {attendanceMutation.isPending ||
+                updateScheduleMutation.isPending
+                  ? 'Saving...'
+                  : 'Save'}
               </button>
             </div>
           )}

@@ -32,6 +32,7 @@ class UpdateMeetingRequest extends FormRequest
             'platform' => ['sometimes', 'nullable', 'string', 'max:255'],
             'link' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'location' => ['sometimes', 'nullable', 'string'],
+            'tutor_assignment_id' => ['sometimes', 'integer', Rule::exists('tutor_assignments', 'id')],
         ];
     }
 

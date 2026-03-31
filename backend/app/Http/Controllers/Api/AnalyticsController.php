@@ -52,6 +52,7 @@ class AnalyticsController
                         'to' => '2026-06-30',
                         'status' => 'ACTIVE',
                     ],
+                    'conversationId' => 55,
                 ],
                 'upcomingMeetings' => [
                     [
