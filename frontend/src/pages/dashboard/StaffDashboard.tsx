@@ -5,6 +5,7 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { LatestBlogsSection } from '@/components/dashboard/LatestBlogsSection'
 import { DashboardWelcomeCard } from '@/components/dashboard/DashboardWelcomeCard'
 import { DashboardSectionHeader } from '@/components/dashboard/DashboardSectionHeader'
+import { DashboardViewAllLink } from '@/components/dashboard/DashboardViewAllLink'
 import {
   DashboardErrorState,
   DashboardLoadingState,
@@ -12,7 +13,6 @@ import {
 import type { ResponsiveTableColumn } from '@/components/dashboard/ResponsiveTable'
 import { ResponsiveTable } from '@/components/dashboard/ResponsiveTable'
 import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import {
   BarChart,
   Bar,
@@ -388,15 +388,7 @@ export function StaffDashboard() {
         <Card className="min-w-0 p-4 sm:p-6">
           <DashboardSectionHeader
             title="Recent Allocations"
-            action={
-              <Button
-                variant="link"
-                size="sm"
-                className="self-start sm:self-auto"
-              >
-                View All →
-              </Button>
-            }
+            action={<DashboardViewAllLink to="/allocations" />}
           />
           <ResponsiveTable
             columns={allocationColumns}

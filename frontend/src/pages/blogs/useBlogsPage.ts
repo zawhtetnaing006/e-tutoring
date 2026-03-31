@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   createBlog,
@@ -15,12 +16,17 @@ import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { useDebouncedValue } from '@/hooks'
 import type { StatusFilter } from '@/components/blogs'
 import { buildCsv, formatDateTimeShort } from '@/utils/formatters'
-import { hasMeaningfulContent, hashtagsToInput } from '@/utils/string'
+import {
+  hasMeaningfulContent,
+  hashtagsToInput,
+  parsePositiveIntParam,
+} from '@/utils/string'
 
 export const BLOGS_PAGE_SIZE = 9
 
 export function useBlogsPage() {
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { data: currentUser } = useCurrentUser()
   const currentUserRole = getUserRole(currentUser)
 
@@ -40,9 +46,40 @@ export function useBlogsPage() {
   const [removeCoverImage, setRemoveCoverImage] = useState(false)
   const editorRef = useRef<HTMLDivElement | null>(null)
 
-  const [detailBlogId, setDetailBlogId] = useState<number | null>(null)
   const [commentDraft, setCommentDraft] = useState('')
   const [commentPage, setCommentPage] = useState(1)
+
+  const detailBlogId = useMemo(
+    () => parsePositiveIntParam(searchParams.get('blog')),
+    [searchParams]
+  )
+
+  const setDetailBlogId = useCallback(
+    (id: number | null) => {
+      if (id == null) {
+        setCommentDraft('')
+        setSearchParams(
+          prev => {
+            const next = new URLSearchParams(prev)
+            next.delete('blog')
+            return next
+          },
+          { replace: true }
+        )
+        return
+      }
+      setCommentPage(1)
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          next.set('blog', String(id))
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
 
   const debouncedSearch = useDebouncedValue(search.trim(), 350)
 
@@ -91,6 +128,10 @@ export function useBlogsPage() {
     if (editorRef.current.innerHTML === formContent) return
     editorRef.current.innerHTML = formContent
   }, [formContent, isEditorModalOpen])
+
+  const closeDetailModal = () => {
+    setDetailBlogId(null)
+  }
 
   const closeEditorModal = () => {
     if (formCoverPreview?.startsWith('blob:')) {
@@ -404,6 +445,7 @@ export function useBlogsPage() {
     editorRef,
     detailBlogId,
     setDetailBlogId,
+    closeDetailModal,
     commentDraft,
     setCommentDraft,
     commentPage,

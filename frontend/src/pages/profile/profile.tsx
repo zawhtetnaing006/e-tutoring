@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { z } from 'zod'
@@ -55,9 +56,7 @@ function userToProfileValues(user: User): ProfileFormValues {
     name: user.name,
     email: user.email,
     phoneNumber: user.phone ?? '',
-    subject: Array.isArray(user.subjects)
-      ? (user.subjects[0]?.name ?? '')
-      : '',
+    subject: Array.isArray(user.subjects) ? (user.subjects[0]?.name ?? '') : '',
     country: user.country ?? '',
     city: user.city ?? '',
     township: user.township ?? '',
@@ -94,6 +93,14 @@ export function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when user loads; profileForm.reset is stable
   }, [user])
 
+  useEffect(() => {
+    if (!isPasswordModalOpen) return
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isPasswordModalOpen])
+
   const passwordForm = useZodForm(passwordSchema, {
     defaultValues: {
       currentPassword: '',
@@ -129,10 +136,6 @@ export function ProfilePage() {
     }
   )
 
-  const handleCancelProfile = () => {
-    if (user) profileForm.reset(userToProfileValues(user))
-  }
-
   const handleClosePasswordModal = () => {
     setIsPasswordModalOpen(false)
     passwordForm.reset()
@@ -147,7 +150,8 @@ export function ProfilePage() {
   const profileMutation = useMutation({
     mutationFn: async (values: ProfileFormValues) => {
       const selectedSubjectId = shouldShowSubject
-        ? subjectsData?.data.find(subject => subject.name === values.subject)?.id
+        ? subjectsData?.data.find(subject => subject.name === values.subject)
+            ?.id
         : undefined
 
       return updateUser(values.userId, {
@@ -159,7 +163,9 @@ export function ProfilePage() {
         city: values.city || null,
         township: values.township || null,
         ...(shouldShowSubject
-          ? { subject_ids: selectedSubjectId != null ? [selectedSubjectId] : [] }
+          ? {
+              subject_ids: selectedSubjectId != null ? [selectedSubjectId] : [],
+            }
           : {}),
       })
     },
@@ -221,7 +227,7 @@ export function ProfilePage() {
                   </p>
                   <button
                     type="button"
-                    className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+                    className="cursor-pointer text-sm font-medium text-blue-500 underline-offset-2 hover:underline"
                   >
                     Change Profile Picture
                   </button>
@@ -382,25 +388,18 @@ export function ProfilePage() {
               <button
                 type="button"
                 onClick={() => setIsPasswordModalOpen(true)}
-                className="mt-6 text-sm font-medium text-primary underline-offset-2 hover:underline"
+                className="mt-6 text-sm font-medium text-blue-500 underline-offset-2 hover:underline"
               >
                 Update Password
               </button>
 
-              <div className="mt-4 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={handleCancelProfile}
-                  className="inline-flex w-24 items-center justify-center rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
-                >
-                  Cancel
-                </button>
+              <div className="mt-4 flex justify-start gap-3">
                 <button
                   type="submit"
                   disabled={profileMutation.isPending}
-                  className="inline-flex w-28 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+                  className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 sm:max-w-56 lg:max-w-full"
                 >
-                  {profileMutation.isPending ? 'Saving...' : 'Save'}
+                  {profileMutation.isPending ? 'Updating...' : 'Update Profile'}
                 </button>
               </div>
             </div>
@@ -408,116 +407,118 @@ export function ProfilePage() {
         </div>
       </section>
 
-      {isPasswordModalOpen && (
-        <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
-            <div className="mb-4 flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground">
-                  Update Password
-                </h2>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Use a minimum of 8 characters with a mix of letters, numbers,
-                  and special symbols to ensure better protection.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleClosePasswordModal}
-                className="rounded-full p-1 text-muted-foreground hover:bg-muted"
-                aria-label="Close"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <form
-              className="space-y-4"
-              onSubmit={handlePasswordSubmit}
-              noValidate
-            >
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="currentPassword"
-                  className="text-subtext font-medium text-foreground"
-                >
-                  Current Password
-                </label>
-                <input
-                  id="currentPassword"
-                  type="password"
-                  autoComplete="current-password"
-                  {...passwordForm.register('currentPassword')}
-                  className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
-                />
-                {passwordForm.formState.errors.currentPassword && (
-                  <p className="text-xs text-destructive">
-                    {passwordForm.formState.errors.currentPassword.message}
+      {isPasswordModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-modal flex items-center justify-center bg-black/40 px-4">
+            <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
+              <div className="mb-4 flex items-start justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Update Password
+                  </h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Use a minimum of 8 characters with a mix of letters,
+                    numbers, and special symbols to ensure better protection.
                   </p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="newPassword"
-                  className="text-subtext font-medium text-foreground"
-                >
-                  New Password
-                </label>
-                <input
-                  id="newPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  {...passwordForm.register('newPassword')}
-                  className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
-                />
-                {passwordForm.formState.errors.newPassword && (
-                  <p className="text-xs text-destructive">
-                    {passwordForm.formState.errors.newPassword.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="confirmNewPassword"
-                  className="text-subtext font-medium text-foreground"
-                >
-                  Confirm New Password
-                </label>
-                <input
-                  id="confirmNewPassword"
-                  type="password"
-                  autoComplete="new-password"
-                  {...passwordForm.register('confirmNewPassword')}
-                  className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
-                />
-                {passwordForm.formState.errors.confirmNewPassword && (
-                  <p className="text-xs text-destructive">
-                    {passwordForm.formState.errors.confirmNewPassword.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-2 flex justify-end gap-3">
+                </div>
                 <button
                   type="button"
                   onClick={handleClosePasswordModal}
-                  className="inline-flex items-center justify-center rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                  className="rounded-full p-1 text-muted-foreground hover:bg-muted"
+                  aria-label="Close"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
-                >
-                  Continue
+                  <X className="size-4" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form
+                className="space-y-4"
+                onSubmit={handlePasswordSubmit}
+                noValidate
+              >
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="currentPassword"
+                    className="text-subtext font-medium text-foreground"
+                  >
+                    Current Password
+                  </label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    autoComplete="current-password"
+                    {...passwordForm.register('currentPassword')}
+                    className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
+                  />
+                  {passwordForm.formState.errors.currentPassword && (
+                    <p className="text-xs text-destructive">
+                      {passwordForm.formState.errors.currentPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="newPassword"
+                    className="text-subtext font-medium text-foreground"
+                  >
+                    New Password
+                  </label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    {...passwordForm.register('newPassword')}
+                    className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
+                  />
+                  {passwordForm.formState.errors.newPassword && (
+                    <p className="text-xs text-destructive">
+                      {passwordForm.formState.errors.newPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="confirmNewPassword"
+                    className="text-subtext font-medium text-foreground"
+                  >
+                    Confirm New Password
+                  </label>
+                  <input
+                    id="confirmNewPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    {...passwordForm.register('confirmNewPassword')}
+                    className="block w-full rounded-md border border-border bg-background px-3 py-2 text-body text-foreground shadow-sm outline-none ring-0 focus:border-ring focus:ring-2 focus:ring-ring/40"
+                  />
+                  {passwordForm.formState.errors.confirmNewPassword && (
+                    <p className="text-xs text-destructive">
+                      {passwordForm.formState.errors.confirmNewPassword.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-2 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleClosePasswordModal}
+                    className="inline-flex items-center justify-center rounded-md border border-border bg-transparent px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90"
+                  >
+                    Continue
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

@@ -29,6 +29,7 @@ export function BlogsPage() {
     editorRef,
     detailBlogId,
     setDetailBlogId,
+    closeDetailModal,
     commentDraft,
     setCommentDraft,
     commentPage,
@@ -89,7 +90,6 @@ export function BlogsPage() {
               selectedIds={selectedIds}
               onOpenDetail={blogId => {
                 setDetailBlogId(blogId)
-                setCommentPage(1)
                 setMenuOpenBlogId(null)
               }}
               onToggleSelect={(blogId, event) => {
@@ -104,7 +104,6 @@ export function BlogsPage() {
               }}
               onViewDetails={blogId => {
                 setDetailBlogId(blogId)
-                setCommentPage(1)
                 setMenuOpenBlogId(null)
               }}
               onEdit={blog => {
@@ -155,7 +154,7 @@ export function BlogsPage() {
 
       <BlogDetailModal
         isOpen={detailBlogId != null}
-        onClose={() => setDetailBlogId(null)}
+        onClose={closeDetailModal}
         isLoading={detailBlogId != null && detailQuery.isLoading}
         blog={detailBlog ?? null}
         comments={comments}

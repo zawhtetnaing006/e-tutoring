@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { List, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { getAuthSession } from '@/features/auth/storage'
 import { getUserRole } from '@/features/auth/role-utils'
@@ -11,12 +12,39 @@ import { EditMeetingModal } from './components/EditMeetingModal'
 import { MeetingDetailModal } from './components/MeetingDetailModal'
 import { CalendarView } from './components/CalendarView'
 import { ListView } from './components/ListView'
+import { parsePositiveIntParam } from '@/utils/string'
 
 export type ViewMode = 'month' | 'week' | 'day' | 'list'
 
 export function MeetingManagerPage() {
   const queryClient = useQueryClient()
-  const [viewMode, setViewMode] = useState<ViewMode>('month')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const viewParam = searchParams.get('view')
+  const viewMode: ViewMode =
+    viewParam === 'month' ||
+    viewParam === 'week' ||
+    viewParam === 'day' ||
+    viewParam === 'list'
+      ? viewParam
+      : 'month'
+
+  const setViewMode = useCallback(
+    (mode: ViewMode) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          if (mode === 'month') {
+            next.delete('view')
+          } else {
+            next.set('view', mode)
+          }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
   const [currentDate, setCurrentDate] = useState(new Date())
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null)
@@ -56,6 +84,28 @@ export function MeetingManagerPage() {
   const handleToday = () => {
     setCurrentDate(new Date())
   }
+
+  const requestedMeetingId = parsePositiveIntParam(searchParams.get('meeting'))
+  const meetingFromUrl = useMemo(() => {
+    if (requestedMeetingId == null) return null
+    const list = meetingsQuery.data?.data
+    if (!list?.length) return null
+    return list.find(m => m.id === requestedMeetingId) ?? null
+  }, [requestedMeetingId, meetingsQuery.data?.data])
+
+  const displayedMeeting = selectedMeeting ?? meetingFromUrl
+
+  const closeMeetingDetail = useCallback(() => {
+    setSelectedMeeting(null)
+    setSearchParams(
+      prev => {
+        const next = new URLSearchParams(prev)
+        next.delete('meeting')
+        return next
+      },
+      { replace: true }
+    )
+  }, [setSearchParams])
 
   const currentMonthYear = useMemo(() => {
     return currentDate.toLocaleString('en-US', {
@@ -211,15 +261,15 @@ export function MeetingManagerPage() {
         />
       )}
 
-      {selectedMeeting && (
+      {displayedMeeting && (
         <MeetingDetailModal
-          key={selectedMeeting.id}
-          meeting={selectedMeeting}
+          key={displayedMeeting.id}
+          meeting={displayedMeeting}
           canManageMeeting={canManageMeetings}
-          onClose={() => setSelectedMeeting(null)}
+          onClose={closeMeetingDetail}
           onEdit={() => {
-            setEditingMeeting(selectedMeeting)
-            setSelectedMeeting(null)
+            setEditingMeeting(displayedMeeting)
+            closeMeetingDetail()
           }}
         />
       )}
