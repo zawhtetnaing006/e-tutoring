@@ -10,11 +10,15 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthService
 {
+    private const LOGIN_MAX_ATTEMPTS = 3;
+    private const LOGIN_LOCKOUT_SECONDS = 900;
+
     /**
      * @param array{name:string,email:string,password:string} $data
      * @return array{token:string,token_type:string,user:UserResource}
@@ -38,19 +42,43 @@ class AuthService
 
     /**
      * @param array{email:string,password:string} $credentials
-     * @return array{token:string,token_type:string,user:UserResource}|null
+     * @return array{status:'success',token:string,token_type:string,user:UserResource}|array{status:'locked',available_in:int}|array{status:'invalid_credentials'}
      */
-    public function login(array $credentials, ?string $tokenName = null): ?array
+    public function login(array $credentials, ?string $tokenName = null): array
     {
-        $user = User::firstWhere('email', $credentials['email']);
+        $email = $this->normalizeEmail($credentials['email']);
+        $rateLimitKey = $this->loginRateLimitKey($email);
+
+        if (RateLimiter::tooManyAttempts($rateLimitKey, self::LOGIN_MAX_ATTEMPTS)) {
+            return [
+                'status' => 'locked',
+                'available_in' => RateLimiter::availableIn($rateLimitKey),
+            ];
+        }
+
+        $user = User::firstWhere('email', $email);
 
         if (! $user || ! $user->is_active || ! Hash::check($credentials['password'], $user->password)) {
-            return null;
+            RateLimiter::hit($rateLimitKey, self::LOGIN_LOCKOUT_SECONDS);
+
+            if (RateLimiter::tooManyAttempts($rateLimitKey, self::LOGIN_MAX_ATTEMPTS)) {
+                return [
+                    'status' => 'locked',
+                    'available_in' => RateLimiter::availableIn($rateLimitKey),
+                ];
+            }
+
+            return [
+                'status' => 'invalid_credentials',
+            ];
         }
+
+        RateLimiter::clear($rateLimitKey);
 
         $token = $user->createToken($tokenName ?? 'api')->plainTextToken;
 
         return [
+            'status' => 'success',
             'token' => $token,
             'token_type' => 'Bearer',
             'user' => new UserResource($user),
@@ -197,5 +225,15 @@ class AuthService
         $throttle = (int) config("auth.passwords.{$broker}.throttle", 60);
 
         return $throttle > 0 ? $throttle : 0;
+    }
+
+    private function loginRateLimitKey(string $email): string
+    {
+        return 'login:email:' . $email;
+    }
+
+    private function normalizeEmail(string $email): string
+    {
+        return Str::lower(trim($email));
     }
 }
