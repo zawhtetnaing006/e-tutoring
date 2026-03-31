@@ -33,13 +33,13 @@ export function EditUserModal({
   layoutVariant,
 }: EditUserModalProps) {
   const { data: subjectsData } = useSubjects({ perPage: 100 })
-  const subjects = subjectsData?.data ?? []
+  const subjects = (subjectsData?.data ?? []).filter(s => s.is_active)
   const { data: tutorsData } = useUsersList({
     userType: 'TUTOR',
     perPage: 100,
     enabled: layoutVariant === 'student',
   })
-  const tutors = tutorsData?.data ?? []
+  const tutors = (tutorsData?.data ?? []).filter(t => t.is_active)
   const useTutorLayout = layoutVariant === 'tutor'
   const useStudentLayout = layoutVariant === 'student'
   const [form, setForm] = useState<UpdateUserPayload>({
@@ -171,7 +171,10 @@ export function EditUserModal({
                       type="text"
                       value={form.phone ?? ''}
                       onChange={e =>
-                        setForm(f => ({ ...f, phone: e.target.value || null }))
+                        setForm(f => ({
+                          ...f,
+                          phone: e.target.value || null,
+                        }))
                       }
                       className="mt-1 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
                     />
@@ -234,7 +237,10 @@ export function EditUserModal({
                         type="text"
                         value={form.city ?? ''}
                         onChange={e =>
-                          setForm(f => ({ ...f, city: e.target.value || null }))
+                          setForm(f => ({
+                            ...f,
+                            city: e.target.value || null,
+                          }))
                         }
                         className="mt-1 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
                       />
@@ -318,7 +324,10 @@ export function EditUserModal({
                       type="text"
                       value={form.phone ?? ''}
                       onChange={e =>
-                        setForm(f => ({ ...f, phone: e.target.value || null }))
+                        setForm(f => ({
+                          ...f,
+                          phone: e.target.value || null,
+                        }))
                       }
                       className="mt-1 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
                     />

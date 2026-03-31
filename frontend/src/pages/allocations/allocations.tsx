@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  ChevronLeft,
+  ChevronRight,
   Eye,
   LoaderCircle,
   Pencil,
@@ -46,12 +48,15 @@ function findUserName(
   return users?.find(user => user.id === userId)?.name ?? fallback
 }
 
+const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100]
+
 export function AllocationsPage() {
   const sessionUser = getAuthSession()?.user
   const isStaff = getUserRole(sessionUser) === 'staff'
   const isTutor = getUserRole(sessionUser) === 'tutor'
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
   const [search, setSearch] = useState('')
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [editingAllocation, setEditingAllocation] = useState<Allocation | null>(
@@ -66,7 +71,7 @@ export function AllocationsPage() {
 
   const allocationsQuery = useAllocations({
     page,
-    perPage: 10,
+    perPage,
     search: debouncedSearch,
     onlyMine: isTutor,
   })
@@ -347,33 +352,33 @@ export function AllocationsPage() {
                           {formatDate(row.to_date)}
                         </td>
                         <td className="px-4 py-4">
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-0.5 sm:gap-1">
                             <button
                               type="button"
                               onClick={() => setSelectedAllocationId(row.id)}
-                              className="rounded-md p-2 text-slate-600 hover:bg-muted"
+                              className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground sm:p-2"
                               aria-label={`View allocation ${row.id}`}
                             >
-                              <Eye className="size-4" />
+                              <Eye className="h-4 w-4" />
                             </button>
                             {isStaff ? (
                               <>
                                 <button
                                   type="button"
                                   onClick={() => setEditingAllocation(row)}
-                                  className="rounded-md p-2 text-blue-500 hover:bg-muted"
+                                  className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground sm:p-2"
                                   aria-label={`Edit allocation ${row.id}`}
                                 >
-                                  <Pencil className="size-4" />
+                                  <Pencil className="h-4 w-4" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDelete(row)}
                                   disabled={deleteMutation.isPending}
-                                  className="rounded-md p-2 text-red-500 hover:bg-muted disabled:opacity-50"
+                                  className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-50 sm:p-2"
                                   aria-label={`Delete allocation ${row.id}`}
                                 >
-                                  <Trash2 className="size-4" />
+                                  <Trash2 className="h-4 w-4" />
                                 </button>
                               </>
                             ) : null}
@@ -394,37 +399,55 @@ export function AllocationsPage() {
                 </tbody>
               </table>
             </div>
-          </div>
 
-          <div className="mt-4 flex flex-col gap-3 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-            <p>Rows per page: 10</p>
-
-            <div className="flex items-center gap-3">
-              <span>
-                {allocationsQuery.data?.total_items ?? 0} total allocation(s)
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage(current => Math.max(1, current - 1))}
-                  disabled={page <= 1}
-                  className="rounded-md border border-border px-2 py-1 disabled:opacity-50"
+            {/* Pagination */}
+            <div className="flex flex-col gap-2 border-t border-border px-3 py-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-4 sm:px-4 sm:py-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm">
+                <span className="whitespace-nowrap">Rows per page:</span>
+                <select
+                  value={perPage}
+                  onChange={e => {
+                    setPerPage(Number(e.target.value))
+                    setPage(1)
+                  }}
+                  className="h-7 rounded border border-input bg-background pl-2 pr-6 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring sm:h-8 sm:pr-8 sm:text-sm"
+                  aria-label="Rows per page"
                 >
-                  Prev
-                </button>
-                <span>
-                  Page {page} / {totalPages}
+                  {ROWS_PER_PAGE_OPTIONS.map(n => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground sm:justify-end sm:gap-4 sm:text-sm">
+                <span className="whitespace-nowrap">
+                  {allocationsQuery.data?.total_items === 0
+                    ? '0-0 of 0'
+                    : `${(page - 1) * perPage + 1}-${Math.min(page * perPage, allocationsQuery.data?.total_items ?? 0)} of ${allocationsQuery.data?.total_items ?? 0}`}
                 </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPage(current => Math.min(totalPages, current + 1))
-                  }
-                  disabled={page >= totalPages}
-                  className="rounded-md border border-border px-2 py-1 disabled:opacity-50"
-                >
-                  Next
-                </button>
+                <div className="flex items-center gap-0.5 sm:gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPage(current => Math.max(1, current - 1))}
+                    disabled={page <= 1}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:p-2"
+                    aria-label="Previous page"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPage(current => Math.min(totalPages, current + 1))
+                    }
+                    disabled={page >= totalPages}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 sm:p-2"
+                    aria-label="Next page"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

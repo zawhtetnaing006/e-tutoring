@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Calendar, LoaderCircle, Plus, Search, X } from 'lucide-react'
+import { Calendar, LoaderCircle, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { User } from '@/features/auth'
 import { getUserRoleLabel } from '@/features/auth'
@@ -522,11 +522,7 @@ export function CreateAllocationModal({
             disabled={isSaving}
             className="inline-flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isSaving ? (
-              <LoaderCircle className="size-4 animate-spin" />
-            ) : (
-              <Plus className="size-4" />
-            )}
+            {isSaving && <LoaderCircle className="size-4 animate-spin" />}
             {isEditMode ? 'Update' : 'Save'}
           </button>
         </div>
