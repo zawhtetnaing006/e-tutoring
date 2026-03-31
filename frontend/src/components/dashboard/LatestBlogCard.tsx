@@ -36,7 +36,7 @@ export function LatestBlogCard({ blog }: LatestBlogCardProps) {
       <img
         src={blog.coverImageUrl ?? './assets/blog_placeholder_view.png'}
         alt=""
-        className="h-36 w-full shrink-0 rounded-lg object-cover sm:h-auto sm:w-40"
+        className="h-36 w-full shrink-0 rounded-lg object-cover sm:h-40 sm:w-40"
         onError={e => {
           e.currentTarget.src = FALLBACK_SVG
         }}
