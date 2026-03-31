@@ -327,6 +327,7 @@ export function AddUserModal({
                           setForm(f => ({
                             ...f,
                             role_code: e.target.value as
+                              | 'ADMIN'
                               | 'STAFF'
                               | 'STUDENT'
                               | 'TUTOR',
@@ -334,6 +335,7 @@ export function AddUserModal({
                         }
                         className="mt-1 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
                       >
+                        <option value="ADMIN">Authorized Staff</option>
                         <option value="STAFF">Staff</option>
                       </select>
                     </label>
