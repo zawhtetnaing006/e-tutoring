@@ -9,6 +9,8 @@ use App\Http\Resources\TutorAssignmentResource;
 use App\Models\Role;
 use App\Models\TutorAssignment;
 use App\Models\User;
+use App\Notifications\AllocationAssignedNotification;
+use App\Notifications\AllocationUpdatedNotification;
 use App\Notifications\TutorAssignmentCreatedNotification;
 use App\Services\AuditLogService;
 use App\Services\ChatService;
@@ -193,8 +195,10 @@ class TutorAssignmentController
             ->values();
 
         $loadedAssignments->each(function (TutorAssignment $assignment): void {
-            $assignment->tutor?->notify(new TutorAssignmentCreatedNotification($assignment));
-            $assignment->student?->notify(new TutorAssignmentCreatedNotification($assignment));
+            foreach ($this->allocationRecipients($assignment) as $recipient) {
+                $recipient->notify(new TutorAssignmentCreatedNotification($assignment));
+                $recipient->notify(new AllocationAssignedNotification($assignment));
+            }
         });
 
         if ($loadedAssignments->count() === 1) {
@@ -372,6 +376,7 @@ class TutorAssignmentController
 
         if ($changes['old'] !== [] || $changes['attributes'] !== []) {
             $targetLabel = $this->tutorAssignmentTargetLabel($loadedAssignment);
+            $changedFields = $this->changedFields($changes);
 
             $this->auditLogService->log(
                 request: $request,
@@ -388,6 +393,10 @@ class TutorAssignmentController
                 ],
                 event: 'updated',
             );
+
+            foreach ($this->allocationRecipients($loadedAssignment, $request->user()) as $recipient) {
+                $recipient->notify(new AllocationUpdatedNotification($loadedAssignment, $changedFields));
+            }
         }
 
         return response()->json(new TutorAssignmentResource($freshAssignment));
@@ -499,10 +508,7 @@ class TutorAssignmentController
      */
     private function tutorAssignmentUpdatedDescription(string $targetLabel, array $changes): string
     {
-        $fields = array_values(array_unique([
-            ...array_keys($changes['old']),
-            ...array_keys($changes['attributes']),
-        ]));
+        $fields = $this->changedFields($changes);
 
         if ($fields === []) {
             return sprintf('Updated %s.', $targetLabel);
@@ -518,5 +524,33 @@ class TutorAssignmentController
         );
 
         return sprintf('Updated %s: %s.', $targetLabel, implode(', ', $labels));
+    }
+
+    /**
+     * @param  array{old: array<string, mixed>, attributes: array<string, mixed>}  $changes
+     * @return list<string>
+     */
+    private function changedFields(array $changes): array
+    {
+        return array_values(array_unique([
+            ...array_keys($changes['old']),
+            ...array_keys($changes['attributes']),
+        ]));
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    private function allocationRecipients(TutorAssignment $tutorAssignment, ?User $excludeUser = null): \Illuminate\Support\Collection
+    {
+        $loadedAssignment = $this->loadTutorAssignmentRelations($tutorAssignment);
+
+        return collect([
+            $loadedAssignment->tutor,
+            $loadedAssignment->student,
+        ])->filter(fn (mixed $recipient): bool => $recipient instanceof User)
+            ->reject(fn (User $recipient): bool => $excludeUser !== null && (int) $recipient->id === (int) $excludeUser->id)
+            ->unique(fn (User $recipient): int => (int) $recipient->id)
+            ->values();
     }
 }

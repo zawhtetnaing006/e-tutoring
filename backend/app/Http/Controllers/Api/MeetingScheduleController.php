@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Requests\Meeting\UpdateMeetingScheduleRequest;
 use App\Http\Resources\MeetingScheduleResource;
 use App\Models\MeetingSchedule;
+use App\Models\User;
+use App\Notifications\MeetingScheduleCancelledNotification;
+use App\Notifications\MeetingScheduleUpdatedNotification;
 use App\Services\AuditLogService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
@@ -50,6 +53,7 @@ class MeetingScheduleController
 
         if ($changes['old'] !== [] || $changes['attributes'] !== []) {
             $targetLabel = $this->meetingScheduleTargetLabel($freshMeetingSchedule);
+            $changedFields = $this->changedFields($changes);
 
             $this->auditLogService->log(
                 request: $request,
@@ -66,6 +70,11 @@ class MeetingScheduleController
                 ],
                 event: 'updated',
             );
+
+            $this->meetingScheduleRecipients($freshMeetingSchedule, $request->user())
+                ->each(fn (User $recipient) => $recipient->notify(
+                    new MeetingScheduleUpdatedNotification($freshMeetingSchedule, $changedFields)
+                ));
         }
 
         return response()->json(new MeetingScheduleResource($freshMeetingSchedule));
@@ -97,29 +106,48 @@ class MeetingScheduleController
         }
 
         $freshMeetingSchedule = $meetingSchedule->fresh();
-        $targetLabel = $this->meetingScheduleTargetLabel($freshMeetingSchedule);
+        if ($before['cancel_at'] === null && $freshMeetingSchedule->cancel_at !== null) {
+            $targetLabel = $this->meetingScheduleTargetLabel($freshMeetingSchedule);
 
-        $this->auditLogService->log(
-            request: $request,
-            description: 'meeting_schedule.cancelled',
-            subject: $freshMeetingSchedule,
-            properties: [
-                'old' => [
-                    'cancel_at' => $before['cancel_at'],
+            $this->auditLogService->log(
+                request: $request,
+                description: 'meeting_schedule.cancelled',
+                subject: $freshMeetingSchedule,
+                properties: [
+                    'old' => [
+                        'cancel_at' => $before['cancel_at'],
+                    ],
+                    'attributes' => [
+                        'cancel_at' => $freshMeetingSchedule->cancel_at?->toISOString(),
+                    ],
+                    'meta' => [
+                        'action_label' => 'CANCEL_MEETING_SCHEDULE',
+                        'target_label' => $targetLabel,
+                        'description' => sprintf('Cancelled %s.', $targetLabel),
+                    ],
                 ],
-                'attributes' => [
-                    'cancel_at' => $freshMeetingSchedule->cancel_at?->toISOString(),
-                ],
-                'meta' => [
-                    'action_label' => 'CANCEL_MEETING_SCHEDULE',
-                    'target_label' => $targetLabel,
-                    'description' => sprintf('Cancelled %s.', $targetLabel),
-                ],
-            ],
-            event: 'updated',
-        );
+                event: 'updated',
+            );
+
+            $this->meetingScheduleRecipients($freshMeetingSchedule, $request->user())
+                ->each(fn (User $recipient) => $recipient->notify(
+                    new MeetingScheduleCancelledNotification($freshMeetingSchedule)
+                ));
+        }
 
         return response()->json(new MeetingScheduleResource($freshMeetingSchedule));
+    }
+
+    /**
+     * @param  array{old: array<string, mixed>, attributes: array<string, mixed>}  $changes
+     * @return list<string>
+     */
+    private function changedFields(array $changes): array
+    {
+        return array_values(array_unique([
+            ...array_keys($changes['old']),
+            ...array_keys($changes['attributes']),
+        ]));
     }
 
     /**
@@ -148,10 +176,7 @@ class MeetingScheduleController
      */
     private function meetingScheduleUpdatedDescription(string $targetLabel, array $changes): string
     {
-        $fields = array_values(array_unique([
-            ...array_keys($changes['old']),
-            ...array_keys($changes['attributes']),
-        ]));
+        $fields = $this->changedFields($changes);
 
         if ($fields === []) {
             return sprintf('Updated %s.', $targetLabel);
@@ -163,5 +188,24 @@ class MeetingScheduleController
         );
 
         return sprintf('Updated %s: %s.', $targetLabel, implode(', ', $labels));
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    private function meetingScheduleRecipients(MeetingSchedule $meetingSchedule, ?User $actor): \Illuminate\Support\Collection
+    {
+        $meetingSchedule->loadMissing([
+            'meeting.tutorAssignment.tutor:id',
+            'meeting.tutorAssignment.student:id',
+        ]);
+
+        return collect([
+            $meetingSchedule->meeting?->tutorAssignment?->tutor,
+            $meetingSchedule->meeting?->tutorAssignment?->student,
+        ])->filter(fn (mixed $recipient): bool => $recipient instanceof User)
+            ->reject(fn (User $recipient): bool => $actor !== null && (int) $recipient->id === (int) $actor->id)
+            ->unique(fn (User $recipient): int => (int) $recipient->id)
+            ->values();
     }
 }

@@ -47,10 +47,36 @@ class NotificationResource extends JsonResource
 
     /**
      * @param  array<string, mixed>  $data
-     * @return array<string, int|string>|null
+     * @return array<string, mixed>|null
      */
     private function resolveAction(array $data): ?array
     {
+        $action = $data['action'] ?? null;
+
+        if (is_array($action)) {
+            $route = trim((string) ($action['route'] ?? ''));
+
+            if ($route !== '') {
+                $resolvedAction = [
+                    'route' => $route,
+                ];
+
+                if (isset($action['params']) && is_array($action['params'])) {
+                    $resolvedAction['params'] = $action['params'];
+                }
+
+                if (isset($action['query']) && is_array($action['query'])) {
+                    $resolvedAction['query'] = $action['query'];
+                }
+
+                if (array_key_exists('conversation_id', $action) && is_numeric($action['conversation_id'])) {
+                    $resolvedAction['conversation_id'] = (int) $action['conversation_id'];
+                }
+
+                return $resolvedAction;
+            }
+        }
+
         $conversationId = $data['conversation_id'] ?? null;
 
         if (! is_numeric($conversationId)) {
@@ -59,6 +85,9 @@ class NotificationResource extends JsonResource
 
         return [
             'route' => '/communication-hub',
+            'query' => [
+                'conversation' => (int) $conversationId,
+            ],
             'conversation_id' => (int) $conversationId,
         ];
     }

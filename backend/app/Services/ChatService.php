@@ -15,6 +15,8 @@ use App\Models\Role;
 use App\Models\TutorAssignment;
 use App\Models\User;
 use App\Notifications\NewMessage;
+use App\Notifications\SharedDocumentCommentAddedNotification;
+use App\Notifications\SharedDocumentUploadedNotification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -210,6 +212,12 @@ class ChatService
             ->loadMissing('uploader:id,name')
             ->loadCount('comments');
 
+        $this->notifyConversationUsers(
+            $conversation,
+            (int) $user->id,
+            fn (User $recipient) => new SharedDocumentUploadedNotification($document),
+        );
+
         DocumentShared::dispatch($document);
 
         return $document;
@@ -240,8 +248,14 @@ class ChatService
 
         $commentModel->loadMissing([
             'commenter:id,name',
-            'document:id,conversation_id',
+            'document:id,conversation_id,file_name',
         ]);
+
+        $this->notifyConversationUsers(
+            $document->conversation()->firstOrFail(),
+            (int) $user->id,
+            fn (User $recipient) => new SharedDocumentCommentAddedNotification($commentModel),
+        );
 
         DocumentCommentAdded::dispatch($commentModel);
 
@@ -396,13 +410,33 @@ class ChatService
 
     private function notifyConversationRecipients(Conversation $conversation, User $sender, Message $message): void
     {
-        User::query()
-            ->whereHas('conversationMembers', function (Builder $query) use ($conversation): void {
-                $query->where('conversation_id', $conversation->id);
-            })
-            ->whereKeyNot($sender->id)
+        $this->notifyConversationUsers(
+            $conversation,
+            (int) $sender->id,
+            fn (User $recipient) => new NewMessage($message),
+        );
+    }
+
+    /**
+     * @param  callable(User): \Illuminate\Notifications\Notification  $notificationFactory
+     */
+    private function notifyConversationUsers(
+        Conversation $conversation,
+        ?int $excludeUserId,
+        callable $notificationFactory
+    ): void {
+        $query = User::query()
+            ->whereHas('conversationMembers', function (Builder $builder) use ($conversation): void {
+                $builder->where('conversation_id', $conversation->id);
+            });
+
+        if ($excludeUserId !== null) {
+            $query->whereKeyNot($excludeUserId);
+        }
+
+        $query
             ->get()
-            ->each(fn(User $recipient) => $recipient->notify(new NewMessage($message)));
+            ->each(fn (User $recipient) => $recipient->notify($notificationFactory($recipient)));
     }
 
     private function buildDirectPairKey(int $firstUserId, int $secondUserId): string

@@ -14,6 +14,7 @@ class NewScheduleAssigned extends Notification
     public function __construct(
         private readonly Meeting $meeting,
     ) {
+        $this->meeting->loadMissing('schedules:id,meeting_id');
     }
 
     /**
@@ -35,6 +36,13 @@ class NewScheduleAssigned extends Notification
                 'A new schedule has been assigned for %s.',
                 (string) $this->meeting->title
             ),
+            'action' => [
+                'route' => '/meeting-manager',
+                'query' => array_filter([
+                    'meeting' => (int) $this->meeting->id,
+                    'schedule' => $this->meeting->schedules->first()?->id,
+                ], static fn (mixed $value): bool => $value !== null),
+            ],
         ];
     }
 

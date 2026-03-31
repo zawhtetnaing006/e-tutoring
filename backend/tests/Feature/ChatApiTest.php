@@ -11,10 +11,14 @@ use App\Models\Message;
 use App\Models\Role;
 use App\Models\TutorAssignment;
 use App\Models\User;
+use App\Notifications\SharedDocumentCommentAddedNotification;
+use App\Notifications\SharedDocumentUploadedNotification;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Event;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Notifications\Events\BroadcastNotificationCreated;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -341,6 +345,73 @@ class ChatApiTest extends TestCase
         $this->assertSame('New Message', $notification->data['title'] ?? null);
         $this->assertSame($conversation->id, $notification->data['conversation_id'] ?? null);
         $this->assertSame($student->name . ' sent you a message.', $notification->data['body'] ?? null);
+        $this->assertSame(0, $student->fresh()->notifications()->count());
+
+        Event::assertDispatched(BroadcastNotificationCreated::class);
+    }
+
+    public function test_uploading_shared_document_notifies_other_conversation_member(): void
+    {
+        [$tutor, $student] = $this->createTutorStudentPair();
+        $conversation = $this->createConversation($tutor, $student);
+
+        Storage::fake('public');
+        Event::fake([BroadcastNotificationCreated::class]);
+        Sanctum::actingAs($student);
+
+        $response = $this->postJson('/api/chat/' . $conversation->id . '/documents', [
+            'file' => UploadedFile::fake()->create('cw-draft.pdf', 256, 'application/pdf'),
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('conversation_id', $conversation->id)
+            ->assertJsonPath('file_name', 'cw-draft.pdf');
+
+        $this->assertDatabaseCount('notifications', 1);
+
+        $notification = $tutor->fresh()->notifications()->firstOrFail();
+
+        $this->assertSame(SharedDocumentUploadedNotification::class, $notification->type);
+        $this->assertSame('New Shared Document', $notification->data['title'] ?? null);
+        $this->assertSame($student->name . ' uploaded "cw-draft.pdf" for review.', $notification->data['body'] ?? null);
+        $this->assertSame('/communication-hub', $notification->data['action']['route'] ?? null);
+        $this->assertSame($conversation->id, $notification->data['action']['query']['conversation'] ?? null);
+        $this->assertSame($response->json('id'), $notification->data['action']['query']['document'] ?? null);
+        $this->assertSame(0, $student->fresh()->notifications()->count());
+
+        Event::assertDispatched(BroadcastNotificationCreated::class);
+    }
+
+    public function test_adding_document_comment_notifies_other_conversation_member(): void
+    {
+        [$tutor, $student] = $this->createTutorStudentPair();
+        $conversation = $this->createConversation($tutor, $student);
+        $document = $this->createDocument($conversation, $tutor);
+
+        Event::fake([BroadcastNotificationCreated::class]);
+        Sanctum::actingAs($student);
+
+        $response = $this->postJson('/api/chat/documents/' . $document->id . '/comments', [
+            'comment' => 'Please revise section 2 before tomorrow.',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('document_id', $document->id)
+            ->assertJsonPath('conversation_id', $conversation->id);
+
+        $this->assertDatabaseCount('notifications', 1);
+
+        $notification = $tutor->fresh()->notifications()->firstOrFail();
+
+        $this->assertSame(SharedDocumentCommentAddedNotification::class, $notification->type);
+        $this->assertSame('New Document Comment', $notification->data['title'] ?? null);
+        $this->assertSame($student->name . ' commented on "lesson-notes.pdf".', $notification->data['body'] ?? null);
+        $this->assertSame('/communication-hub', $notification->data['action']['route'] ?? null);
+        $this->assertSame($conversation->id, $notification->data['action']['query']['conversation'] ?? null);
+        $this->assertSame($document->id, $notification->data['action']['query']['document'] ?? null);
+        $this->assertSame($response->json('id'), $notification->data['action']['query']['comment'] ?? null);
         $this->assertSame(0, $student->fresh()->notifications()->count());
 
         Event::assertDispatched(BroadcastNotificationCreated::class);

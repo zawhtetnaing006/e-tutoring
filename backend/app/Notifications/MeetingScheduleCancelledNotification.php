@@ -2,19 +2,19 @@
 
 namespace App\Notifications;
 
-use App\Models\Message;
+use App\Models\MeetingSchedule;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class NewMessage extends Notification
+class MeetingScheduleCancelledNotification extends Notification
 {
     use Queueable;
 
     public function __construct(
-        private readonly Message $message,
+        private readonly MeetingSchedule $meetingSchedule,
     ) {
-        $this->message->loadMissing('sender:id,name');
+        $this->meetingSchedule->loadMissing('meeting:id,title');
     }
 
     /**
@@ -31,18 +31,17 @@ class NewMessage extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => 'New Message',
+            'title' => 'Meeting Schedule Cancelled',
             'body' => sprintf(
-                '%s sent you a message.',
-                (string) ($this->message->sender?->name ?? 'Someone')
+                'The schedule for %s has been cancelled.',
+                (string) ($this->meetingSchedule->meeting?->title ?? 'your meeting')
             ),
-            'conversation_id' => (int) $this->message->conversation_id,
             'action' => [
-                'route' => '/communication-hub',
+                'route' => '/meeting-manager',
                 'query' => [
-                    'conversation' => (int) $this->message->conversation_id,
+                    'meeting' => (int) $this->meetingSchedule->meeting_id,
+                    'schedule' => (int) $this->meetingSchedule->id,
                 ],
-                'conversation_id' => (int) $this->message->conversation_id,
             ],
         ];
     }
@@ -54,6 +53,6 @@ class NewMessage extends Notification
 
     public function broadcastType(): string
     {
-        return 'new_message';
+        return 'meeting_schedule_cancelled';
     }
 }

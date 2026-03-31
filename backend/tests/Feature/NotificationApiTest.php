@@ -31,14 +31,26 @@ class NotificationApiTest extends TestCase
         $user->notify(new FakeDatabaseNotification([
             'title' => 'First message',
             'body' => 'You have a new message.',
-            'conversation_id' => 11,
+            'action' => [
+                'route' => '/communication-hub',
+                'query' => [
+                    'conversation' => 11,
+                ],
+                'conversation_id' => 11,
+            ],
         ]));
 
         Carbon::setTestNow('2026-03-16 10:01:00');
         $user->notify(new FakeDatabaseNotification([
             'title' => 'Second message',
             'body' => 'You have another message.',
-            'conversation_id' => 12,
+            'action' => [
+                'route' => '/communication-hub',
+                'query' => [
+                    'conversation' => 12,
+                ],
+                'conversation_id' => 12,
+            ],
         ]));
 
         Carbon::setTestNow('2026-03-16 10:02:00');
@@ -60,8 +72,29 @@ class NotificationApiTest extends TestCase
             ->assertJsonPath('data.0.body', 'You have another message.')
             ->assertJsonPath('data.0.is_read', false)
             ->assertJsonPath('data.0.action.route', '/communication-hub')
+            ->assertJsonPath('data.0.action.query.conversation', 12)
             ->assertJsonPath('data.0.action.conversation_id', 12)
             ->assertJsonPath('data.1.title', 'First message');
+    }
+
+    public function test_it_keeps_backward_compatible_chat_action_fallback_from_conversation_id(): void
+    {
+        $user = $this->createUserWithRole(Role::STUDENT);
+
+        $user->notify(new FakeDatabaseNotification([
+            'title' => 'Legacy message',
+            'conversation_id' => 27,
+        ]));
+
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/notifications');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.0.action.route', '/communication-hub')
+            ->assertJsonPath('data.0.action.query.conversation', 27)
+            ->assertJsonPath('data.0.action.conversation_id', 27);
     }
 
     public function test_user_can_mark_single_notification_as_read(): void

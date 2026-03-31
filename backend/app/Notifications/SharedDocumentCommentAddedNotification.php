@@ -2,19 +2,22 @@
 
 namespace App\Notifications;
 
-use App\Models\Message;
+use App\Models\DocumentComment;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class NewMessage extends Notification
+class SharedDocumentCommentAddedNotification extends Notification
 {
     use Queueable;
 
     public function __construct(
-        private readonly Message $message,
+        private readonly DocumentComment $comment,
     ) {
-        $this->message->loadMissing('sender:id,name');
+        $this->comment->loadMissing([
+            'commenter:id,name',
+            'document:id,conversation_id,file_name',
+        ]);
     }
 
     /**
@@ -31,18 +34,19 @@ class NewMessage extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => 'New Message',
+            'title' => 'New Document Comment',
             'body' => sprintf(
-                '%s sent you a message.',
-                (string) ($this->message->sender?->name ?? 'Someone')
+                '%s commented on "%s".',
+                (string) ($this->comment->commenter?->name ?? 'Someone'),
+                (string) ($this->comment->document?->file_name ?? 'your document'),
             ),
-            'conversation_id' => (int) $this->message->conversation_id,
             'action' => [
                 'route' => '/communication-hub',
                 'query' => [
-                    'conversation' => (int) $this->message->conversation_id,
+                    'conversation' => (int) ($this->comment->document?->conversation_id ?? 0),
+                    'document' => (int) $this->comment->document_id,
+                    'comment' => (int) $this->comment->id,
                 ],
-                'conversation_id' => (int) $this->message->conversation_id,
             ],
         ];
     }
@@ -54,6 +58,6 @@ class NewMessage extends Notification
 
     public function broadcastType(): string
     {
-        return 'new_message';
+        return 'shared_document_comment_added';
     }
 }

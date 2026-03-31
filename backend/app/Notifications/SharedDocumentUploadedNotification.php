@@ -2,19 +2,19 @@
 
 namespace App\Notifications;
 
-use App\Models\Message;
+use App\Models\Document;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
 
-class NewMessage extends Notification
+class SharedDocumentUploadedNotification extends Notification
 {
     use Queueable;
 
     public function __construct(
-        private readonly Message $message,
+        private readonly Document $document,
     ) {
-        $this->message->loadMissing('sender:id,name');
+        $this->document->loadMissing('uploader:id,name');
     }
 
     /**
@@ -31,18 +31,18 @@ class NewMessage extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'title' => 'New Message',
+            'title' => 'New Shared Document',
             'body' => sprintf(
-                '%s sent you a message.',
-                (string) ($this->message->sender?->name ?? 'Someone')
+                '%s uploaded "%s" for review.',
+                (string) ($this->document->uploader?->name ?? 'Someone'),
+                (string) $this->document->file_name,
             ),
-            'conversation_id' => (int) $this->message->conversation_id,
             'action' => [
                 'route' => '/communication-hub',
                 'query' => [
-                    'conversation' => (int) $this->message->conversation_id,
+                    'conversation' => (int) $this->document->conversation_id,
+                    'document' => (int) $this->document->id,
                 ],
-                'conversation_id' => (int) $this->message->conversation_id,
             ],
         ];
     }
@@ -54,6 +54,6 @@ class NewMessage extends Notification
 
     public function broadcastType(): string
     {
-        return 'new_message';
+        return 'shared_document_uploaded';
     }
 }
