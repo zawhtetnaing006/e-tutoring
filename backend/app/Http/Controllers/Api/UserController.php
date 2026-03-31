@@ -168,12 +168,14 @@ class UserController
         $this->assignUserRole($user, $roleCode);
         $user->subjects()->sync($subjectIds);
 
+        $loadedUser = $this->loadUserRelations($user->fresh());
+
         if ($autoGeneratePassword) {
-            $user->notify(new UserGeneratedPasswordNotification($plainPassword));
+            $loadedUser->notify(new UserGeneratedPasswordNotification($plainPassword));
+        } else {
+            $loadedUser->notify(new UserWelcomeNotification());
         }
 
-        $loadedUser = $this->loadUserRelations($user->fresh());
-        $loadedUser->notify(new UserWelcomeNotification());
         $targetLabel = $this->userTargetLabel($loadedUser);
 
         $this->auditLogService->log(

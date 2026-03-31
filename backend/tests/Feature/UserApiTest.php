@@ -53,7 +53,7 @@ class UserApiTest extends TestCase
         Notification::assertNotSentTo($createdUser, UserGeneratedPasswordNotification::class);
     }
 
-    public function test_creating_user_with_auto_generated_password_sends_welcome_and_password_emails(): void
+    public function test_creating_user_with_auto_generated_password_sends_only_password_email(): void
     {
         Notification::fake();
 
@@ -78,7 +78,7 @@ class UserApiTest extends TestCase
             ->where('email', 'generated-staff@example.test')
             ->firstOrFail();
 
-        Notification::assertSentTo($createdUser, UserWelcomeNotification::class);
+        Notification::assertNotSentTo($createdUser, UserWelcomeNotification::class);
         Notification::assertSentTo($createdUser, UserGeneratedPasswordNotification::class);
     }
 
