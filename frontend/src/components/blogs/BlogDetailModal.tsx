@@ -18,9 +18,14 @@ const COMMENTS_PER_PAGE = 8
 export interface BlogDetailModalProps {
   blogId: number | null
   onClose: () => void
+  canPostComments?: boolean
 }
 
-export function BlogDetailModal({ blogId, onClose }: BlogDetailModalProps) {
+export function BlogDetailModal({
+  blogId,
+  onClose,
+  canPostComments = true,
+}: BlogDetailModalProps) {
   const queryClient = useQueryClient()
   const [commentDraft, setCommentDraft] = useState('')
   const [commentPage, setCommentPage] = useState(1)
@@ -214,6 +219,7 @@ export function BlogDetailModal({ blogId, onClose }: BlogDetailModalProps) {
               onCommentDraftChange={setCommentDraft}
               onPostComment={handlePostComment}
               isPosting={createCommentMutation.isPending}
+              canPostComments={canPostComments}
             />
           </div>
         ) : (

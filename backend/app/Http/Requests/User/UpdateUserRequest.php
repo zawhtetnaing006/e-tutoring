@@ -36,6 +36,8 @@ class UpdateUserRequest extends FormRequest
             'country' => ['sometimes', 'nullable', 'string', 'max:255'],
             'city' => ['sometimes', 'nullable', 'string', 'max:255'],
             'township' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'profile_image' => ['nullable', 'image', 'max:5120', 'mimes:jpeg,jpg,png,webp'],
+            'remove_profile_image' => ['sometimes', 'boolean'],
             'is_active' => ['sometimes', 'boolean'],
             'role_code' => ['sometimes', 'string', Rule::in(Role::CODES)],
             'subject_ids' => ['sometimes', 'array'],

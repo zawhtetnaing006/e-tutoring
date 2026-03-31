@@ -31,6 +31,7 @@ class User extends Authenticatable
         'country',
         'city',
         'township',
+        'profile_image_path',
         'role_id',
         'is_active',
         'password',

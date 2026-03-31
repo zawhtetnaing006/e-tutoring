@@ -24,6 +24,7 @@ export type User = {
   country?: string | null
   city?: string | null
   township?: string | null
+  profile_image_url: string | null
   is_active: boolean
   role_code: UserRoleCode | null
   role_name?: string | null
