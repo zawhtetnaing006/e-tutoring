@@ -9,6 +9,7 @@ use App\Http\Resources\TutorAssignmentResource;
 use App\Models\Role;
 use App\Models\TutorAssignment;
 use App\Models\User;
+use App\Notifications\TutorAssignmentCreatedNotification;
 use App\Services\AuditLogService;
 use App\Services\ChatService;
 use App\Services\TutorAssignmentExportService;
@@ -190,6 +191,11 @@ class TutorAssignmentController
         $loadedAssignments = collect($created)
             ->map(fn (TutorAssignment $assignment): TutorAssignment => $this->loadTutorAssignmentRelations($assignment))
             ->values();
+
+        $loadedAssignments->each(function (TutorAssignment $assignment): void {
+            $assignment->tutor?->notify(new TutorAssignmentCreatedNotification($assignment));
+            $assignment->student?->notify(new TutorAssignmentCreatedNotification($assignment));
+        });
 
         if ($loadedAssignments->count() === 1) {
             /** @var TutorAssignment $assignment */

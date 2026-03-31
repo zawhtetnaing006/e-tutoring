@@ -11,6 +11,7 @@ use App\Models\Role;
 use App\Models\TutorAssignment;
 use App\Models\User;
 use App\Notifications\UserGeneratedPasswordNotification;
+use App\Notifications\UserWelcomeNotification;
 use App\Services\AuditLogService;
 use App\Services\UserExportService;
 use Dedoc\Scramble\Attributes\BodyParameter;
@@ -172,6 +173,7 @@ class UserController
         }
 
         $loadedUser = $this->loadUserRelations($user->fresh());
+        $loadedUser->notify(new UserWelcomeNotification());
         $targetLabel = $this->userTargetLabel($loadedUser);
 
         $this->auditLogService->log(
