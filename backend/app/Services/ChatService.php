@@ -287,29 +287,8 @@ class ChatService
 
     private function allowedChatUserIds(User $user): ?array
     {
-        if ($this->isStaffLike($user)) {
+        if ($this->canChatAnyActiveUser($user)) {
             return null;
-        }
-
-        if ($user->hasRole(Role::TUTOR)) {
-            $staffIds = User::query()
-                ->where('is_active', true)
-                ->whereHas('role', function (Builder $query): void {
-                    $query->whereIn('code', [Role::ADMIN, Role::STAFF]);
-                })
-                ->pluck('id')
-                ->all();
-
-            $assignedStudentIds = TutorAssignment::query()
-                ->where('tutor_user_id', $user->id)
-                ->whereNotNull('student_user_id')
-                ->pluck('student_user_id')
-                ->all();
-
-            return array_values(array_unique([
-                ...$staffIds,
-                ...$assignedStudentIds,
-            ]));
         }
 
         if ($user->hasRole(Role::STUDENT)) {
@@ -342,17 +321,8 @@ class ChatService
 
     private function canStartConversation(User $user, User $target): bool
     {
-        if ($this->isStaffLike($user)) {
+        if ($this->canChatAnyActiveUser($user)) {
             return true;
-        }
-
-        if ($user->hasRole(Role::TUTOR)) {
-            if ($this->isStaffLike($target)) {
-                return true;
-            }
-
-            return $target->hasRole(Role::STUDENT)
-                && $this->hasTutorAssignment((int) $user->id, (int) $target->id);
         }
 
         if ($user->hasRole(Role::STUDENT)) {
@@ -371,9 +341,9 @@ class ChatService
             ->exists();
     }
 
-    private function isStaffLike(User $user): bool
+    private function canChatAnyActiveUser(User $user): bool
     {
-        return $user->hasAnyRole([Role::ADMIN, Role::STAFF]);
+        return $user->hasAnyRole([Role::ADMIN, Role::STAFF, Role::TUTOR]);
     }
 
     private function ensureDirectConversationMembers(Conversation $conversation, User $user, User $target): void

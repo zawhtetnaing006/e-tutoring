@@ -60,6 +60,7 @@ fi
 
 ensure_dir "$APP_DIR/storage"
 ensure_dir "$APP_DIR/storage/app"
+ensure_dir "$APP_DIR/storage/app/public"
 ensure_dir "$APP_DIR/storage/framework/cache"
 ensure_dir "$APP_DIR/storage/framework/sessions"
 ensure_dir "$APP_DIR/storage/framework/views"
@@ -92,6 +93,10 @@ if [ -z "${APP_KEY:-}" ] && [ -f "$APP_DIR/.env" ]; then
 fi
 
 php "$APP_DIR/artisan" package:discover --ansi
+
+if [ "${1:-}" = "php-fpm" ] && [ ! -e "$APP_DIR/public/storage" ] && [ ! -L "$APP_DIR/public/storage" ]; then
+  php "$APP_DIR/artisan" storage:link
+fi
 
 if [ "${APP_RUN_MIGRATIONS:-0}" = "1" ]; then
   MAX_ATTEMPTS="${APP_MIGRATION_MAX_ATTEMPTS:-30}"

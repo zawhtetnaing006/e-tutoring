@@ -7,6 +7,7 @@ import { filterAuditLogsByRoleSlugs } from '@/features/audit-logs/filterAuditLog
 import {
   formatAuditLogDateTime,
   auditLogRowKey,
+  formatAuditLogTarget,
 } from '@/features/audit-logs/format'
 import {
   compareAuditLogRows,
@@ -334,7 +335,7 @@ export function AuditLogPage() {
                       {row.action}
                     </td>
                     <td className="min-w-[100px] px-2 py-3 text-muted-foreground sm:px-3 sm:py-3.5 2xl:px-4 2xl:py-4">
-                      {row.target}
+                      {formatAuditLogTarget(row.target)}
                     </td>
                     <td className="min-w-[220px] px-2 py-3 pl-3 text-muted-foreground sm:min-w-[260px] sm:px-3 sm:py-3.5 sm:pl-4 2xl:w-[44%] 2xl:min-w-0 2xl:px-4 2xl:py-4 2xl:pl-5">
                       <span className="block break-words leading-relaxed 2xl:whitespace-normal">

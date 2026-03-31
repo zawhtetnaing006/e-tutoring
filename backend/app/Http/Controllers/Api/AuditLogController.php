@@ -4,6 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Resources\AuditLogResource;
 use App\Models\Activity;
+use App\Models\Blog;
+use App\Models\Meeting;
+use App\Models\MeetingAttendee;
+use App\Models\MeetingSchedule;
+use App\Models\Subject;
+use App\Models\TutorAssignment;
 use App\Models\User;
 use App\Traits\FormatsListingResponse;
 use Carbon\CarbonImmutable;
@@ -32,8 +38,8 @@ class AuditLogController
             'date_time' => '2026-03-18T10:30:00.000000Z',
             'actor' => 'Staff User (Staff)',
             'action' => 'UPDATE_USER',
-            'target' => 'User#18',
-            'description' => 'Updated User#18: email, role.',
+            'target' => 'User: Jane Student (Student)',
+            'description' => 'Updated User: Jane Student (Student): email, role.',
         ]],
         'current_page' => 1,
         'total_page' => 1,
@@ -77,7 +83,26 @@ class AuditLogController
                         User::class => ['role:id,code,name'],
                     ]);
                 },
-                'subject',
+                'subject' => function (MorphTo $morphTo): void {
+                    $morphTo->morphWith([
+                        User::class => ['role:id,code,name'],
+                        Blog::class => [],
+                        Meeting::class => [],
+                        MeetingAttendee::class => [
+                            'meeting:id,title',
+                            'user:id,name,role_id',
+                            'user.role:id,code,name',
+                        ],
+                        MeetingSchedule::class => ['meeting:id,title'],
+                        Subject::class => [],
+                        TutorAssignment::class => [
+                            'tutor:id,name,role_id',
+                            'tutor.role:id,code,name',
+                            'student:id,name,role_id',
+                            'student.role:id,code,name',
+                        ],
+                    ]);
+                },
             ])
             ->when($dateFrom !== null, function ($query) use ($dateFrom): void {
                 $query->where('created_at', '>=', $dateFrom);
