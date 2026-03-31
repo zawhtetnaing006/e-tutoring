@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   X,
@@ -16,8 +16,6 @@ import {
   useDeleteMeeting,
   useUpdateMeetingSchedule,
 } from '@/features/meetings/useMeetings'
-import { useAllocations } from '@/features/allocations/useAllocations'
-import { useUsers } from '@/features/users/useUsers'
 
 type MeetingDetailModalProps = {
   meeting: Meeting
