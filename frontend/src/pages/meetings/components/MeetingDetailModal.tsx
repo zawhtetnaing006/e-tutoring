@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   X,
@@ -8,12 +8,19 @@ import {
   XCircle,
   MinusCircle,
   Link as LinkIcon,
+  LoaderCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ApiError } from '@/lib/api-client'
-import { createMeetingAttendance, type Meeting } from '@/features/meetings/api'
+import {
+  createMeetingAttendance,
+  type Meeting,
+  type MeetingAttendance,
+  type MeetingSchedule,
+} from '@/features/meetings/api'
 import {
   useDeleteMeeting,
+  useMeetingDetails,
   useUpdateMeetingSchedule,
 } from '@/features/meetings/useMeetings'
 
@@ -27,37 +34,90 @@ type MeetingDetailModalProps = {
 
 type AttendanceStatus = 'PRESENCE' | 'ABSENCE' | 'ON_LEAVE'
 
+type MeetingDetailModalDraftProps = {
+  meeting: Meeting
+  meetingId: number
+  canManageMeeting: boolean
+  onClose: () => void
+  onEdit: () => void
+  primarySchedule: MeetingSchedule | null
+  existingAttendance: MeetingAttendance | null
+  attendanceLocked: boolean
+  detailLoading: boolean
+  detailError: boolean
+}
+
 export function MeetingDetailModal({
   meeting,
   canManageMeeting,
   onClose,
   onEdit,
 }: MeetingDetailModalProps) {
-  const queryClient = useQueryClient()
+  const detailQuery = useMeetingDetails(meeting.id)
+  const detailMeeting = detailQuery.data ?? meeting
+
   const primarySchedule = useMemo(() => {
     return (
-      meeting.meeting_schedules.find(s => !s.cancel_at) ??
-      meeting.meeting_schedules[0] ??
+      detailMeeting.meeting_schedules.find(schedule => !schedule.cancel_at) ??
+      detailMeeting.meeting_schedules[0] ??
       null
     )
-  }, [meeting.meeting_schedules])
+  }, [detailMeeting.meeting_schedules])
 
+  const existingAttendance = detailQuery.data?.student_attendance ?? null
+  const attendanceLocked = detailQuery.data?.attendance_locked ?? false
+  const draftKey = [
+    meeting.id,
+    primarySchedule?.updated_at ?? 'no-schedule',
+    existingAttendance?.updated_at ?? 'no-attendance',
+    detailQuery.data ? 'loaded' : detailQuery.isError ? 'error' : 'fallback',
+  ].join(':')
+
+  return (
+    <MeetingDetailModalDraft
+      key={draftKey}
+      meeting={detailMeeting}
+      meetingId={meeting.id}
+      canManageMeeting={canManageMeeting}
+      onClose={onClose}
+      onEdit={onEdit}
+      primarySchedule={primarySchedule}
+      existingAttendance={existingAttendance}
+      attendanceLocked={attendanceLocked}
+      detailLoading={detailQuery.isLoading}
+      detailError={detailQuery.isError}
+    />
+  )
+}
+
+function MeetingDetailModalDraft({
+  meeting,
+  meetingId,
+  canManageMeeting,
+  onClose,
+  onEdit,
+  primarySchedule,
+  existingAttendance,
+  attendanceLocked,
+  detailLoading,
+  detailError,
+}: MeetingDetailModalDraftProps) {
+  const queryClient = useQueryClient()
   const [notes, setNotes] = useState(() => primarySchedule?.note ?? '')
   const [selectedAttendance, setSelectedAttendance] =
-    useState<AttendanceStatus | null>(null)
+    useState<AttendanceStatus | null>(() => existingAttendance?.status ?? null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   const tutorName = meeting.tutor_name ?? getTutorFallback(meeting)
   const studentName = meeting.student_name ?? getStudentFallback(meeting)
   const studentId = meeting.student_user_id
-
   const recurrenceType =
     meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
   const firstSchedule = meeting.meeting_schedules[0]
+  const isVirtual = meeting.type === 'VIRTUAL'
 
   const updateScheduleMutation = useUpdateMeetingSchedule()
   const deleteMeetingMutation = useDeleteMeeting()
-
   const attendanceMutation = useMutation({
     mutationFn: createMeetingAttendance,
     onSuccess: () => {
@@ -65,6 +125,9 @@ export function MeetingDetailModal({
         description: 'Student attendance has been recorded.',
       })
       void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+      void queryClient.invalidateQueries({
+        queryKey: ['meeting-details', meetingId],
+      })
     },
     onError: error => {
       const description =
@@ -73,14 +136,31 @@ export function MeetingDetailModal({
     },
   })
 
+  const isSaving =
+    attendanceMutation.isPending || updateScheduleMutation.isPending
+  const normalizedNote = normalizeNullableText(notes)
+  const savedNote = normalizeNullableText(primarySchedule?.note ?? null)
+  const hasNoteChanged =
+    primarySchedule !== null && normalizedNote !== savedNote
+  const hasAttendanceSelection =
+    !attendanceLocked && selectedAttendance !== null
+  const canSave =
+    !detailLoading &&
+    !detailError &&
+    !isSaving &&
+    (hasNoteChanged || hasAttendanceSelection)
+
   const confirmDeleteMeeting = () => {
-    deleteMeetingMutation.mutate(meeting.id, {
+    deleteMeetingMutation.mutate(meetingId, {
       onSuccess: () => {
         toast.success('Meeting deleted successfully', {
           description:
             'The meeting and its scheduled sessions have been removed from the system.',
         })
         void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+        void queryClient.invalidateQueries({
+          queryKey: ['meeting-details', meetingId],
+        })
         setDeleteConfirmOpen(false)
         onClose()
       },
@@ -99,28 +179,47 @@ export function MeetingDetailModal({
   }
 
   const handleSave = async () => {
-    if (!selectedAttendance) {
+    if (!hasNoteChanged && attendanceLocked) {
+      return
+    }
+
+    if (!attendanceLocked && !selectedAttendance) {
       toast.error('Please select attendance status')
       return
     }
 
-    if (!studentId) {
+    if (!attendanceLocked && !studentId) {
       toast.error('Student not found')
       return
     }
 
     try {
-      if (primarySchedule) {
+      if (primarySchedule && hasNoteChanged) {
         await updateScheduleMutation.mutateAsync({
           scheduleId: primarySchedule.id,
-          payload: { note: notes.trim() || null },
+          payload: { note: normalizedNote },
         })
       }
 
-      await attendanceMutation.mutateAsync({
-        meeting_id: meeting.id,
-        user_id: studentId,
-        status: selectedAttendance,
+      if (!attendanceLocked && selectedAttendance && studentId) {
+        await attendanceMutation.mutateAsync({
+          meeting_id: meetingId,
+          user_id: studentId,
+          status: selectedAttendance,
+        })
+      }
+
+      queryClient.removeQueries({
+        queryKey: ['meeting-details', meetingId],
+        exact: true,
+      })
+      queryClient.removeQueries({
+        queryKey: ['meetings', meetingId],
+        exact: true,
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ['meetings'],
+        refetchType: 'active',
       })
 
       onClose()
@@ -128,16 +227,6 @@ export function MeetingDetailModal({
       // toasts handled by mutations
     }
   }
-
-  const getTimezone = () => {
-    const offset = -new Date().getTimezoneOffset()
-    const hours = Math.floor(Math.abs(offset) / 60)
-    const minutes = Math.abs(offset) % 60
-    const sign = offset >= 0 ? '+' : '-'
-    return `UCT ${sign}${hours}:${minutes.toString().padStart(2, '0')}`
-  }
-
-  const isVirtual = meeting.type === 'VIRTUAL'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
@@ -335,87 +424,52 @@ export function MeetingDetailModal({
               <h3 className="mb-3 font-medium text-foreground">
                 Student Attendance <span className="text-red-500">*</span>
               </h3>
+              {detailLoading && (
+                <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Loading attendance details...
+                </div>
+              )}
+              {detailError && (
+                <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                  Failed to load the latest meeting details. Attendance changes
+                  are disabled until the data is available.
+                </div>
+              )}
+              {existingAttendance && (
+                <div className="mb-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                  Attendance was already recorded for this meeting. Updating
+                  attendance is disabled.
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSelectedAttendance('PRESENCE')}
-                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                    selectedAttendance === 'PRESENCE'
-                      ? 'border-green-500 bg-green-500/10'
-                      : 'border-border bg-background hover:bg-muted'
-                  }`}
-                >
-                  <CheckCircle
-                    className={`h-6 w-6 ${
-                      selectedAttendance === 'PRESENCE'
-                        ? 'text-green-600'
-                        : 'text-muted-foreground'
-                    }`}
-                  />
-                  <span
-                    className={`text-sm font-medium ${
-                      selectedAttendance === 'PRESENCE'
-                        ? 'text-green-600'
-                        : 'text-foreground'
-                    }`}
-                  >
-                    Present
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedAttendance('ABSENCE')}
-                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                    selectedAttendance === 'ABSENCE'
-                      ? 'border-red-500 bg-red-500/10'
-                      : 'border-border bg-background hover:bg-muted'
-                  }`}
-                >
-                  <XCircle
-                    className={`h-6 w-6 ${
-                      selectedAttendance === 'ABSENCE'
-                        ? 'text-red-600'
-                        : 'text-muted-foreground'
-                    }`}
-                  />
-                  <span
-                    className={`text-sm font-medium ${
-                      selectedAttendance === 'ABSENCE'
-                        ? 'text-red-600'
-                        : 'text-foreground'
-                    }`}
-                  >
-                    Absent
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedAttendance('ON_LEAVE')}
-                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
-                    selectedAttendance === 'ON_LEAVE'
-                      ? 'border-orange-500 bg-orange-500/10'
-                      : 'border-border bg-background hover:bg-muted'
-                  }`}
-                >
-                  <MinusCircle
-                    className={`h-6 w-6 ${
-                      selectedAttendance === 'ON_LEAVE'
-                        ? 'text-orange-600'
-                        : 'text-muted-foreground'
-                    }`}
-                  />
-                  <span
-                    className={`text-sm font-medium ${
-                      selectedAttendance === 'ON_LEAVE'
-                        ? 'text-orange-600'
-                        : 'text-foreground'
-                    }`}
-                  >
-                    On Leave
-                  </span>
-                </button>
+                <AttendanceButton
+                  label="Present"
+                  value="PRESENCE"
+                  selectedAttendance={selectedAttendance}
+                  onSelect={setSelectedAttendance}
+                  disabled={attendanceLocked || detailLoading || detailError}
+                  activeClassName="border-green-500 bg-green-500/10 text-green-600"
+                  icon={<CheckCircle className="h-6 w-6" />}
+                />
+                <AttendanceButton
+                  label="Absent"
+                  value="ABSENCE"
+                  selectedAttendance={selectedAttendance}
+                  onSelect={setSelectedAttendance}
+                  disabled={attendanceLocked || detailLoading || detailError}
+                  activeClassName="border-red-500 bg-red-500/10 text-red-600"
+                  icon={<XCircle className="h-6 w-6" />}
+                />
+                <AttendanceButton
+                  label="On Leave"
+                  value="ON_LEAVE"
+                  selectedAttendance={selectedAttendance}
+                  onSelect={setSelectedAttendance}
+                  disabled={attendanceLocked || detailLoading || detailError}
+                  activeClassName="border-orange-500 bg-orange-500/10 text-orange-600"
+                  icon={<MinusCircle className="h-6 w-6" />}
+                />
               </div>
             </div>
           )}
@@ -427,7 +481,7 @@ export function MeetingDetailModal({
               </h3>
               <textarea
                 value={notes}
-                onChange={e => setNotes(e.target.value)}
+                onChange={event => setNotes(event.target.value)}
                 placeholder="Record key discussion points, action items, and follow-up tasks..."
                 rows={4}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -447,16 +501,14 @@ export function MeetingDetailModal({
               <button
                 type="button"
                 onClick={() => void handleSave()}
-                disabled={
-                  attendanceMutation.isPending ||
-                  updateScheduleMutation.isPending
-                }
+                disabled={!canSave}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {attendanceMutation.isPending ||
-                updateScheduleMutation.isPending
+                {isSaving
                   ? 'Saving...'
-                  : 'Save'}
+                  : hasNoteChanged && !hasAttendanceSelection
+                    ? 'Save Notes'
+                    : 'Save'}
               </button>
             </div>
           )}
@@ -464,6 +516,63 @@ export function MeetingDetailModal({
       </div>
     </div>
   )
+}
+
+type AttendanceButtonProps = {
+  label: string
+  value: AttendanceStatus
+  selectedAttendance: AttendanceStatus | null
+  onSelect: (value: AttendanceStatus) => void
+  disabled: boolean
+  activeClassName: string
+  icon: ReactNode
+}
+
+function AttendanceButton({
+  label,
+  value,
+  selectedAttendance,
+  onSelect,
+  disabled,
+  activeClassName,
+  icon,
+}: AttendanceButtonProps) {
+  const isSelected = selectedAttendance === value
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(value)}
+      disabled={disabled}
+      className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+        isSelected
+          ? activeClassName
+          : 'border-border bg-background hover:bg-muted'
+      } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+    >
+      <span className={isSelected ? '' : 'text-muted-foreground'}>{icon}</span>
+      <span
+        className={`text-sm font-medium ${isSelected ? '' : 'text-foreground'}`}
+      >
+        {label}
+      </span>
+    </button>
+  )
+}
+
+function getTimezone() {
+  const offset = -new Date().getTimezoneOffset()
+  const hours = Math.floor(Math.abs(offset) / 60)
+  const minutes = Math.abs(offset) % 60
+  const sign = offset >= 0 ? '+' : '-'
+
+  return `UCT ${sign}${hours}:${minutes.toString().padStart(2, '0')}`
+}
+
+function normalizeNullableText(value: string | null | undefined) {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+
+  return normalized === '' ? null : normalized
 }
 
 function getTutorFallback(meeting: Meeting) {

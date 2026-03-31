@@ -8,12 +8,14 @@ import {
 import {
   getMeetings,
   getMeeting,
+  getMeetingDetails,
   createMeeting,
   updateMeeting,
   deleteMeeting,
   updateMeetingSchedule,
   type MeetingsResponse,
   type Meeting,
+  type MeetingDetails,
   type MeetingSchedule,
   type GetMeetingsParams,
   type CreateMeetingPayload,
@@ -35,6 +37,19 @@ export function useMeeting(meetingId: number): UseQueryResult<Meeting, Error> {
     queryKey: ['meetings', meetingId],
     queryFn: () => getMeeting(meetingId),
     enabled: !!meetingId,
+  })
+}
+
+export function useMeetingDetails(
+  meetingId: number
+): UseQueryResult<MeetingDetails, Error> {
+  return useQuery({
+    queryKey: ['meeting-details', meetingId],
+    queryFn: () => getMeetingDetails(meetingId),
+    enabled: !!meetingId,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
   })
 }
 

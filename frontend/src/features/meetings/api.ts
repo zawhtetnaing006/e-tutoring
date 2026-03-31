@@ -13,6 +13,15 @@ export type MeetingSchedule = {
   updated_at: string
 }
 
+export type MeetingAttendance = {
+  id: number
+  meeting_id: number
+  user_id: number
+  status: 'PRESENCE' | 'ABSENCE' | 'ON_LEAVE'
+  created_at: string
+  updated_at: string
+}
+
 export type Meeting = {
   id: number
   title: string
@@ -29,6 +38,11 @@ export type Meeting = {
   meeting_schedules: MeetingSchedule[]
   created_at: string
   updated_at: string
+}
+
+export type MeetingDetails = Meeting & {
+  student_attendance: MeetingAttendance | null
+  attendance_locked: boolean
 }
 
 export type MeetingsResponse = {
@@ -116,6 +130,15 @@ export async function getMeeting(meetingId: number): Promise<Meeting> {
   })
 }
 
+export async function getMeetingDetails(
+  meetingId: number
+): Promise<MeetingDetails> {
+  return apiClient<MeetingDetails>(`meetings/${meetingId}/details`, {
+    method: 'GET',
+    token: getToken(),
+  })
+}
+
 export async function createMeeting(
   payload: CreateMeetingPayload
 ): Promise<Meeting> {
@@ -166,8 +189,8 @@ export async function cancelMeetingSchedule(
 
 export async function createMeetingAttendance(
   payload: CreateMeetingAttendancePayload
-): Promise<void> {
-  await apiClient<null>('meeting-attendances', {
+): Promise<MeetingAttendance> {
+  return apiClient<MeetingAttendance>('meeting-attendances', {
     method: 'POST',
     token: getToken(),
     body: payload,

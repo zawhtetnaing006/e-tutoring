@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Meeting;
 
+use App\Models\MeetingSchedule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -9,7 +10,15 @@ class UpdateMeetingScheduleRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $meetingSchedule = $this->route('meetingSchedule');
+
+        if (! $meetingSchedule instanceof MeetingSchedule) {
+            return false;
+        }
+
+        $meetingSchedule->loadMissing('meeting.tutorAssignment');
+
+        return $this->user()?->can('update', $meetingSchedule->meeting) ?? false;
     }
 
     /**

@@ -12,6 +12,7 @@ use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 #[Group('Meeting Schedules', description: 'Meeting schedule management endpoints.', weight: 8)]
 class MeetingScheduleController
@@ -39,6 +40,9 @@ class MeetingScheduleController
     ]])]
     public function update(UpdateMeetingScheduleRequest $request, MeetingSchedule $meetingSchedule): JsonResponse
     {
+        $meetingSchedule->loadMissing('meeting.tutorAssignment');
+        Gate::authorize('update', $meetingSchedule->meeting);
+
         $before = $this->meetingScheduleAuditAttributes($meetingSchedule);
         $meetingSchedule->update($request->validated());
         $freshMeetingSchedule = $meetingSchedule->fresh();
@@ -81,6 +85,9 @@ class MeetingScheduleController
     ]])]
     public function cancel(Request $request, MeetingSchedule $meetingSchedule): JsonResponse
     {
+        $meetingSchedule->loadMissing('meeting.tutorAssignment');
+        Gate::authorize('update', $meetingSchedule->meeting);
+
         $before = $this->meetingScheduleAuditAttributes($meetingSchedule);
 
         if ($meetingSchedule->cancel_at === null) {

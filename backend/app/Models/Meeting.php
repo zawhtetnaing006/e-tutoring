@@ -35,4 +35,9 @@ class Meeting extends Model
     {
         return $this->hasMany(MeetingSchedule::class, 'meeting_id');
     }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(MeetingAttendee::class, 'meeting_id');
+    }
 }

@@ -120,6 +120,7 @@ Route::prefix('meetings')
     ->group(function () {
         Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR,STUDENT'])->group(function () {
             Route::get('/', 'index');
+            Route::get('{meeting}/details', 'details');
             Route::get('{meeting}', 'show');
         });
 
@@ -130,7 +131,7 @@ Route::prefix('meetings')
         });
     });
 
-Route::middleware(['auth:sanctum', 'role:STAFF'])
+Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])
     ->prefix('meeting-schedules')
     ->controller(MeetingScheduleController::class)
     ->group(function () {
@@ -138,7 +139,7 @@ Route::middleware(['auth:sanctum', 'role:STAFF'])
         Route::post('{meetingSchedule}/cancel', 'cancel');
     });
 
-Route::middleware(['auth:sanctum', 'role:STAFF'])
+Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])
     ->prefix('meeting-attendances')
     ->controller(MeetingAttendanceController::class)
     ->group(function () {

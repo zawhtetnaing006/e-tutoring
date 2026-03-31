@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\Meeting;
+use App\Models\MeetingAttendee;
+use App\Models\MeetingSchedule;
 use App\Models\Role;
 use App\Models\TutorAssignment;
 use App\Models\User;
@@ -189,6 +192,146 @@ class MeetingApiTest extends TestCase
         $this->putJson("/api/meetings/{$meetingId}", [
             'title' => 'Hacked',
         ])->assertForbidden();
+    }
+
+    public function test_meeting_details_returns_student_attendance_and_lock_state(): void
+    {
+        $staff = $this->createUserWithRole(Role::STAFF);
+        $tutor = $this->createUserWithRole(Role::TUTOR);
+        $student = $this->createUserWithRole(Role::STUDENT);
+
+        $assignment = TutorAssignment::query()->create([
+            'tutor_user_id' => $tutor->id,
+            'student_user_id' => $student->id,
+            'start_date' => '2026-03-01',
+            'end_date' => '2026-03-31',
+            'status' => TutorAssignment::STATUS_ACTIVE,
+        ]);
+
+        $meeting = Meeting::query()->create([
+            'title' => 'Details session',
+            'description' => 'Review attendance state',
+            'type' => 'VIRTUAL',
+            'platform' => 'Google Meet',
+            'link' => 'https://meet.example.com/details',
+            'location' => null,
+            'tutor_assignment_id' => $assignment->id,
+        ]);
+
+        MeetingSchedule::query()->create([
+            'meeting_id' => $meeting->id,
+            'date' => '2026-03-22',
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+            'note' => 'Bring practice work.',
+        ]);
+
+        MeetingAttendee::query()->create([
+            'meeting_id' => $meeting->id,
+            'user_id' => $student->id,
+            'status' => 'PRESENCE',
+        ]);
+
+        Sanctum::actingAs($staff);
+
+        $this->getJson("/api/meetings/{$meeting->id}/details")
+            ->assertOk()
+            ->assertJsonPath('id', $meeting->id)
+            ->assertJsonPath('student_attendance.user_id', $student->id)
+            ->assertJsonPath('student_attendance.status', 'PRESENCE')
+            ->assertJsonPath('attendance_locked', true)
+            ->assertJsonPath('meeting_schedules.0.note', 'Bring practice work.');
+    }
+
+    public function test_tutor_can_record_attendance_once_for_own_meeting_and_cannot_change_it(): void
+    {
+        $tutor = $this->createUserWithRole(Role::TUTOR);
+        $student = $this->createUserWithRole(Role::STUDENT);
+
+        $assignment = TutorAssignment::query()->create([
+            'tutor_user_id' => $tutor->id,
+            'student_user_id' => $student->id,
+            'start_date' => '2026-03-01',
+            'end_date' => '2026-03-31',
+            'status' => TutorAssignment::STATUS_ACTIVE,
+        ]);
+
+        $meeting = Meeting::query()->create([
+            'title' => 'Attendance session',
+            'description' => null,
+            'type' => 'VIRTUAL',
+            'platform' => 'Google Meet',
+            'link' => 'https://meet.example.com/attendance',
+            'location' => null,
+            'tutor_assignment_id' => $assignment->id,
+        ]);
+
+        MeetingSchedule::query()->create([
+            'meeting_id' => $meeting->id,
+            'date' => '2026-03-22',
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+        ]);
+
+        Sanctum::actingAs($tutor);
+
+        $this->postJson('/api/meeting-attendances', [
+            'meeting_id' => $meeting->id,
+            'user_id' => $student->id,
+            'status' => 'PRESENCE',
+        ])->assertCreated()
+            ->assertJsonPath('meeting_id', $meeting->id)
+            ->assertJsonPath('user_id', $student->id)
+            ->assertJsonPath('status', 'PRESENCE');
+
+        $this->postJson('/api/meeting-attendances', [
+            'meeting_id' => $meeting->id,
+            'user_id' => $student->id,
+            'status' => 'ABSENCE',
+        ])->assertUnprocessable()
+            ->assertJsonPath(
+                'error.details.errors.user_id.0',
+                'Attendance has already been recorded for this student in this meeting.'
+            );
+    }
+
+    public function test_tutor_can_update_note_for_own_meeting_schedule(): void
+    {
+        $tutor = $this->createUserWithRole(Role::TUTOR);
+        $student = $this->createUserWithRole(Role::STUDENT);
+
+        $assignment = TutorAssignment::query()->create([
+            'tutor_user_id' => $tutor->id,
+            'student_user_id' => $student->id,
+            'start_date' => '2026-03-01',
+            'end_date' => '2026-03-31',
+            'status' => TutorAssignment::STATUS_ACTIVE,
+        ]);
+
+        $meeting = Meeting::query()->create([
+            'title' => 'Notes session',
+            'description' => null,
+            'type' => 'VIRTUAL',
+            'platform' => 'Google Meet',
+            'link' => 'https://meet.example.com/notes',
+            'location' => null,
+            'tutor_assignment_id' => $assignment->id,
+        ]);
+
+        $schedule = MeetingSchedule::query()->create([
+            'meeting_id' => $meeting->id,
+            'date' => '2026-03-22',
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+            'note' => null,
+        ]);
+
+        Sanctum::actingAs($tutor);
+
+        $this->putJson("/api/meeting-schedules/{$schedule->id}", [
+            'note' => 'Student completed revision tasks.',
+        ])->assertOk()
+            ->assertJsonPath('note', 'Student completed revision tasks.');
     }
 
     private function createUserWithRole(string $roleCode): User

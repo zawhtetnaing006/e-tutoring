@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\Meeting\StoreMeetingRequest;
 use App\Http\Requests\Meeting\UpdateMeetingRequest;
+use App\Http\Resources\MeetingAttendanceResource;
 use App\Http\Resources\MeetingResource;
 use App\Models\Meeting;
+use App\Models\MeetingAttendee;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\NewScheduleAssigned;
@@ -225,6 +227,65 @@ class MeetingController
                 'tutorAssignment.student:id,name',
             ])
         ));
+    }
+
+    #[Endpoint(title: 'Get Meeting Details')]
+    #[Response(status: 200, examples: [[
+        'id' => 1,
+        'title' => 'Math Session',
+        'description' => 'Weekly tutoring',
+        'type' => 'VIRTUAL',
+        'platform' => 'Google Meet',
+        'link' => 'https://meet.example.com/abc',
+        'location' => null,
+        'tutor_assignment_id' => 1,
+        'student_attendance' => [
+            'id' => 1,
+            'meeting_id' => 1,
+            'user_id' => 5,
+            'status' => 'PRESENCE',
+            'created_at' => '2026-03-03T00:00:00.000000Z',
+            'updated_at' => '2026-03-03T00:00:00.000000Z',
+        ],
+        'attendance_locked' => true,
+        'meeting_schedules' => [[
+            'id' => 1,
+            'meeting_id' => 1,
+            'date' => '2026-03-10',
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+            'note' => 'Focus on algebra practice.',
+            'created_at' => '2026-03-01T00:00:00.000000Z',
+            'updated_at' => '2026-03-01T00:00:00.000000Z',
+        ]],
+        'created_at' => '2026-03-01T00:00:00.000000Z',
+        'updated_at' => '2026-03-01T00:00:00.000000Z',
+    ]])]
+    public function details(Request $request, Meeting $meeting): JsonResponse
+    {
+        Gate::authorize('view', $meeting);
+
+        $meeting->load([
+            'schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time'),
+            'tutorAssignment.tutor:id,name',
+            'tutorAssignment.student:id,name',
+        ]);
+
+        $studentUserId = (int) ($meeting->tutorAssignment?->student_user_id ?? 0);
+        $studentAttendance = $studentUserId > 0
+            ? MeetingAttendee::query()
+                ->where('meeting_id', (int) $meeting->id)
+                ->where('user_id', $studentUserId)
+                ->first()
+            : null;
+
+        return response()->json([
+            ...(new MeetingResource($meeting))->toArray($request),
+            'student_attendance' => $studentAttendance === null
+                ? null
+                : (new MeetingAttendanceResource($studentAttendance))->toArray($request),
+            'attendance_locked' => $studentAttendance !== null,
+        ]);
     }
 
     #[Endpoint(title: 'Update Meeting')]
