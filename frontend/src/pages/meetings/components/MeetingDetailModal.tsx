@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   X,
@@ -49,37 +49,9 @@ export function MeetingDetailModal({
     useState<AttendanceStatus | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
-  const allocationsQuery = useAllocations({ perPage: 1000 })
-  const tutorsQuery = useUsers({ perPage: 100, role_code: 'TUTOR' })
-  const studentsQuery = useUsers({ perPage: 100, role_code: 'STUDENT' })
-
-  const selectedAllocation = useMemo(() => {
-    return allocationsQuery.data?.data.find(
-      a => a.id === meeting.tutor_assignment_id
-    )
-  }, [meeting.tutor_assignment_id, allocationsQuery.data?.data])
-
-  const tutorName = useMemo(() => {
-    if (!selectedAllocation) return `Tutor #${meeting.tutor_assignment_id}`
-    const tutor = tutorsQuery.data?.data.find(
-      u => u.id === selectedAllocation.tutor_user_id
-    )
-    return tutor?.name || `Tutor #${selectedAllocation.tutor_user_id}`
-  }, [selectedAllocation, tutorsQuery.data?.data, meeting.tutor_assignment_id])
-
-  const studentName = useMemo(() => {
-    if (!selectedAllocation) return `Student #${meeting.tutor_assignment_id}`
-    const student = studentsQuery.data?.data.find(
-      u => u.id === selectedAllocation.student_user_id
-    )
-    return student?.name || `Student #${selectedAllocation.student_user_id}`
-  }, [
-    selectedAllocation,
-    studentsQuery.data?.data,
-    meeting.tutor_assignment_id,
-  ])
-
-  const studentId = selectedAllocation?.student_user_id
+  const tutorName = meeting.tutor_name ?? getTutorFallback(meeting)
+  const studentName = meeting.student_name ?? getStudentFallback(meeting)
+  const studentId = meeting.student_user_id
 
   const recurrenceType =
     meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
@@ -494,4 +466,12 @@ export function MeetingDetailModal({
       </div>
     </div>
   )
+}
+
+function getTutorFallback(meeting: Meeting) {
+  return `Tutor Assignment #${meeting.tutor_assignment_id}`
+}
+
+function getStudentFallback(meeting: Meeting) {
+  return `Student Assignment #${meeting.tutor_assignment_id}`
 }

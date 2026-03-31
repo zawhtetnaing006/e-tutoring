@@ -22,6 +22,10 @@ export type Meeting = {
   link: string | null
   location: string | null
   tutor_assignment_id: number
+  tutor_user_id: number | null
+  student_user_id: number | null
+  tutor_name: string | null
+  student_name: string | null
   meeting_schedules: MeetingSchedule[]
   created_at: string
   updated_at: string

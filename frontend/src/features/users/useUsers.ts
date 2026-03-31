@@ -1,5 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
-import { getUsers, type GetUsersParams, type UsersListResponse } from './api'
+import {
+  getUser,
+  getUsers,
+  type GetUsersParams,
+  type UserResource,
+  type UsersListResponse,
+} from './api'
 
 type UseUsersOptions = GetUsersParams & {
   enabled?: boolean
@@ -20,5 +26,16 @@ export function useUsers(
     queryKey: ['users', page, perPage, name, role_code],
     queryFn: () => getUsers({ page, perPage, name, role_code }),
     enabled,
+  })
+}
+
+export function useUser(
+  userIdentifier: string | number | null | undefined,
+  enabled = true
+): ReturnType<typeof useQuery<UserResource>> {
+  return useQuery<UserResource>({
+    queryKey: ['users', 'detail', userIdentifier],
+    queryFn: () => getUser(userIdentifier as string | number),
+    enabled: enabled && userIdentifier != null,
   })
 }

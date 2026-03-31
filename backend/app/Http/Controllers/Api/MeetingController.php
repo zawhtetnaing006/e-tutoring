@@ -68,7 +68,11 @@ class MeetingController
         $page = max(1, (int) $request->integer('page', 1));
 
         $meetings = Meeting::query()
-            ->with(['schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time')])
+            ->with([
+                'schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time'),
+                'tutorAssignment.tutor:id,name',
+                'tutorAssignment.student:id,name',
+            ])
             ->when($currentUser?->hasRole(Role::TUTOR), function ($query) use ($currentUser) {
                 $query->whereHas('tutorAssignment', function ($assignmentQuery) use ($currentUser): void {
                     $assignmentQuery->where('tutor_user_id', (int) $currentUser->id);
@@ -215,7 +219,11 @@ class MeetingController
         Gate::authorize('view', $meeting);
 
         return response()->json(new MeetingResource(
-            $meeting->load(['schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time')])
+            $meeting->load([
+                'schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time'),
+                'tutorAssignment.tutor:id,name',
+                'tutorAssignment.student:id,name',
+            ])
         ));
     }
 
@@ -252,7 +260,11 @@ class MeetingController
     {
         $before = $this->meetingAuditAttributes($meeting);
         $meeting->update($request->validated());
-        $freshMeeting = $meeting->fresh()->load(['schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time')]);
+        $freshMeeting = $meeting->fresh()->load([
+            'schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time'),
+            'tutorAssignment.tutor:id,name',
+            'tutorAssignment.student:id,name',
+        ]);
         $changes = $this->auditLogService->diff($before, $this->meetingAuditAttributes($freshMeeting));
 
         if ($changes['old'] !== [] || $changes['attributes'] !== []) {
