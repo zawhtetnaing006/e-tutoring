@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
 import { z } from 'zod'
@@ -55,9 +55,7 @@ function userToProfileValues(user: User): ProfileFormValues {
     name: user.name,
     email: user.email,
     phoneNumber: user.phone ?? '',
-    subject: Array.isArray(user.subjects)
-      ? (user.subjects[0]?.name ?? '')
-      : '',
+    subject: Array.isArray(user.subjects) ? (user.subjects[0]?.name ?? '') : '',
     country: user.country ?? '',
     city: user.city ?? '',
     township: user.township ?? '',
@@ -67,6 +65,12 @@ function userToProfileValues(user: User): ProfileFormValues {
 
 export function ProfilePage() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
+    null
+  )
+  const [removeProfileImage, setRemoveProfileImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const queryClient = useQueryClient()
   const { data: user, isLoading } = useCurrentUser()
   const normalizedRole = getUserRole(user)
@@ -90,9 +94,20 @@ export function ProfilePage() {
   useEffect(() => {
     if (user) {
       profileForm.reset(userToProfileValues(user))
+      setProfileImageFile(null)
+      setProfileImagePreview(user.profile_image_url)
+      setRemoveProfileImage(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when user loads; profileForm.reset is stable
   }, [user])
+
+  useEffect(() => {
+    return () => {
+      if (profileImagePreview?.startsWith('blob:')) {
+        URL.revokeObjectURL(profileImagePreview)
+      }
+    }
+  }, [profileImagePreview])
 
   const passwordForm = useZodForm(passwordSchema, {
     defaultValues: {
@@ -131,6 +146,12 @@ export function ProfilePage() {
 
   const handleCancelProfile = () => {
     if (user) profileForm.reset(userToProfileValues(user))
+    if (profileImagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+    setProfileImageFile(null)
+    setProfileImagePreview(user?.profile_image_url ?? null)
+    setRemoveProfileImage(false)
   }
 
   const handleClosePasswordModal = () => {
@@ -147,8 +168,11 @@ export function ProfilePage() {
   const profileMutation = useMutation({
     mutationFn: async (values: ProfileFormValues) => {
       const selectedSubjectId = shouldShowSubject
-        ? subjectsData?.data.find(subject => subject.name === values.subject)?.id
+        ? subjectsData?.data.find(subject => subject.name === values.subject)
+            ?.id
         : undefined
+      const shouldSyncSubjectIds =
+        shouldShowSubject && subjectsData != null && !isSubjectsLoading
 
       return updateUser(values.userId, {
         name: values.name,
@@ -158,13 +182,20 @@ export function ProfilePage() {
         country: values.country || null,
         city: values.city || null,
         township: values.township || null,
-        ...(shouldShowSubject
-          ? { subject_ids: selectedSubjectId != null ? [selectedSubjectId] : [] }
+        profileImageFile,
+        removeProfileImage,
+        ...(shouldSyncSubjectIds
+          ? {
+              subject_ids: selectedSubjectId != null ? [selectedSubjectId] : [],
+            }
           : {}),
       })
     },
     onSuccess: updatedUser => {
       profileForm.reset(userToProfileValues(updatedUser))
+      setProfileImageFile(null)
+      setProfileImagePreview(updatedUser.profile_image_url)
+      setRemoveProfileImage(false)
       queryClient.setQueryData(['auth', 'me'], updatedUser)
 
       const session = getAuthSession()
@@ -190,6 +221,38 @@ export function ProfilePage() {
     profileMutation.mutate(values)
   })
 
+  const handleOpenProfileImagePicker = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleProfileImageChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0] ?? null
+
+    if (profileImagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+
+    setProfileImageFile(file)
+    setRemoveProfileImage(false)
+    setProfileImagePreview(
+      file ? URL.createObjectURL(file) : (user?.profile_image_url ?? null)
+    )
+
+    event.target.value = ''
+  }
+
+  const handleRemoveProfileImage = () => {
+    if (profileImagePreview?.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+
+    setProfileImageFile(null)
+    setProfileImagePreview(null)
+    setRemoveProfileImage(true)
+  }
+
   return (
     <div className="max-w-5xl space-y-6">
       <section>
@@ -200,17 +263,25 @@ export function ProfilePage() {
           <form className="space-y-6" onSubmit={handleProfileSubmit} noValidate>
             <div className="flex flex-col gap-6 md:flex-row md:items-center">
               <div className="flex items-center gap-4">
-                <div className="relative flex size-20 items-center justify-center rounded-full bg-muted text-xl font-semibold text-foreground">
-                  {isLoading
-                    ? '…'
-                    : user
-                      ? user.name
-                          .split(/\s+/)
-                          .map(p => p[0])
-                          .join('')
-                          .toUpperCase()
-                          .slice(0, 2) || '?'
-                      : '?'}
+                <div className="relative flex size-20 items-center justify-center overflow-hidden rounded-full bg-muted text-xl font-semibold text-foreground">
+                  {profileImagePreview ? (
+                    <img
+                      src={profileImagePreview}
+                      alt={user?.name ?? 'Profile'}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : isLoading ? (
+                    '…'
+                  ) : user ? (
+                    user.name
+                      .split(/\s+/)
+                      .map(p => p[0])
+                      .join('')
+                      .toUpperCase()
+                      .slice(0, 2) || '?'
+                  ) : (
+                    '?'
+                  )}
                 </div>
                 <div className="space-y-1">
                   <h2 className="text-lg font-semibold text-foreground">
@@ -219,12 +290,30 @@ export function ProfilePage() {
                   <p className="text-subtext text-muted-foreground">
                     {isLoading ? '…' : roleLabel}
                   </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleProfileImageChange}
+                    className="hidden"
+                  />
                   <button
                     type="button"
+                    onClick={handleOpenProfileImagePicker}
                     className="text-sm font-medium text-primary underline-offset-2 hover:underline"
                   >
                     Change Profile Picture
                   </button>
+                  {(profileImagePreview ||
+                    (!removeProfileImage && user?.profile_image_url)) && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveProfileImage}
+                      className="block text-sm font-medium text-destructive underline-offset-2 hover:underline"
+                    >
+                      Remove Profile Picture
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
