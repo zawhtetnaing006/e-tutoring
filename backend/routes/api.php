@@ -81,16 +81,18 @@ Route::prefix('users')
         Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])->get('{user}', 'show');
     });
 
-Route::middleware(['auth:sanctum', 'role:STAFF'])
-    ->prefix('subjects')
+Route::prefix('subjects')
     ->controller(SubjectController::class)
     ->group(function () {
         Route::get('/', 'index');
-        Route::post('/', 'store');
-        Route::get('{subject}', 'show');
-        Route::put('{subject}', 'update');
-        Route::post('{subject}/toggle-status', 'toggleStatus');
-        Route::delete('{subject}', 'destroy');
+
+        Route::middleware(['auth:sanctum', 'role:STAFF'])->group(function () {
+            Route::post('/', 'store');
+            Route::get('{subject}', 'show');
+            Route::put('{subject}', 'update');
+            Route::post('{subject}/toggle-status', 'toggleStatus');
+            Route::delete('{subject}', 'destroy');
+        });
     });
 
 Route::prefix('tutor-assignments')

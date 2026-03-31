@@ -11,10 +11,6 @@ import type { User } from '@/features/auth'
 import { useSubjects } from '@/features/subjects/useSubjects'
 import { updateUser } from '@/features/users/api'
 
-function isE164PhoneNumber(value: string) {
-  return /^\+[1-9]\d{6,14}$/.test(value)
-}
-
 const profileSchema = z.object({
   userId: z.string(),
   name: z.string().min(1, 'Name is required'),
@@ -23,10 +19,7 @@ const profileSchema = z.object({
     .string()
     .trim()
     .min(1, 'Phone number is required')
-    .refine(
-      isE164PhoneNumber,
-      'Please enter a valid phone number (e.g. +959XXXXXXXXX)'
-    ),
+    .min(7, 'Phone number must be longer than 6 characters'),
   subject: z.string().optional(),
   country: z.string().optional(),
   city: z.string().optional(),
