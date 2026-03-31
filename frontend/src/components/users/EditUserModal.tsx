@@ -2,12 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { User, X } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import { useSubjects } from '@/features/subjects/useSubjects'
-import { useUsersList } from '@/features/users/useUsersList'
-import { createClassRooms } from '@/features/class-rooms/api'
 import {
   updateUser,
-  type UserResource,
   type UpdateUserPayload,
+  type UserResource,
 } from '@/features/users/api'
 import type { LayoutVariant } from './types'
 
@@ -34,12 +32,6 @@ export function EditUserModal({
 }: EditUserModalProps) {
   const { data: subjectsData } = useSubjects({ perPage: 100 })
   const subjects = (subjectsData?.data ?? []).filter(s => s.is_active)
-  const { data: tutorsData } = useUsersList({
-    userType: 'TUTOR',
-    perPage: 100,
-    enabled: layoutVariant === 'student',
-  })
-  const tutors = (tutorsData?.data ?? []).filter(t => t.is_active)
   const useTutorLayout = layoutVariant === 'tutor'
   const useStudentLayout = layoutVariant === 'student'
   const [form, setForm] = useState<UpdateUserPayload>({
@@ -53,32 +45,10 @@ export function EditUserModal({
     is_active: user.is_active,
     subject_ids: user.subjects?.map(s => s.id) ?? [],
   })
-  const [assignedTutorId, setAssignedTutorId] = useState<number | ''>('')
-  const [semesterFrom, setSemesterFrom] = useState('')
-  const [semesterTo, setSemesterTo] = useState('')
 
   const updateMutation = useMutation({
     mutationFn: (payload: UpdateUserPayload) => updateUser(user.uuid, payload),
     onSuccess: async () => {
-      if (
-        useStudentLayout &&
-        assignedTutorId &&
-        semesterFrom &&
-        semesterTo &&
-        user.id != null
-      ) {
-        try {
-          await createClassRooms({
-            tutor_user_id: assignedTutorId,
-            student_user_ids: [user.id],
-            from_date: semesterFrom,
-            to_date: semesterTo,
-          })
-        } catch (err) {
-          onError(err instanceof Error ? err.message : 'Failed to assign tutor')
-          return
-        }
-      }
       onSuccess()
     },
     onError: (err: Error) => onError(err.message || 'Failed to update user'),
@@ -370,56 +340,6 @@ export function EditUserModal({
                             </option>
                           ))}
                         </select>
-                      </label>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-foreground">
-                        Select Tutor
-                        <select
-                          value={assignedTutorId}
-                          onChange={e =>
-                            setAssignedTutorId(
-                              e.target.value ? Number(e.target.value) : ''
-                            )
-                          }
-                          className="mt-1 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
-                        >
-                          <option value="">Select a tutor</option>
-                          {tutors.map(t => (
-                            <option
-                              key={t.uuid}
-                              value={(t as UserResource).id ?? ''}
-                            >
-                              {t.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <div className="col-span-2">
-                      <label className="block text-sm font-medium text-foreground">
-                        Semester Period
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          Tutor assignments automatically expire when the
-                          semester ends.
-                        </p>
-                        <div className="mt-1 flex gap-2">
-                          <input
-                            type="date"
-                            value={semesterFrom}
-                            onChange={e => setSemesterFrom(e.target.value)}
-                            className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
-                          />
-                          <span className="self-center text-muted-foreground">
-                            –
-                          </span>
-                          <input
-                            type="date"
-                            value={semesterTo}
-                            onChange={e => setSemesterTo(e.target.value)}
-                            className="flex-1 rounded border border-input bg-background px-3 py-2 text-sm text-foreground"
-                          />
-                        </div>
                       </label>
                     </div>
                   </>

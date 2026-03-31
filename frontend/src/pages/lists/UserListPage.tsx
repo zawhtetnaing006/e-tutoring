@@ -221,9 +221,12 @@ export function UserListPage({
   })
 
   const { data: editUser } = useQuery({
-    queryKey: ['users', editUuid],
+    queryKey: ['users', 'edit', editUuid],
     queryFn: () => getUser(editUuid!),
     enabled: !!editUuid,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: 'always',
   })
 
   useEffect(() => {
@@ -606,7 +609,13 @@ export function UserListPage({
                         </button>
                         <button
                           type="button"
-                          onClick={() => setEditUuid(row.uuid)}
+                          onClick={() => {
+                            queryClient.removeQueries({
+                              queryKey: ['users', 'edit', row.uuid],
+                              exact: true,
+                            })
+                            setEditUuid(row.uuid)
+                          }}
                           className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground 2xl:p-2"
                           aria-label={`Edit ${row.name}`}
                         >
