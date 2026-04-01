@@ -240,10 +240,12 @@ export function ProfilePage() {
   return (
     <div className="max-w-5xl space-y-6">
       <section>
-        <div className="px-2 pb-3">
-          <h2 className="text-xl font-semibold text-foreground">Profile</h2>
+        <div className="pb-3">
+          <h2 className="text-lg font-bold text-foreground sm:text-xl 2xl:text-2xl">
+            Profile
+          </h2>
         </div>
-        <div className="px-2 pb-6 pt-4">
+        <div className="pb-6 pt-4">
           <form className="space-y-6" onSubmit={handleProfileSubmit} noValidate>
             <div className="flex flex-col gap-6 md:flex-row md:items-center">
               <div className="flex items-center gap-4">

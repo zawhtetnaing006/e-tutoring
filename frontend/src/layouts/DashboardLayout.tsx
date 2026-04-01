@@ -80,7 +80,7 @@ export function DashboardLayout() {
 
       <aside
         className={cn(
-          'flex min-h-screen flex-col border-r border-border bg-background',
+          'flex min-h-0 flex-col border-r border-border bg-background lg:min-h-screen',
           'fixed inset-y-0 left-0 z-50 lg:relative lg:z-auto',
           'transition-all duration-300 ease-in-out',
           isCollapsed && 'lg:w-16 lg:overflow-visible lg:px-2 lg:py-4',
@@ -141,7 +141,7 @@ export function DashboardLayout() {
           </div>
           <section
             className={cn(
-              'flex flex-1 flex-col gap-6 pt-6',
+              'flex min-h-0 flex-1 flex-col gap-6 pt-6',
               isCollapsed
                 ? 'lg:overflow-visible'
                 : 'overflow-y-auto overflow-x-hidden'

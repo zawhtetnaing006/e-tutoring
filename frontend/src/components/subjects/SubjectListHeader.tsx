@@ -16,7 +16,7 @@ export function SubjectListHeader({
   return (
     <div className="mb-4 flex flex-col gap-3 sm:mb-1 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
       <div className="min-w-0">
-        <h1 className="truncate text-lg font-bold text-foreground sm:text-xl lg:text-2xl 2xl:text-3xl">
+        <h1 className="truncate text-lg font-bold text-foreground sm:text-xl 2xl:text-2xl">
           {title}
         </h1>
         <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm lg:text-base 2xl:text-lg">

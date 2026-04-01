@@ -79,7 +79,7 @@ export function SubjectListPage({
   } = useSubjectListPage(showStaffActions)
 
   return (
-    <div className="w-full p-3 sm:p-4 lg:p-2">
+    <div className="w-full">
       <SubjectListHeader
         title={title}
         subtitle={subtitle}

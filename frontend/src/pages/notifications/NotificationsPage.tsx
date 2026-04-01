@@ -157,14 +157,14 @@ export function NotificationsPage() {
 
   return (
     <div className="flex h-full w-full flex-col">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white">
-        <div className="shrink-0 px-3 pb-0 pt-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
+        <div className="shrink-0 pb-0">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+              <h1 className="text-lg font-bold text-foreground sm:text-xl 2xl:text-2xl">
                 Notifications
               </h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm lg:text-base">
                 Stay updated with your latest activities
               </p>
             </div>
@@ -214,7 +214,7 @@ export function NotificationsPage() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto py-4">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <LoadingSpinner />

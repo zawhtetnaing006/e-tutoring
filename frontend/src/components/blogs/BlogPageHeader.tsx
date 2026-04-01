@@ -13,10 +13,10 @@ export function BlogPageHeader({
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div>
-        <h1 className="text-base font-medium text-slate-800 sm:text-lg">
+        <h1 className="text-lg font-bold text-foreground sm:text-xl 2xl:text-2xl">
           Blogs
         </h1>
-        <p className="mt-0.5 text-xs text-slate-600 sm:mt-1 sm:text-sm">
+        <p className="mt-0.5 text-xs text-muted-foreground sm:mt-1 sm:text-sm lg:text-base">
           Share knowledge and insights with the community
         </p>
       </div>
