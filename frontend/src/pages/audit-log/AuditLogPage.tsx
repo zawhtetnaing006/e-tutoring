@@ -138,13 +138,13 @@ export function AuditLogPage() {
   }
 
   return (
-    <div className="w-full p-3 sm:p-4 lg:p-2">
+    <div className="w-full">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold text-foreground sm:text-xl lg:text-2xl 2xl:text-3xl">
+          <h1 className="truncate text-lg font-bold text-foreground sm:text-xl 2xl:text-2xl">
             Audit Log
           </h1>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm lg:text-base 2xl:text-lg">
+          <p className="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm lg:text-base">
             Monitor and review system activities and user actions for
             accountability and security.
           </p>

@@ -59,7 +59,7 @@ export function SidebarUserSection({
 
   if (isCollapsed) {
     return (
-      <div className="relative mt-auto border-t border-border pt-4">
+      <div className="relative mt-auto shrink-0 border-t border-border pt-4">
         <div
           className={cn(
             'absolute bottom-full left-full mb-1 ml-2 w-56 origin-bottom-left rounded-lg border border-border bg-background shadow-lg transition-all duration-200 ease-in-out',
@@ -117,7 +117,7 @@ export function SidebarUserSection({
   }
 
   return (
-    <div className="relative mt-auto border-t border-border pt-4">
+    <div className="relative mt-auto shrink-0 border-t border-border pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-4 lg:pb-0">
       <div
         className={cn(
           'absolute bottom-full left-0 right-0 mb-1 origin-bottom rounded-lg border border-border bg-background shadow-lg transition-all duration-200 ease-in-out',

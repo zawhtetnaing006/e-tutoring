@@ -230,10 +230,10 @@ export function AllocationsPage() {
         <section className="p-0">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h1 className="text-2xl font-semibold text-foreground">
+              <h1 className="text-lg font-bold text-foreground sm:text-xl 2xl:text-2xl">
                 Allocation &amp; Scheduling
               </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-sm text-muted-foreground lg:text-base">
                 Assign tutors to students
               </p>
             </div>

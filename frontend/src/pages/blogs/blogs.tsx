@@ -195,7 +195,7 @@ export function BlogsPage() {
 
   return (
     <div className="flex h-full max-h-screen w-full flex-col overflow-hidden bg-background">
-      <div className="flex h-full flex-col overflow-hidden p-4 sm:p-6">
+      <div className="flex h-full flex-col overflow-hidden">
         <BlogFilters
           search={search}
           onSearchChange={handleSearchChange}

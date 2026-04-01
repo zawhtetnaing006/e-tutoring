@@ -59,7 +59,7 @@ export function ConversationListSidebar({
   }
 
   return (
-    <aside className="flex min-h-0 flex-col border-r border-border lg:border-r">
+    <aside className="flex h-full min-h-0 flex-col">
       {!hideSearchBar && (
         <div className="border-b border-border p-3 sm:p-4">
           <SearchInput

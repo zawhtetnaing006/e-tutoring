@@ -1,5 +1,10 @@
 import type { KeyboardEvent, ReactNode, RefObject } from 'react'
-import { LoaderCircle, MessageSquareText, SendHorizontal } from 'lucide-react'
+import {
+  ChevronLeft,
+  LoaderCircle,
+  MessageSquareText,
+  SendHorizontal,
+} from 'lucide-react'
 import type { ChatConversation, ChatMessage } from '@/features/chat/api'
 import { formatMessageTime, getConversationPeer } from './chat-utils'
 
@@ -31,7 +36,9 @@ function MessageBubble({
             isOwnMessage ? 'text-right' : 'text-left'
           }`}
         >
-          {message.is_sending ? 'Sending...' : formatMessageTime(message.created_at)}
+          {message.is_sending
+            ? 'Sending...'
+            : formatMessageTime(message.created_at)}
           {!message.is_sending && statusLabel ? ` · ${statusLabel}` : ''}
         </p>
       </div>
@@ -42,6 +49,8 @@ function MessageBubble({
 type ChatThreadProps = {
   activeConversation: ChatConversation | null
   currentUserId: number | undefined
+  /** When set (e.g. mobile), shows a back control to return to the conversation list. */
+  onBack?: () => void
   activeTab: ChatWorkspaceTab
   onTabChange: (tab: ChatWorkspaceTab) => void
   messages: ChatMessage[]
@@ -59,6 +68,7 @@ type ChatThreadProps = {
 export function ChatThread({
   activeConversation,
   currentUserId,
+  onBack,
   activeTab,
   onTabChange,
   messages,
@@ -74,15 +84,21 @@ export function ChatThread({
 }: ChatThreadProps) {
   if (!activeConversation) {
     return (
-      <section className="flex min-h-0 flex-col">
-        <div className="flex h-full items-center justify-center text-center text-muted-foreground">
+      <section className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center text-muted-foreground">
           <div>
             <MessageSquareText className="mx-auto mb-3 size-10" />
             <p className="text-sm font-medium text-foreground">
               No conversation selected
             </p>
             <p className="mt-1 text-sm">
-              Search for a person on the left to start chatting or open an existing conversation.
+              <span className="hidden lg:inline">
+                Search for a person on the left to start chatting or open an
+                existing conversation.
+              </span>
+              <span className="lg:hidden">
+                Search for a person or choose a conversation from the list.
+              </span>
             </p>
           </div>
         </div>
@@ -104,20 +120,34 @@ export function ChatThread({
     activeConversation.other_user_last_seen_message_id
 
   return (
-    <section className="flex min-h-0 flex-col">
-      <div className="border-b border-border px-5 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-8 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white">
+    <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="border-b border-border px-3 py-3 sm:px-5 sm:py-4">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          {onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="-ml-1 inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-foreground hover:bg-muted"
+              aria-label="Back to conversations"
+            >
+              <ChevronLeft className="size-5" />
+            </button>
+          ) : null}
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-500 text-xs font-semibold text-white">
             {(peer.name.charAt(0) || '?').toUpperCase()}
           </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">{peer.name}</p>
-            <p className="text-xs text-muted-foreground">{peer.email}</p>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">
+              {peer.name}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {peer.email}
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-5 border-b border-border px-5 py-3 text-sm text-muted-foreground">
+      <div className="flex items-center gap-4 border-b border-border px-3 py-2.5 text-sm text-muted-foreground sm:gap-5 sm:px-5 sm:py-3">
         <button
           type="button"
           onClick={() => onTabChange('chat')}
@@ -147,7 +177,7 @@ export function ChatThread({
           <div
             ref={messagesRef}
             onScroll={onMessagesScroll}
-            className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-6"
+            className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-5 sm:py-6"
           >
             {isFetchingMoreMessages ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -192,8 +222,8 @@ export function ChatThread({
             )}
           </div>
 
-          <div className="border-t border-border p-4">
-            <div className="flex items-end gap-3">
+          <div className="border-t border-border p-3 sm:p-4">
+            <div className="flex items-end gap-2 sm:gap-3">
               <textarea
                 value={draft}
                 onChange={event => onDraftChange(event.target.value)}

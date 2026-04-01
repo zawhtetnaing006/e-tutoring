@@ -25,7 +25,7 @@ import {
   useDocumentComments,
   sendConversationMessage,
 } from '@/features/chat/useChat'
-import { useDebouncedValue } from '@/hooks'
+import { useDebouncedValue, useMediaQuery } from '@/hooks'
 import { parsePositiveIntParam } from '@/utils/string'
 import { getConversationPeer } from './components/chat-utils'
 import {
@@ -39,6 +39,7 @@ import type { ChatWorkspaceTab } from './components/ChatThread'
 export function useCommunicationHub() {
   const queryClient = useQueryClient()
   const { data: currentUser } = useCurrentUser()
+  const isLg = useMediaQuery('(min-width: 1024px)')
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState('')
   const [draft, setDraft] = useState('')
@@ -59,6 +60,9 @@ export function useCommunicationHub() {
 
   const conversationListRef = useRef<HTMLDivElement | null>(null)
   const messagesListRef = useRef<HTMLDivElement | null>(null)
+  /** When set, the next URL→selection sync microtask is skipped (see handleBackToConversationList). */
+  const suppressConversationUrlSyncRef = useRef(false)
+  const prevRequestedConversationFromUrlRef = useRef<number | null>(null)
   const prevConversationIdRef = useRef<number | null>(null)
   const shouldStickToBottomRef = useRef(true)
   const seenAttemptRef = useRef<Record<number, number>>({})
@@ -96,6 +100,16 @@ export function useCommunicationHub() {
   }, [conversations, currentUser?.id, search])
 
   useEffect(() => {
+    if (
+      requestedConversationId != null &&
+      requestedConversationId !== prevRequestedConversationFromUrlRef.current
+    ) {
+      suppressConversationUrlSyncRef.current = false
+    }
+    prevRequestedConversationFromUrlRef.current = requestedConversationId
+  }, [requestedConversationId])
+
+  useEffect(() => {
     if (requestedConversationId == null) {
       return
     }
@@ -118,6 +132,11 @@ export function useCommunicationHub() {
     }
 
     queueMicrotask(() => {
+      if (suppressConversationUrlSyncRef.current) {
+        suppressConversationUrlSyncRef.current = false
+        return
+      }
+
       setSelectedConversationId(requestedConversationId)
       setSearch('')
       setSelectedDocumentId(null)
@@ -142,8 +161,8 @@ export function useCommunicationHub() {
 
   const resolvedConversationId =
     selectedConversationId ??
-    conversations[0]?.id ??
     optimisticConversationId ??
+    (isLg ? conversations[0]?.id : null) ??
     null
 
   const activeConversation =
@@ -153,7 +172,7 @@ export function useCommunicationHub() {
     (optimisticConversation?.id === resolvedConversationId
       ? optimisticConversation
       : null) ??
-    conversations[0] ??
+    (isLg ? conversations[0] : null) ??
     (optimisticConversationId != null ? optimisticConversation : null) ??
     null
 
@@ -379,7 +398,6 @@ export function useCommunicationHub() {
       return
     }
 
-    // eslint-disable-next-line security/detect-object-injection
     const attemptedSeenMessageId =
       seenAttemptRef.current[activeConversationId] ?? 0
     if (attemptedSeenMessageId >= latestIncomingMessageId) {
@@ -548,9 +566,27 @@ export function useCommunicationHub() {
   }
 
   const handleSelectConversation = (conversationId: number) => {
+    suppressConversationUrlSyncRef.current = false
     setSelectedConversationId(conversationId)
     setSearchParams({ conversation: String(conversationId) }, { replace: true })
     setSearch('')
+    setSelectedDocumentId(null)
+    setCommentDraft('')
+    setActiveTab('chat')
+  }
+
+  const handleBackToConversationList = () => {
+    suppressConversationUrlSyncRef.current = true
+    setSelectedConversationId(null)
+    setOptimisticConversation(null)
+    setSearchParams(
+      prev => {
+        const next = new URLSearchParams(prev)
+        next.delete('conversation')
+        return next
+      },
+      { replace: true }
+    )
     setSelectedDocumentId(null)
     setCommentDraft('')
     setActiveTab('chat')
@@ -640,11 +676,13 @@ export function useCommunicationHub() {
     handleDraftKeyDown,
     handleCommentKeyDown,
     handleSelectConversation,
+    handleBackToConversationList,
     handleStartConversation,
     handleSearchSubmit,
     handleUploadDocument,
     handleSubmitComment,
     handleSelectDocument,
+    isLg,
   }
 }
 

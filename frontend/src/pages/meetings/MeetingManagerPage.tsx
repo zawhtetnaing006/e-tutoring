@@ -116,12 +116,12 @@ export function MeetingManagerPage() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-col gap-3 border-b border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-b border-border bg-card pb-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
+          <h1 className="text-lg font-bold text-foreground sm:text-xl 2xl:text-2xl">
             Meeting Manager
           </h1>
-          <p className="text-xs text-muted-foreground sm:text-sm">
+          <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm lg:text-base">
             {isStudent
               ? 'View your scheduled sessions'
               : 'Manage your tutoring sessions'}
@@ -140,7 +140,7 @@ export function MeetingManagerPage() {
         )}
       </div>
 
-      <div className="border-b border-border bg-card p-3">
+      <div className="border-b border-border bg-card py-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-1 overflow-x-auto sm:gap-2">
             <button
@@ -213,7 +213,7 @@ export function MeetingManagerPage() {
       </div>
 
       {viewMode !== 'list' && (
-        <div className="border-b border-border bg-card p-3">
+        <div className="border-b border-border bg-card py-3">
           <h2 className="text-base font-semibold text-foreground sm:text-lg">
             {currentMonthYear}
           </h2>
