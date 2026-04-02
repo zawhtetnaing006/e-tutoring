@@ -37,12 +37,16 @@ export function LoginPage() {
 
       navigate('/', { replace: true })
     } catch (error) {
+      const title =
+        error instanceof ApiError && error.status === 403
+          ? 'Account inactive'
+          : 'Login failed'
       const description =
         error instanceof ApiError
           ? error.message || 'Unable to log in. Please check your credentials.'
           : 'Unable to log in. Please try again.'
 
-      toast.error('Login failed', { description })
+      toast.error(title, { description })
     } finally {
       setIsSubmitting(false)
     }

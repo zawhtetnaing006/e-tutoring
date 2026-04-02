@@ -41,16 +41,22 @@ class AuthService
 
     /**
      * @param array{email:string,password:string} $credentials
-     * @return array{status:'success',token:string,token_type:string,user:UserResource}|array{status:'locked',available_in:int}|array{status:'invalid_credentials'}
+     * @return array{status:'success',token:string,token_type:string,user:UserResource}|array{status:'locked',available_in:int}|array{status:'inactive'}|array{status:'invalid_credentials'}
      */
     public function login(array $credentials, ?string $tokenName = null): array
     {
         $email = $this->normalizeEmail($credentials['email']);
         $user = User::firstWhere('email', $email);
 
-        if (! $user || ! $user->is_active) {
+        if (! $user) {
             return [
                 'status' => 'invalid_credentials',
+            ];
+        }
+
+        if (! $user->is_active) {
+            return [
+                'status' => 'inactive',
             ];
         }
 

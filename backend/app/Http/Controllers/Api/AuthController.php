@@ -61,6 +61,14 @@ class AuthController
         ],
     )]
     #[Response(
+        status: 403,
+        examples: [
+            [
+                'message' => 'Your account is inactive. Please contact an administrator for help.',
+            ],
+        ],
+    )]
+    #[Response(
         status: 423,
         examples: [
             [
@@ -94,6 +102,12 @@ class AuthController
             return response()->json([
                 'message' => 'Invalid credentials.',
             ], 422);
+        }
+
+        if ($payload['status'] === 'inactive') {
+            return response()->json([
+                'message' => 'Your account is inactive. Please contact an administrator for help.',
+            ], 403);
         }
 
         $user = User::query()
