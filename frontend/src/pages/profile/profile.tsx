@@ -147,6 +147,7 @@ export function ProfilePage() {
 
   const { data: subjectsData, isLoading: isSubjectsLoading } = useSubjects({
     enabled: shouldShowSubject,
+    is_active: true,
   })
 
   const profileMutation = useMutation({

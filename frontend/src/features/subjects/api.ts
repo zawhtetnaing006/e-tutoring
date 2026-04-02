@@ -23,6 +23,7 @@ export type GetSubjectsParams = {
   /** @deprecated Use per_page */
   perPage?: number
   name?: string
+  is_active?: boolean
 }
 
 export async function getSubjects(
@@ -39,6 +40,9 @@ export async function getSubjects(
   if (perPage != null) searchParams.set('per_page', String(perPage))
   if (params.name != null && params.name.trim() !== '') {
     searchParams.set('name', params.name.trim())
+  }
+  if (params.is_active != null) {
+    searchParams.set('is_active', params.is_active ? '1' : '0')
   }
 
   const path = searchParams.toString()

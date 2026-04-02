@@ -29,6 +29,7 @@ class SubjectController
 
     #[Endpoint(title: 'List Subjects')]
     #[QueryParameter('name', required: false, example: 'Math')]
+    #[QueryParameter('is_active', required: false, example: true)]
     #[QueryParameter('per_page', required: false, example: 15)]
     #[QueryParameter('page', required: false, example: 1)]
     #[Response(
@@ -50,15 +51,20 @@ class SubjectController
     {
         $filters = $request->validate([
             'name' => ['sometimes', 'string'],
+            'is_active' => ['sometimes', 'boolean'],
         ]);
 
         $perPage = max(1, min(100, (int) $request->integer('per_page', 15)));
         $page = max(1, (int) $request->integer('page', 1));
         $name = trim((string) ($filters['name'] ?? ''));
+        $isActive = $filters['is_active'] ?? null;
 
         $subjects = Subject::query()
             ->when($name !== '', function ($query) use ($name): void {
                 $query->where('name', 'like', '%' . $name . '%');
+            })
+            ->when($isActive !== null, function ($query) use ($isActive): void {
+                $query->where('is_active', (bool) $isActive);
             })
             ->latest('id')
             ->paginate($perPage, ['*'], 'page', $page);
