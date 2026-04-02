@@ -34,6 +34,10 @@ export type CreateAllocationPayload = {
   status?: 'ACTIVE' | 'INACTIVE' | null
 }
 
+export type CreateAllocationsResponse = {
+  data: Allocation[]
+}
+
 export type UpdateAllocationPayload = {
   tutor_user_id: number
   student_user_id: number
@@ -86,11 +90,16 @@ export async function getAllocation(id: number): Promise<Allocation> {
 export async function createAllocation(
   payload: CreateAllocationPayload
 ): Promise<Allocation[]> {
-  return apiClient<Allocation[]>('tutor-assignments', {
-    method: 'POST',
-    token: getToken(),
-    body: payload,
-  })
+  const response = await apiClient<CreateAllocationsResponse>(
+    'tutor-assignments',
+    {
+      method: 'POST',
+      token: getToken(),
+      body: payload,
+    }
+  )
+
+  return response.data
 }
 
 export async function updateAllocation(
