@@ -9,6 +9,12 @@ import { getAuthSession } from '@/features/auth/storage'
 import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { useAllocations } from '@/features/allocations/useAllocations'
 import { useUsers } from '@/features/users/useUsers'
+import {
+  formatLocalYmd,
+  isEndBeforeOrEqualStart,
+  isLocalScheduleStartInPast,
+  minLocalDateInputValue,
+} from '@/utils'
 
 type RecurrenceType = 'one-time' | 'weekly'
 
@@ -162,6 +168,18 @@ export function CreateMeetingModal({
         toast.error('Please fill in all date and time fields')
         return
       }
+      if (
+        isEndBeforeOrEqualStart(oneTimeDate, oneTimeStartTime, oneTimeEndTime)
+      ) {
+        toast.error('End time must be after start time')
+        return
+      }
+      if (isLocalScheduleStartInPast(oneTimeDate, oneTimeStartTime)) {
+        toast.error(
+          'Schedule must be in the present or future (your local time).'
+        )
+        return
+      }
       meetingSchedules.push({
         date: oneTimeDate,
         start_time: oneTimeStartTime,
@@ -179,8 +197,22 @@ export function CreateMeetingModal({
         return
       }
 
-      const startDate = new Date(weeklyStartDate)
-      const endDate = new Date(weeklyEndDate)
+      if (weeklyStartDate > weeklyEndDate) {
+        toast.error('Weekly end date must be on or after the start date')
+        return
+      }
+
+      if (
+        isEndBeforeOrEqualStart(weeklyStartDate, weeklyStartTime, weeklyEndTime)
+      ) {
+        toast.error('End time must be after start time')
+        return
+      }
+
+      const [sy, sm, sd] = weeklyStartDate.split('-').map(Number)
+      const [ey, em, ed] = weeklyEndDate.split('-').map(Number)
+      const startDate = new Date(sy, sm - 1, sd)
+      const endDate = new Date(ey, em - 1, ed)
       const currentDate = new Date(startDate)
 
       while (currentDate.getDay() !== weeklyWeekday) {
@@ -189,7 +221,7 @@ export function CreateMeetingModal({
 
       while (currentDate <= endDate) {
         meetingSchedules.push({
-          date: currentDate.toISOString().split('T')[0],
+          date: formatLocalYmd(currentDate),
           start_time: weeklyStartTime,
           end_time: weeklyEndTime,
         })
@@ -202,6 +234,18 @@ export function CreateMeetingModal({
         )
         return
       }
+
+      const futureSchedules = meetingSchedules.filter(
+        s => !isLocalScheduleStartInPast(s.date, s.start_time)
+      )
+      if (futureSchedules.length === 0) {
+        toast.error(
+          'All occurrences would be in the past. Adjust the date range or times (your local time).'
+        )
+        return
+      }
+      meetingSchedules.length = 0
+      meetingSchedules.push(...futureSchedules)
     }
 
     const payload: CreateMeetingPayload = {
@@ -518,6 +562,7 @@ export function CreateMeetingModal({
                     <input
                       id="one-time-date"
                       type="date"
+                      min={minLocalDateInputValue()}
                       value={oneTimeDate}
                       onChange={e => setOneTimeDate(e.target.value)}
                       className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -583,6 +628,7 @@ export function CreateMeetingModal({
                       <input
                         id="weekly-start-date"
                         type="date"
+                        min={minLocalDateInputValue()}
                         value={weeklyStartDate}
                         onChange={e => setWeeklyStartDate(e.target.value)}
                         className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -602,6 +648,7 @@ export function CreateMeetingModal({
                       <input
                         id="weekly-end-date"
                         type="date"
+                        min={minLocalDateInputValue()}
                         value={weeklyEndDate}
                         onChange={e => setWeeklyEndDate(e.target.value)}
                         className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
