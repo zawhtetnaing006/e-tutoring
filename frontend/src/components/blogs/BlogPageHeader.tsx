@@ -25,8 +25,8 @@ export function BlogPageHeader({
         <Button
           type="button"
           onClick={onNewBlog}
-          className="w-full rounded-lg bg-slate-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-700 sm:w-auto sm:px-5 sm:py-3 sm:text-lg"
-          leftIcon={<Plus className="size-4 sm:size-5" />}
+          className="w-full rounded-lg bg-slate-600 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 sm:w-auto"
+          leftIcon={<Plus className="size-4" />}
         >
           New Blog
         </Button>

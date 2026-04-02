@@ -197,7 +197,7 @@ function BlogEditorModalContent({
         <div className="shrink-0 border-b border-slate-200 px-4 py-4 sm:px-8 sm:py-6">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-800 sm:text-base">
+              <h2 className="text-base font-semibold text-slate-800 sm:text-lg">
                 {editingBlog ? 'Edit Blog' : 'Create New Blog'}
               </h2>
               <p className="mt-1 text-xs text-slate-400 sm:text-sm">

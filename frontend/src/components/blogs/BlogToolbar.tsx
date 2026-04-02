@@ -39,10 +39,10 @@ export function BlogToolbar({
           type="button"
           variant="outline"
           onClick={onExportCsv}
-          className="flex-1 rounded-xl border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:flex-none sm:px-4 sm:py-2.5 sm:text-lg"
-          leftIcon={<Download className="size-4 sm:size-5" />}
+          className="flex-1 rounded-xl border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:flex-none"
+          leftIcon={<Download className="size-4" />}
         >
-          <span className="hidden xs:inline">Excel</span>
+          <span className="hidden text-sm xs:inline">Excel</span>
         </Button>
 
         {canManageBlogs ? (
@@ -58,10 +58,10 @@ export function BlogToolbar({
             variant="outline"
             onClick={onDeleteSelected}
             disabled={!hasSelection}
-            className="rounded-xl border-slate-200 px-2.5 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 sm:px-3 sm:py-2.5 sm:text-lg"
+            className="rounded-xl border-slate-200 px-2.5 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             aria-label="Delete selected blogs"
           >
-            <Trash2 className="size-4 sm:size-5" />
+            <Trash2 className="size-4" />
           </Button>
         ) : null}
       </div>

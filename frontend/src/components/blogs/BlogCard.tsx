@@ -139,11 +139,11 @@ export function BlogCard({
 
       <div className="space-y-2 p-3 sm:space-y-3 sm:p-4">
         <div className="flex items-start justify-between gap-2 sm:items-center sm:gap-3">
-          <h3 className="line-clamp-2 text-sm font-medium text-slate-700">
+          <h3 className="line-clamp-2 h-[48px] text-base font-medium text-slate-700">
             {blog.title}
           </h3>
           <span
-            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium sm:px-3 sm:py-1 sm:text-sm ${
+            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
               blog.is_active
                 ? BLOG_STATUS_STYLES.active
                 : BLOG_STATUS_STYLES.inactive
@@ -153,7 +153,7 @@ export function BlogCard({
           </span>
         </div>
 
-        <p className="line-clamp-3 text-xs leading-6 text-slate-600 sm:leading-8">
+        <p className="line-clamp-3 h-[96px] text-xs leading-6 text-slate-600 sm:leading-8">
           {getExcerpt(stripHtml(blog.content))}
         </p>
 
