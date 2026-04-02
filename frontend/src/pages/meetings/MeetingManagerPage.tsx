@@ -5,7 +5,10 @@ import { List, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { getAuthSession } from '@/features/auth/storage'
 import { getUserRole } from '@/features/auth/role-utils'
 import { useCurrentUser } from '@/features/auth/useCurrentUser'
-import { useMeetings } from '@/features/meetings/useMeetings'
+import {
+  useMeetings,
+  useMeetingSchedules,
+} from '@/features/meetings/useMeetings'
 import { type Meeting } from '@/features/meetings/api'
 import { CreateMeetingModal } from './components/CreateMeetingModal'
 import { EditMeetingModal } from './components/EditMeetingModal'
@@ -15,6 +18,11 @@ import { ListView } from './components/ListView'
 import { parsePositiveIntParam } from '@/utils/string'
 
 export type ViewMode = 'month' | 'week' | 'day' | 'list'
+
+type MeetingSelection = {
+  meeting: Meeting
+  scheduleId?: number | null
+}
 
 export function MeetingManagerPage() {
   const queryClient = useQueryClient()
@@ -47,10 +55,14 @@ export function MeetingManagerPage() {
   )
   const [currentDate, setCurrentDate] = useState(new Date())
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null)
-  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
+  const [editingMeeting, setEditingMeeting] = useState<MeetingSelection | null>(
+    null
+  )
+  const [selectedMeeting, setSelectedMeeting] =
+    useState<MeetingSelection | null>(null)
 
   const meetingsQuery = useMeetings({ per_page: 1000 })
+  const meetingSchedulesQuery = useMeetingSchedules({ per_page: 1000 })
   const currentUserQuery = useCurrentUser()
   const effectiveUser = currentUserQuery.data ?? getAuthSession()?.user ?? null
   const role = getUserRole(effectiveUser)
@@ -86,6 +98,9 @@ export function MeetingManagerPage() {
   }
 
   const requestedMeetingId = parsePositiveIntParam(searchParams.get('meeting'))
+  const requestedScheduleId = parsePositiveIntParam(
+    searchParams.get('schedule')
+  )
   const meetingFromUrl = useMemo(() => {
     if (requestedMeetingId == null) return null
     const list = meetingsQuery.data?.data
@@ -93,7 +108,36 @@ export function MeetingManagerPage() {
     return list.find(m => m.id === requestedMeetingId) ?? null
   }, [requestedMeetingId, meetingsQuery.data?.data])
 
-  const displayedMeeting = selectedMeeting ?? meetingFromUrl
+  const meetingSelectionFromUrl = useMemo<MeetingSelection | null>(() => {
+    if (!meetingFromUrl) return null
+    if (
+      requestedScheduleId != null &&
+      meetingFromUrl.meeting_schedules.some(
+        schedule => schedule.id === requestedScheduleId
+      )
+    ) {
+      return {
+        meeting: meetingFromUrl,
+        scheduleId: requestedScheduleId,
+      }
+    }
+    return {
+      meeting: meetingFromUrl,
+      scheduleId: null,
+    }
+  }, [meetingFromUrl, requestedScheduleId])
+
+  const displayedMeeting = selectedMeeting ?? meetingSelectionFromUrl
+
+  const openMeetingDetails = useCallback(
+    (meeting: Meeting, scheduleId?: number | null) => {
+      setSelectedMeeting({
+        meeting,
+        scheduleId: scheduleId ?? null,
+      })
+    },
+    []
+  )
 
   const closeMeetingDetail = useCallback(() => {
     setSelectedMeeting(null)
@@ -101,6 +145,7 @@ export function MeetingManagerPage() {
       prev => {
         const next = new URLSearchParams(prev)
         next.delete('meeting')
+        next.delete('schedule')
         return next
       },
       { replace: true }
@@ -223,9 +268,9 @@ export function MeetingManagerPage() {
       <div className="flex-1 overflow-auto bg-background">
         {viewMode === 'list' ? (
           <ListView
-            meetings={meetingsQuery.data?.data ?? []}
-            isLoading={meetingsQuery.isLoading}
-            onViewDetails={setSelectedMeeting}
+            meetingSchedules={meetingSchedulesQuery.data?.data ?? []}
+            isLoading={meetingSchedulesQuery.isLoading}
+            onViewDetails={openMeetingDetails}
             isStudent={isStudent}
           />
         ) : (
@@ -234,7 +279,7 @@ export function MeetingManagerPage() {
             currentDate={currentDate}
             meetings={meetingsQuery.data?.data ?? []}
             isLoading={meetingsQuery.isLoading}
-            onViewDetails={setSelectedMeeting}
+            onViewDetails={openMeetingDetails}
           />
         )}
       </div>
@@ -245,26 +290,34 @@ export function MeetingManagerPage() {
           onSuccess={() => {
             setIsCreateOpen(false)
             void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+            void queryClient.invalidateQueries({
+              queryKey: ['meeting-schedules'],
+            })
           }}
         />
       )}
 
       {editingMeeting && canManageMeetings && (
         <EditMeetingModal
-          key={editingMeeting.id}
-          meeting={editingMeeting}
+          key={`${editingMeeting.meeting.id}:${editingMeeting.scheduleId ?? 'default'}`}
+          meeting={editingMeeting.meeting}
+          scheduleId={editingMeeting.scheduleId}
           onClose={() => setEditingMeeting(null)}
           onSuccess={() => {
             setEditingMeeting(null)
             void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+            void queryClient.invalidateQueries({
+              queryKey: ['meeting-schedules'],
+            })
           }}
         />
       )}
 
       {displayedMeeting && (
         <MeetingDetailModal
-          key={displayedMeeting.id}
-          meeting={displayedMeeting}
+          key={`${displayedMeeting.meeting.id}:${displayedMeeting.scheduleId ?? 'default'}`}
+          meeting={displayedMeeting.meeting}
+          scheduleId={displayedMeeting.scheduleId}
           canManageMeeting={canManageMeetings}
           onClose={closeMeetingDetail}
           onEdit={() => {

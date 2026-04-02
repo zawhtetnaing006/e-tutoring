@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Requests\MeetingAttendance\StoreMeetingAttendanceRequest;
 use App\Http\Resources\MeetingAttendanceResource;
 use App\Models\MeetingAttendee;
+use App\Models\MeetingSchedule;
 use App\Services\AuditLogService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
@@ -23,12 +24,13 @@ class MeetingAttendanceController
     }
 
     #[Endpoint(title: 'Create Meeting Attendance')]
-    #[BodyParameter('meeting_id', required: true, example: 1)]
+    #[BodyParameter('meeting_schedule_id', required: true, example: 1)]
     #[BodyParameter('user_id', required: true, example: 5)]
     #[BodyParameter('status', required: true, example: 'PRESENCE')]
     #[Response(status: 201, examples: [[
         'id' => 1,
         'meeting_id' => 1,
+        'meeting_schedule_id' => 1,
         'user_id' => 5,
         'status' => 'PRESENCE',
         'created_at' => '2026-03-03T00:00:00.000000Z',
@@ -36,7 +38,13 @@ class MeetingAttendanceController
     ]])]
     public function store(StoreMeetingAttendanceRequest $request): JsonResponse
     {
-        $attendance = MeetingAttendee::query()->create($request->validated());
+        $validated = $request->validated();
+        $meetingSchedule = MeetingSchedule::query()->findOrFail((int) $validated['meeting_schedule_id']);
+
+        $attendance = MeetingAttendee::query()->create([
+            ...$validated,
+            'meeting_id' => (int) $meetingSchedule->meeting_id,
+        ]);
         $targetLabel = $this->meetingAttendanceTargetLabel($attendance);
 
         $this->auditLogService->log(

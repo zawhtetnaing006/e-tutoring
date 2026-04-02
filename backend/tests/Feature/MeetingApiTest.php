@@ -200,6 +200,86 @@ class MeetingApiTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_student_can_list_own_meeting_schedules_with_meeting_info(): void
+    {
+        $staff = $this->createUserWithRole(Role::STAFF);
+        $tutor = $this->createUserWithRole(Role::TUTOR);
+        $student = $this->createUserWithRole(Role::STUDENT);
+        $otherTutor = $this->createUserWithRole(Role::TUTOR);
+        $otherStudent = $this->createUserWithRole(Role::STUDENT);
+
+        $ownAssignment = TutorAssignment::query()->create([
+            'tutor_user_id' => $tutor->id,
+            'student_user_id' => $student->id,
+            'start_date' => '2026-03-01',
+            'end_date' => '2026-03-31',
+            'status' => TutorAssignment::STATUS_ACTIVE,
+        ]);
+
+        $otherAssignment = TutorAssignment::query()->create([
+            'tutor_user_id' => $otherTutor->id,
+            'student_user_id' => $otherStudent->id,
+            'start_date' => '2026-03-01',
+            'end_date' => '2026-03-31',
+            'status' => TutorAssignment::STATUS_ACTIVE,
+        ]);
+
+        $ownMeeting = Meeting::query()->create([
+            'title' => 'Own schedule session',
+            'description' => 'Student-owned meeting',
+            'type' => 'VIRTUAL',
+            'platform' => 'Google Meet',
+            'link' => 'https://meet.example.com/own',
+            'location' => null,
+            'tutor_assignment_id' => $ownAssignment->id,
+        ]);
+
+        $ownSchedule = MeetingSchedule::query()->create([
+            'meeting_id' => $ownMeeting->id,
+            'date' => '2026-03-22',
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+        ]);
+
+        MeetingSchedule::query()->create([
+            'meeting_id' => $ownMeeting->id,
+            'date' => '2026-03-29',
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+            'cancel_at' => now(),
+        ]);
+
+        $otherMeeting = Meeting::query()->create([
+            'title' => 'Hidden schedule session',
+            'description' => null,
+            'type' => 'PHYSICAL',
+            'platform' => null,
+            'link' => null,
+            'location' => 'Room 101',
+            'tutor_assignment_id' => $otherAssignment->id,
+        ]);
+
+        MeetingSchedule::query()->create([
+            'meeting_id' => $otherMeeting->id,
+            'date' => '2026-03-23',
+            'start_time' => '11:00:00',
+            'end_time' => '12:00:00',
+        ]);
+
+        Sanctum::actingAs($student);
+
+        $this->getJson('/api/meeting-schedules')
+            ->assertOk()
+            ->assertJsonPath('total_items', 1)
+            ->assertJsonPath('data.0.id', $ownSchedule->id)
+            ->assertJsonPath('data.0.meeting_id', $ownMeeting->id)
+            ->assertJsonPath('data.0.meeting.id', $ownMeeting->id)
+            ->assertJsonPath('data.0.meeting.title', 'Own schedule session')
+            ->assertJsonPath('data.0.meeting.tutor_name', $tutor->name)
+            ->assertJsonPath('data.0.meeting.student_name', $student->name)
+            ->assertJsonPath('data.0.meeting.schedule_count', 1);
+    }
+
     public function test_meeting_details_returns_student_attendance_and_lock_state(): void
     {
         $staff = $this->createUserWithRole(Role::STAFF);
@@ -224,7 +304,7 @@ class MeetingApiTest extends TestCase
             'tutor_assignment_id' => $assignment->id,
         ]);
 
-        MeetingSchedule::query()->create([
+        $schedule = MeetingSchedule::query()->create([
             'meeting_id' => $meeting->id,
             'date' => '2026-03-22',
             'start_time' => '09:00:00',
@@ -234,15 +314,18 @@ class MeetingApiTest extends TestCase
 
         MeetingAttendee::query()->create([
             'meeting_id' => $meeting->id,
+            'meeting_schedule_id' => $schedule->id,
             'user_id' => $student->id,
             'status' => 'PRESENCE',
         ]);
 
         Sanctum::actingAs($staff);
 
-        $this->getJson("/api/meetings/{$meeting->id}/details")
+        $this->getJson("/api/meetings/{$meeting->id}/details?schedule_id={$schedule->id}")
             ->assertOk()
             ->assertJsonPath('id', $meeting->id)
+            ->assertJsonPath('selected_schedule_id', $schedule->id)
+            ->assertJsonPath('student_attendance.meeting_schedule_id', $schedule->id)
             ->assertJsonPath('student_attendance.user_id', $student->id)
             ->assertJsonPath('student_attendance.status', 'PRESENCE')
             ->assertJsonPath('attendance_locked', true)
@@ -272,9 +355,16 @@ class MeetingApiTest extends TestCase
             'tutor_assignment_id' => $assignment->id,
         ]);
 
-        MeetingSchedule::query()->create([
+        $schedule = MeetingSchedule::query()->create([
             'meeting_id' => $meeting->id,
             'date' => '2026-03-22',
+            'start_time' => '09:00:00',
+            'end_time' => '10:00:00',
+        ]);
+
+        $nextSchedule = MeetingSchedule::query()->create([
+            'meeting_id' => $meeting->id,
+            'date' => '2026-03-29',
             'start_time' => '09:00:00',
             'end_time' => '10:00:00',
         ]);
@@ -282,22 +372,32 @@ class MeetingApiTest extends TestCase
         Sanctum::actingAs($tutor);
 
         $this->postJson('/api/meeting-attendances', [
-            'meeting_id' => $meeting->id,
+            'meeting_schedule_id' => $schedule->id,
             'user_id' => $student->id,
             'status' => 'PRESENCE',
         ])->assertCreated()
             ->assertJsonPath('meeting_id', $meeting->id)
+            ->assertJsonPath('meeting_schedule_id', $schedule->id)
             ->assertJsonPath('user_id', $student->id)
             ->assertJsonPath('status', 'PRESENCE');
 
         $this->postJson('/api/meeting-attendances', [
-            'meeting_id' => $meeting->id,
+            'meeting_schedule_id' => $nextSchedule->id,
+            'user_id' => $student->id,
+            'status' => 'ABSENCE',
+        ])->assertCreated()
+            ->assertJsonPath('meeting_schedule_id', $nextSchedule->id)
+            ->assertJsonPath('user_id', $student->id)
+            ->assertJsonPath('status', 'ABSENCE');
+
+        $this->postJson('/api/meeting-attendances', [
+            'meeting_schedule_id' => $schedule->id,
             'user_id' => $student->id,
             'status' => 'ABSENCE',
         ])->assertUnprocessable()
             ->assertJsonPath(
                 'error.details.errors.user_id.0',
-                'Attendance has already been recorded for this student in this meeting.'
+                'Attendance has already been recorded for this student in this schedule.'
             );
     }
 

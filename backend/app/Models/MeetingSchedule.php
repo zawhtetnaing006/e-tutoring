@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MeetingSchedule extends Model
 {
@@ -37,5 +38,10 @@ class MeetingSchedule extends Model
     public function meeting(): BelongsTo
     {
         return $this->belongsTo(Meeting::class, 'meeting_id');
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(MeetingAttendee::class, 'meeting_schedule_id');
     }
 }

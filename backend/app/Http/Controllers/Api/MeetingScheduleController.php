@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Traits\FormatsListingResponse;
 use App\Http\Requests\Meeting\UpdateMeetingScheduleRequest;
 use App\Http\Resources\MeetingScheduleResource;
+use App\Models\Role;
 use App\Models\MeetingSchedule;
 use App\Models\User;
 use App\Notifications\MeetingScheduleCancelledNotification;
@@ -12,6 +14,7 @@ use App\Services\AuditLogService;
 use Dedoc\Scramble\Attributes\BodyParameter;
 use Dedoc\Scramble\Attributes\Endpoint;
 use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,10 +23,75 @@ use Illuminate\Support\Facades\Gate;
 #[Group('Meeting Schedules', description: 'Meeting schedule management endpoints.', weight: 8)]
 class MeetingScheduleController
 {
+    use FormatsListingResponse;
+
     public function __construct(
         private readonly AuditLogService $auditLogService
     )
     {
+    }
+
+    #[Endpoint(title: 'List Meeting Schedules')]
+    #[QueryParameter('per_page', required: false, example: 15)]
+    #[QueryParameter('page', required: false, example: 1)]
+    #[Response(status: 200, examples: [[
+        'data' => [[
+            'id' => 1,
+            'meeting_id' => 1,
+            'date' => '2026-03-10',
+            'start_time' => '10:00:00',
+            'end_time' => '11:00:00',
+            'note' => 'Bring chapter 5 worksheet',
+            'meeting' => [
+                'id' => 1,
+                'title' => 'Math Session',
+                'type' => 'VIRTUAL',
+                'tutor_name' => 'Tutor User',
+                'student_name' => 'Student User',
+            ],
+            'created_at' => '2026-03-01T00:00:00.000000Z',
+            'updated_at' => '2026-03-02T00:00:00.000000Z',
+        ]],
+        'current_page' => 1,
+        'total_page' => 1,
+        'total_items' => 1,
+    ]])]
+    public function index(Request $request): JsonResponse
+    {
+        /** @var User|null $currentUser */
+        $currentUser = $request->user();
+        $perPage = max(1, min(100, (int) $request->integer('per_page', 15)));
+        $page = max(1, (int) $request->integer('page', 1));
+
+        $meetingSchedules = MeetingSchedule::query()
+            ->with([
+                'meeting.schedules' => fn ($query) => $query
+                    ->select('id', 'meeting_id')
+                    ->whereNull('cancel_at'),
+                'meeting.tutorAssignment.tutor:id,name',
+                'meeting.tutorAssignment.student:id,name',
+            ])
+            ->whereNull('cancel_at')
+            ->when($currentUser?->hasRole(Role::TUTOR), function ($query) use ($currentUser): void {
+                $query->whereHas('meeting.tutorAssignment', function ($assignmentQuery) use ($currentUser): void {
+                    $assignmentQuery->where('tutor_user_id', (int) $currentUser->id);
+                });
+            })
+            ->when($currentUser?->hasRole(Role::STUDENT), function ($query) use ($currentUser): void {
+                $query->whereHas('meeting.tutorAssignment', function ($assignmentQuery) use ($currentUser): void {
+                    $assignmentQuery->where('student_user_id', (int) $currentUser->id);
+                });
+            })
+            ->orderByDesc('date')
+            ->orderByDesc('start_time')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $data = $meetingSchedules->getCollection()
+            ->map(fn (MeetingSchedule $meetingSchedule) => (new MeetingScheduleResource($meetingSchedule))->toArray($request))
+            ->values()
+            ->all();
+
+        return $this->formatListingResponse($meetingSchedules, $data);
     }
 
     #[Endpoint(title: 'Update Meeting Schedule')]

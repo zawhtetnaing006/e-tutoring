@@ -20,13 +20,14 @@ import {
 } from '@/features/meetings/api'
 import { resolveVirtualJoinUrl } from '@/features/meetings/virtual-platform-links'
 import {
-  useDeleteMeeting,
+  useCancelMeetingSchedule,
   useMeetingDetails,
   useUpdateMeetingSchedule,
 } from '@/features/meetings/useMeetings'
 
 type MeetingDetailModalProps = {
   meeting: Meeting
+  scheduleId?: number | null
   /** Staff and tutors can reschedule and record attendance; students are read-only. */
   canManageMeeting: boolean
   onClose: () => void
@@ -50,20 +51,28 @@ type MeetingDetailModalDraftProps = {
 
 export function MeetingDetailModal({
   meeting,
+  scheduleId,
   canManageMeeting,
   onClose,
   onEdit,
 }: MeetingDetailModalProps) {
-  const detailQuery = useMeetingDetails(meeting.id)
+  const detailQuery = useMeetingDetails(meeting.id, scheduleId)
   const detailMeeting = detailQuery.data ?? meeting
+  const selectedScheduleId =
+    detailQuery.data?.selected_schedule_id ?? scheduleId ?? null
 
   const primarySchedule = useMemo(() => {
     return (
+      (selectedScheduleId != null
+        ? detailMeeting.meeting_schedules.find(
+            schedule => schedule.id === selectedScheduleId
+          )
+        : undefined) ??
       detailMeeting.meeting_schedules.find(schedule => !schedule.cancel_at) ??
       detailMeeting.meeting_schedules[0] ??
       null
     )
-  }, [detailMeeting.meeting_schedules])
+  }, [detailMeeting.meeting_schedules, selectedScheduleId])
 
   const existingAttendance = detailQuery.data?.student_attendance ?? null
   const attendanceLocked = detailQuery.data?.attendance_locked ?? false
@@ -113,13 +122,16 @@ function MeetingDetailModalDraft({
   const studentName = meeting.student_name ?? getStudentFallback(meeting)
   const studentId = meeting.student_user_id
   const recurrenceType =
-    meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
-  const firstSchedule = meeting.meeting_schedules[0]
+    (meeting.schedule_count ?? meeting.meeting_schedules.length) > 1
+      ? 'weekly'
+      : 'one-time'
+  const selectedSchedule = primarySchedule ?? meeting.meeting_schedules[0]
   const isVirtual = meeting.type === 'VIRTUAL'
   const virtualJoinUrl = isVirtual ? resolveVirtualJoinUrl(meeting) : null
+  const isScheduleCancelled = primarySchedule?.cancel_at != null
 
   const updateScheduleMutation = useUpdateMeetingSchedule()
-  const deleteMeetingMutation = useDeleteMeeting()
+  const cancelScheduleMutation = useCancelMeetingSchedule()
   const attendanceMutation = useMutation({
     mutationFn: createMeetingAttendance,
     onSuccess: () => {
@@ -127,6 +139,7 @@ function MeetingDetailModalDraft({
         description: 'Student attendance has been recorded.',
       })
       void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+      void queryClient.invalidateQueries({ queryKey: ['meeting-schedules'] })
       void queryClient.invalidateQueries({
         queryKey: ['meeting-details', meetingId],
       })
@@ -145,21 +158,26 @@ function MeetingDetailModalDraft({
   const hasNoteChanged =
     primarySchedule !== null && normalizedNote !== savedNote
   const hasAttendanceSelection =
-    !attendanceLocked && selectedAttendance !== null
+    !attendanceLocked && !isScheduleCancelled && selectedAttendance !== null
   const canSave =
     !detailLoading &&
     !detailError &&
     !isSaving &&
     (hasNoteChanged || hasAttendanceSelection)
 
-  const confirmDeleteMeeting = () => {
-    deleteMeetingMutation.mutate(meetingId, {
+  const confirmCancelSchedule = () => {
+    if (!primarySchedule) {
+      toast.error('Meeting schedule not found')
+      return
+    }
+
+    cancelScheduleMutation.mutate(primarySchedule.id, {
       onSuccess: () => {
-        toast.success('Meeting deleted successfully', {
-          description:
-            'The meeting and its scheduled sessions have been removed from the system.',
+        toast.success('Schedule cancelled successfully', {
+          description: 'Only this meeting schedule has been cancelled.',
         })
         void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+        void queryClient.invalidateQueries({ queryKey: ['meeting-schedules'] })
         void queryClient.invalidateQueries({
           queryKey: ['meeting-details', meetingId],
         })
@@ -173,7 +191,7 @@ function MeetingDetailModalDraft({
             : error instanceof Error
               ? error.message
               : 'Please try again later.'
-        toast.error('Failed to delete meeting', {
+        toast.error('Failed to cancel schedule', {
           description,
         })
       },
@@ -185,13 +203,18 @@ function MeetingDetailModalDraft({
       return
     }
 
-    if (!attendanceLocked && !selectedAttendance) {
+    if (!attendanceLocked && !isScheduleCancelled && !selectedAttendance) {
       toast.error('Please select attendance status')
       return
     }
 
-    if (!attendanceLocked && !studentId) {
+    if (!attendanceLocked && !isScheduleCancelled && !studentId) {
       toast.error('Student not found')
+      return
+    }
+
+    if (!primarySchedule) {
+      toast.error('Meeting schedule not found')
       return
     }
 
@@ -203,9 +226,14 @@ function MeetingDetailModalDraft({
         })
       }
 
-      if (!attendanceLocked && selectedAttendance && studentId) {
+      if (
+        !attendanceLocked &&
+        !isScheduleCancelled &&
+        selectedAttendance &&
+        studentId
+      ) {
         await attendanceMutation.mutateAsync({
-          meeting_id: meetingId,
+          meeting_schedule_id: primarySchedule.id,
           user_id: studentId,
           status: selectedAttendance,
         })
@@ -213,7 +241,6 @@ function MeetingDetailModalDraft({
 
       queryClient.removeQueries({
         queryKey: ['meeting-details', meetingId],
-        exact: true,
       })
       queryClient.removeQueries({
         queryKey: ['meetings', meetingId],
@@ -237,37 +264,38 @@ function MeetingDetailModalDraft({
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="delete-meeting-dialog-title"
+          aria-labelledby="cancel-schedule-dialog-title"
         >
           <div className="my-auto w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
             <h3
-              id="delete-meeting-dialog-title"
+              id="cancel-schedule-dialog-title"
               className="text-lg font-semibold text-foreground"
             >
-              Delete this meeting?
+              Cancel this schedule?
             </h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              This will permanently remove &quot;{meeting.title}&quot; and all
-              of its scheduled sessions. This action cannot be undone.
+              This will cancel only this scheduled session for &quot;
+              {meeting.title}&quot;. Other schedules for the same meeting will
+              remain.
             </p>
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setDeleteConfirmOpen(false)}
-                disabled={deleteMeetingMutation.isPending}
+                disabled={cancelScheduleMutation.isPending}
                 className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
               >
-                Keep meeting
+                Keep schedule
               </button>
               <button
                 type="button"
-                onClick={confirmDeleteMeeting}
-                disabled={deleteMeetingMutation.isPending}
+                onClick={confirmCancelSchedule}
+                disabled={cancelScheduleMutation.isPending}
                 className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
               >
-                {deleteMeetingMutation.isPending
-                  ? 'Deleting…'
-                  : 'Delete meeting'}
+                {cancelScheduleMutation.isPending
+                  ? 'Cancelling…'
+                  : 'Cancel schedule'}
               </button>
             </div>
           </div>
@@ -347,14 +375,14 @@ function MeetingDetailModalDraft({
               </div>
             )}
 
-            {firstSchedule && (
+            {selectedSchedule && (
               <div className="mt-4 grid grid-cols-2 gap-4 border-t border-border pt-4 text-sm">
                 <div>
                   <div className="text-muted-foreground">Date & Time</div>
                   <div className="mt-1 font-medium text-foreground">
-                    {firstSchedule.date}{' '}
-                    {firstSchedule.start_time.substring(0, 5)}-
-                    {firstSchedule.end_time.substring(0, 5)}
+                    {selectedSchedule.date}{' '}
+                    {selectedSchedule.start_time.substring(0, 5)}-
+                    {selectedSchedule.end_time.substring(0, 5)}
                   </div>
                 </div>
                 <div>
@@ -412,10 +440,14 @@ function MeetingDetailModalDraft({
                 <button
                   type="button"
                   onClick={() => setDeleteConfirmOpen(true)}
-                  disabled={deleteMeetingMutation.isPending}
+                  disabled={
+                    cancelScheduleMutation.isPending ||
+                    !primarySchedule ||
+                    isScheduleCancelled
+                  }
                   className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted"
                 >
-                  Cancel Meeting
+                  Cancel Schedule
                 </button>
               )}
             </div>
@@ -440,8 +472,13 @@ function MeetingDetailModalDraft({
               )}
               {existingAttendance && (
                 <div className="mb-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                  Attendance was already recorded for this meeting. Updating
+                  Attendance was already recorded for this schedule. Updating
                   attendance is disabled.
+                </div>
+              )}
+              {!existingAttendance && isScheduleCancelled && (
+                <div className="mb-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                  This schedule was cancelled. Recording attendance is disabled.
                 </div>
               )}
               <div className="grid grid-cols-3 gap-3">
@@ -450,7 +487,12 @@ function MeetingDetailModalDraft({
                   value="PRESENCE"
                   selectedAttendance={selectedAttendance}
                   onSelect={setSelectedAttendance}
-                  disabled={attendanceLocked || detailLoading || detailError}
+                  disabled={
+                    attendanceLocked ||
+                    isScheduleCancelled ||
+                    detailLoading ||
+                    detailError
+                  }
                   activeClassName="border-green-500 bg-green-500/10 text-green-600"
                   icon={<CheckCircle className="h-6 w-6" />}
                 />
@@ -459,7 +501,12 @@ function MeetingDetailModalDraft({
                   value="ABSENCE"
                   selectedAttendance={selectedAttendance}
                   onSelect={setSelectedAttendance}
-                  disabled={attendanceLocked || detailLoading || detailError}
+                  disabled={
+                    attendanceLocked ||
+                    isScheduleCancelled ||
+                    detailLoading ||
+                    detailError
+                  }
                   activeClassName="border-red-500 bg-red-500/10 text-red-600"
                   icon={<XCircle className="h-6 w-6" />}
                 />
@@ -468,7 +515,12 @@ function MeetingDetailModalDraft({
                   value="ON_LEAVE"
                   selectedAttendance={selectedAttendance}
                   onSelect={setSelectedAttendance}
-                  disabled={attendanceLocked || detailLoading || detailError}
+                  disabled={
+                    attendanceLocked ||
+                    isScheduleCancelled ||
+                    detailLoading ||
+                    detailError
+                  }
                   activeClassName="border-orange-500 bg-orange-500/10 text-orange-600"
                   icon={<MinusCircle className="h-6 w-6" />}
                 />

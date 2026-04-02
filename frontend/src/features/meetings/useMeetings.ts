@@ -7,16 +7,19 @@ import {
 } from '@tanstack/react-query'
 import {
   getMeetings,
+  getMeetingSchedules,
   getMeeting,
   getMeetingDetails,
   createMeeting,
   updateMeeting,
   deleteMeeting,
   updateMeetingSchedule,
+  cancelMeetingSchedule,
   type MeetingsResponse,
   type Meeting,
   type MeetingDetails,
   type MeetingSchedule,
+  type MeetingSchedulesResponse,
   type GetMeetingsParams,
   type CreateMeetingPayload,
   type UpdateMeetingPayload,
@@ -32,6 +35,15 @@ export function useMeetings(
   })
 }
 
+export function useMeetingSchedules(
+  params: GetMeetingsParams = {}
+): UseQueryResult<MeetingSchedulesResponse, Error> {
+  return useQuery({
+    queryKey: ['meeting-schedules', params],
+    queryFn: () => getMeetingSchedules(params),
+  })
+}
+
 export function useMeeting(meetingId: number): UseQueryResult<Meeting, Error> {
   return useQuery({
     queryKey: ['meetings', meetingId],
@@ -41,11 +53,12 @@ export function useMeeting(meetingId: number): UseQueryResult<Meeting, Error> {
 }
 
 export function useMeetingDetails(
-  meetingId: number
+  meetingId: number,
+  scheduleId?: number | null
 ): UseQueryResult<MeetingDetails, Error> {
   return useQuery({
-    queryKey: ['meeting-details', meetingId],
-    queryFn: () => getMeetingDetails(meetingId),
+    queryKey: ['meeting-details', meetingId, scheduleId ?? null],
+    queryFn: () => getMeetingDetails(meetingId, scheduleId),
     enabled: !!meetingId,
     staleTime: 0,
     gcTime: 0,
@@ -64,6 +77,7 @@ export function useCreateMeeting(): UseMutationResult<
     mutationFn: createMeeting,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+      void queryClient.invalidateQueries({ queryKey: ['meeting-schedules'] })
     },
   })
 }
@@ -79,6 +93,7 @@ export function useUpdateMeeting(): UseMutationResult<
     mutationFn: ({ id, payload }) => updateMeeting(id, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+      void queryClient.invalidateQueries({ queryKey: ['meeting-schedules'] })
     },
   })
 }
@@ -90,6 +105,7 @@ export function useDeleteMeeting(): UseMutationResult<void, Error, number> {
     mutationFn: deleteMeeting,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+      void queryClient.invalidateQueries({ queryKey: ['meeting-schedules'] })
     },
   })
 }
@@ -106,6 +122,23 @@ export function useUpdateMeetingSchedule(): UseMutationResult<
       updateMeetingSchedule(scheduleId, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+      void queryClient.invalidateQueries({ queryKey: ['meeting-schedules'] })
+    },
+  })
+}
+
+export function useCancelMeetingSchedule(): UseMutationResult<
+  MeetingSchedule,
+  Error,
+  number
+> {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: cancelMeetingSchedule,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['meetings'] })
+      void queryClient.invalidateQueries({ queryKey: ['meeting-schedules'] })
     },
   })
 }

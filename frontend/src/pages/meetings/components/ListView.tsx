@@ -1,23 +1,60 @@
 import { useMemo } from 'react'
 import { LoaderCircle, Video, MapPin, Calendar, Clock } from 'lucide-react'
-import type { Meeting, MeetingSchedule } from '@/features/meetings/api'
+import type { Meeting, MeetingScheduleListItem } from '@/features/meetings/api'
 
 type ListViewProps = {
-  meetings: Meeting[]
+  meetingSchedules: MeetingScheduleListItem[]
   isLoading: boolean
-  onViewDetails: (meeting: Meeting) => void
+  onViewDetails: (meeting: Meeting, scheduleId?: number | null) => void
   isStudent?: boolean
 }
 
-type MeetingWithNextSchedule = {
+type MeetingScheduleCard = {
   meeting: Meeting
-  nextSchedule: MeetingSchedule | null
+  schedule: MeetingScheduleListItem
   recurrence: 'weekly' | 'one-time'
   status: 'upcoming' | 'ongoing' | 'present' | 'cancelled'
 }
 
+function buildMeetingFromScheduleListItem(
+  meetingSchedule: MeetingScheduleListItem
+): Meeting {
+  return {
+    id: meetingSchedule.meeting?.id ?? meetingSchedule.meeting_id,
+    title: meetingSchedule.meeting?.title ?? 'Meeting',
+    description: meetingSchedule.meeting?.description ?? null,
+    type: meetingSchedule.meeting?.type ?? 'VIRTUAL',
+    platform: meetingSchedule.meeting?.platform ?? null,
+    link: meetingSchedule.meeting?.link ?? null,
+    location: meetingSchedule.meeting?.location ?? null,
+    tutor_assignment_id: meetingSchedule.meeting?.tutor_assignment_id ?? 0,
+    tutor_user_id: meetingSchedule.meeting?.tutor_user_id ?? null,
+    student_user_id: meetingSchedule.meeting?.student_user_id ?? null,
+    tutor_name: meetingSchedule.meeting?.tutor_name ?? null,
+    student_name: meetingSchedule.meeting?.student_name ?? null,
+    schedule_count: meetingSchedule.meeting?.schedule_count ?? 1,
+    meeting_schedules: [
+      {
+        id: meetingSchedule.id,
+        meeting_id: meetingSchedule.meeting_id,
+        date: meetingSchedule.date,
+        start_time: meetingSchedule.start_time,
+        end_time: meetingSchedule.end_time,
+        note: meetingSchedule.note,
+        cancel_at: meetingSchedule.cancel_at,
+        created_at: meetingSchedule.created_at,
+        updated_at: meetingSchedule.updated_at,
+      },
+    ],
+    created_at:
+      meetingSchedule.meeting?.created_at ?? meetingSchedule.created_at,
+    updated_at:
+      meetingSchedule.meeting?.updated_at ?? meetingSchedule.updated_at,
+  }
+}
+
 export function ListView({
-  meetings,
+  meetingSchedules,
   isLoading,
   onViewDetails,
   isStudent = false,
@@ -28,61 +65,40 @@ export function ListView({
   const getStudentLabel = (meeting: Meeting) =>
     meeting.student_name ?? `Student Assignment #${meeting.tutor_assignment_id}`
 
-  const meetingsWithSchedule = useMemo<MeetingWithNextSchedule[]>(() => {
+  const meetingScheduleCards = useMemo<MeetingScheduleCard[]>(() => {
     const now = new Date()
     const nowStr = now.toISOString().split('T')[0]
     const nowTime = now.toTimeString().substring(0, 8)
 
-    return meetings.map(meeting => {
-      const activeSchedules = meeting.meeting_schedules.filter(
-        s => !s.cancel_at
-      )
-
-      const upcomingSchedules = activeSchedules.filter(s => {
-        if (s.date > nowStr) return true
-        if (s.date === nowStr && s.start_time > nowTime) return true
-        return false
-      })
-
-      const nextSchedule =
-        upcomingSchedules.length > 0
-          ? upcomingSchedules.sort((a, b) => {
-              if (a.date !== b.date) return a.date.localeCompare(b.date)
-              return a.start_time.localeCompare(b.start_time)
-            })[0]
-          : activeSchedules.length > 0
-            ? activeSchedules[activeSchedules.length - 1]
-            : null
-
+    return meetingSchedules.map(schedule => {
+      const meeting = buildMeetingFromScheduleListItem(schedule)
       const recurrence =
-        meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
+        (schedule.meeting?.schedule_count ?? meeting.meeting_schedules.length) >
+        1
+          ? 'weekly'
+          : 'one-time'
 
-      let status: MeetingWithNextSchedule['status'] = 'upcoming'
-      if (nextSchedule) {
-        if (nextSchedule.date === nowStr) {
-          if (
-            nowTime >= nextSchedule.start_time &&
-            nowTime <= nextSchedule.end_time
-          ) {
-            status = 'ongoing'
-          } else if (nowTime > nextSchedule.end_time) {
-            status = 'present'
-          }
-        } else if (nextSchedule.date < nowStr) {
+      let status: MeetingScheduleCard['status'] = 'upcoming'
+      if (schedule.cancel_at) {
+        status = 'cancelled'
+      } else if (schedule.date === nowStr) {
+        if (nowTime >= schedule.start_time && nowTime <= schedule.end_time) {
+          status = 'ongoing'
+        } else if (nowTime > schedule.end_time) {
           status = 'present'
         }
-      } else {
-        status = 'cancelled'
+      } else if (schedule.date < nowStr) {
+        status = 'present'
       }
 
       return {
         meeting,
-        nextSchedule,
+        schedule,
         recurrence,
         status,
       }
     })
-  }, [meetings])
+  }, [meetingSchedules])
 
   if (isLoading) {
     return (
@@ -92,7 +108,7 @@ export function ListView({
     )
   }
 
-  if (meetingsWithSchedule.length === 0) {
+  if (meetingScheduleCards.length === 0) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
@@ -110,17 +126,17 @@ export function ListView({
   return (
     <div className="h-full overflow-y-auto py-6">
       <div className="space-y-4">
-        {meetingsWithSchedule.map(
-          ({ meeting, nextSchedule, recurrence, status }) => (
+        {meetingScheduleCards.map(
+          ({ meeting, schedule, recurrence, status }) => (
             <div
-              key={meeting.id}
+              key={`${schedule.meeting_id}:${schedule.id}`}
               role="button"
               tabIndex={0}
-              onClick={() => onViewDetails(meeting)}
+              onClick={() => onViewDetails(meeting, schedule.id)}
               onKeyDown={e => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
-                  onViewDetails(meeting)
+                  onViewDetails(meeting, schedule.id)
                 }
               }}
               className="w-full cursor-pointer rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted/50"
@@ -182,42 +198,37 @@ export function ListView({
                       </div>
                     </div>
 
-                    {nextSchedule && (
-                      <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          <span>
-                            {new Date(nextSchedule.date).toLocaleDateString(
-                              'en-US',
-                              {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                              }
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          <span>
-                            {nextSchedule.start_time.substring(0, 5)} -{' '}
-                            {nextSchedule.end_time.substring(0, 5)}
-                          </span>
-                        </div>
-                        {meeting.type === 'VIRTUAL' && meeting.platform && (
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Video className="h-4 w-4" />
-                            <span>{meeting.platform}</span>
-                          </div>
-                        )}
-                        {meeting.type === 'PHYSICAL' && meeting.location && (
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            <span>{meeting.location}</span>
-                          </div>
-                        )}
+                    <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>
+                          {new Date(schedule.date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                          })}
+                        </span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {schedule.start_time.substring(0, 5)} -{' '}
+                          {schedule.end_time.substring(0, 5)}
+                        </span>
+                      </div>
+                      {meeting.type === 'VIRTUAL' && meeting.platform && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Video className="h-4 w-4" />
+                          <span>{meeting.platform}</span>
+                        </div>
+                      )}
+                      {meeting.type === 'PHYSICAL' && meeting.location && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <MapPin className="h-4 w-4" />
+                          <span>{meeting.location}</span>
+                        </div>
+                      )}
+                    </div>
 
                     {meeting.description && (
                       <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
@@ -246,7 +257,7 @@ export function ListView({
                   type="button"
                   onClick={e => {
                     e.stopPropagation()
-                    onViewDetails(meeting)
+                    onViewDetails(meeting, schedule.id)
                   }}
                   className="w-full shrink-0 rounded-lg bg-primary/10 px-4 py-2 text-center text-sm font-medium text-primary hover:bg-primary/20 sm:w-auto sm:self-start"
                 >

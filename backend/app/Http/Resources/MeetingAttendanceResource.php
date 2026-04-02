@@ -18,6 +18,7 @@ class MeetingAttendanceResource extends JsonResource
         return [
             'id' => $this->resource->id,
             'meeting_id' => $this->resource->meeting_id,
+            'meeting_schedule_id' => $this->resource->meeting_schedule_id,
             'user_id' => $this->resource->user_id,
             'status' => $this->resource->status,
             'created_at' => $this->resource->created_at?->toISOString(),

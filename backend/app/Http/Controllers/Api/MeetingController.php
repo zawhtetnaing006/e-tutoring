@@ -22,6 +22,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 #[Group('Meetings', description: 'Meeting management endpoints.', weight: 7)]
 class MeetingController
@@ -230,6 +231,7 @@ class MeetingController
     }
 
     #[Endpoint(title: 'Get Meeting Details')]
+    #[QueryParameter('schedule_id', required: false, example: 1)]
     #[Response(status: 200, examples: [[
         'id' => 1,
         'title' => 'Math Session',
@@ -239,9 +241,11 @@ class MeetingController
         'link' => 'https://meet.example.com/abc',
         'location' => null,
         'tutor_assignment_id' => 1,
+        'selected_schedule_id' => 1,
         'student_attendance' => [
             'id' => 1,
             'meeting_id' => 1,
+            'meeting_schedule_id' => 1,
             'user_id' => 5,
             'status' => 'PRESENCE',
             'created_at' => '2026-03-03T00:00:00.000000Z',
@@ -265,22 +269,40 @@ class MeetingController
     {
         Gate::authorize('view', $meeting);
 
+        $filters = $request->validate([
+            'schedule_id' => [
+                'sometimes',
+                'integer',
+                Rule::exists('meeting_schedule', 'id')->where(
+                    fn ($query) => $query->where('meeting_id', (int) $meeting->id)
+                ),
+            ],
+        ]);
+
         $meeting->load([
             'schedules' => fn ($query) => $query->orderBy('date')->orderBy('start_time'),
             'tutorAssignment.tutor:id,name',
             'tutorAssignment.student:id,name',
         ]);
 
+        $selectedScheduleId = isset($filters['schedule_id'])
+            ? (int) $filters['schedule_id']
+            : null;
+        $selectedSchedule = $selectedScheduleId !== null
+            ? $meeting->schedules->firstWhere('id', $selectedScheduleId)
+            : ($meeting->schedules->firstWhere('cancel_at', null) ?? $meeting->schedules->first());
+
         $studentUserId = (int) ($meeting->tutorAssignment?->student_user_id ?? 0);
-        $studentAttendance = $studentUserId > 0
+        $studentAttendance = $studentUserId > 0 && $selectedSchedule !== null
             ? MeetingAttendee::query()
-                ->where('meeting_id', (int) $meeting->id)
+                ->where('meeting_schedule_id', (int) $selectedSchedule->id)
                 ->where('user_id', $studentUserId)
                 ->first()
             : null;
 
         return response()->json([
             ...(new MeetingResource($meeting))->toArray($request),
+            'selected_schedule_id' => $selectedSchedule?->id,
             'student_attendance' => $studentAttendance === null
                 ? null
                 : (new MeetingAttendanceResource($studentAttendance))->toArray($request),

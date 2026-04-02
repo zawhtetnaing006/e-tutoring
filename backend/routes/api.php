@@ -131,12 +131,15 @@ Route::prefix('meetings')
         });
     });
 
-Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])
-    ->prefix('meeting-schedules')
+Route::prefix('meeting-schedules')
     ->controller(MeetingScheduleController::class)
     ->group(function () {
-        Route::put('{meetingSchedule}', 'update');
-        Route::post('{meetingSchedule}/cancel', 'cancel');
+        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR,STUDENT'])->get('/', 'index');
+
+        Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])->group(function () {
+            Route::put('{meetingSchedule}', 'update');
+            Route::post('{meetingSchedule}/cancel', 'cancel');
+        });
     });
 
 Route::middleware(['auth:sanctum', 'role:STAFF,TUTOR'])

@@ -8,7 +8,7 @@ type CalendarViewProps = {
   currentDate: Date
   meetings: Meeting[]
   isLoading: boolean
-  onViewDetails: (meeting: Meeting) => void
+  onViewDetails: (meeting: Meeting, scheduleId?: number | null) => void
 }
 
 type CalendarEvent = {
@@ -84,7 +84,7 @@ export function CalendarView({
 type MonthViewProps = {
   currentDate: Date
   events: CalendarEvent[]
-  onViewDetails: (meeting: Meeting) => void
+  onViewDetails: (meeting: Meeting, scheduleId?: number | null) => void
 }
 
 function MonthView({ currentDate, events, onViewDetails }: MonthViewProps) {
@@ -181,7 +181,9 @@ function MonthView({ currentDate, events, onViewDetails }: MonthViewProps) {
                 {dayEvents.slice(0, 2).map((event, idx) => (
                   <button
                     key={idx}
-                    onClick={() => onViewDetails(event.meeting)}
+                    onClick={() =>
+                      onViewDetails(event.meeting, event.schedule.id)
+                    }
                     className="w-full truncate rounded bg-primary/10 px-2 py-1 text-left text-xs text-primary hover:bg-primary/20"
                   >
                     {event.schedule.start_time.substring(0, 5)}{' '}
@@ -205,7 +207,7 @@ function MonthView({ currentDate, events, onViewDetails }: MonthViewProps) {
 type WeekViewProps = {
   currentDate: Date
   events: CalendarEvent[]
-  onViewDetails: (meeting: Meeting) => void
+  onViewDetails: (meeting: Meeting, scheduleId?: number | null) => void
 }
 
 function WeekView({ currentDate, events, onViewDetails }: WeekViewProps) {
@@ -273,7 +275,9 @@ function WeekView({ currentDate, events, onViewDetails }: WeekViewProps) {
                 {dayEvents.map((event, idx) => (
                   <button
                     key={idx}
-                    onClick={() => onViewDetails(event.meeting)}
+                    onClick={() =>
+                      onViewDetails(event.meeting, event.schedule.id)
+                    }
                     className="w-full rounded bg-primary/10 px-2 py-1.5 text-left text-xs text-primary hover:bg-primary/20"
                   >
                     <div className="font-medium">
@@ -294,7 +298,7 @@ function WeekView({ currentDate, events, onViewDetails }: WeekViewProps) {
 type DayViewProps = {
   currentDate: Date
   events: CalendarEvent[]
-  onViewDetails: (meeting: Meeting) => void
+  onViewDetails: (meeting: Meeting, scheduleId?: number | null) => void
 }
 
 function DayView({ currentDate, events, onViewDetails }: DayViewProps) {
@@ -332,7 +336,7 @@ function DayView({ currentDate, events, onViewDetails }: DayViewProps) {
             dayEvents.map((event, idx) => (
               <button
                 key={idx}
-                onClick={() => onViewDetails(event.meeting)}
+                onClick={() => onViewDetails(event.meeting, event.schedule.id)}
                 className="w-full rounded-lg border border-border bg-card p-4 text-left hover:bg-muted/50"
               >
                 <div className="flex items-center justify-between">

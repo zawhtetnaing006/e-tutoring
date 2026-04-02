@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\MeetingAttendance;
 
-use App\Models\Meeting;
+use App\Models\MeetingSchedule;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
@@ -19,17 +19,17 @@ class StoreMeetingAttendanceRequest extends FormRequest
             return false;
         }
 
-        $meetingId = (int) $this->input('meeting_id');
+        $meetingScheduleId = (int) $this->input('meeting_schedule_id');
 
-        if ($meetingId < 1) {
+        if ($meetingScheduleId < 1) {
             return false;
         }
 
-        $meeting = Meeting::query()
-            ->with('tutorAssignment')
-            ->find($meetingId);
+        $meetingSchedule = MeetingSchedule::query()
+            ->with('meeting.tutorAssignment')
+            ->find($meetingScheduleId);
 
-        if (! $meeting instanceof Meeting) {
+        if (! $meetingSchedule instanceof MeetingSchedule) {
             return false;
         }
 
@@ -38,7 +38,7 @@ class StoreMeetingAttendanceRequest extends FormRequest
         }
 
         if ($user->hasRole(Role::TUTOR)) {
-            return (int) $meeting->tutorAssignment?->tutor_user_id === (int) $user->id;
+            return (int) $meetingSchedule->meeting?->tutorAssignment?->tutor_user_id === (int) $user->id;
         }
 
         return false;
@@ -50,13 +50,13 @@ class StoreMeetingAttendanceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'meeting_id' => ['required', 'integer', 'exists:meeting,id'],
+            'meeting_schedule_id' => ['required', 'integer', 'exists:meeting_schedule,id'],
             'user_id' => [
                 'required',
                 'integer',
                 'exists:users,id',
                 Rule::unique('meeting_attendees', 'user_id')
-                    ->where(fn ($query) => $query->where('meeting_id', $this->input('meeting_id'))),
+                    ->where(fn ($query) => $query->where('meeting_schedule_id', $this->input('meeting_schedule_id'))),
             ],
             'status' => ['required', Rule::in(['PRESENCE', 'ABSENCE', 'ON_LEAVE'])],
         ];
@@ -65,22 +65,31 @@ class StoreMeetingAttendanceRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            $meetingId = (int) $this->input('meeting_id');
+            $meetingScheduleId = (int) $this->input('meeting_schedule_id');
             $userId = (int) $this->input('user_id');
 
-            if ($meetingId < 1 || $userId < 1) {
+            if ($meetingScheduleId < 1 || $userId < 1) {
                 return;
             }
 
-            $meeting = Meeting::query()
-                ->with('tutorAssignment')
-                ->find($meetingId);
+            $meetingSchedule = MeetingSchedule::query()
+                ->with('meeting.tutorAssignment')
+                ->find($meetingScheduleId);
 
-            if (! $meeting instanceof Meeting) {
+            if (! $meetingSchedule instanceof MeetingSchedule) {
                 return;
             }
 
-            $studentUserId = (int) ($meeting->tutorAssignment?->student_user_id ?? 0);
+            if ($meetingSchedule->cancel_at !== null) {
+                $validator->errors()->add(
+                    'meeting_schedule_id',
+                    'Attendance cannot be recorded for a cancelled schedule.'
+                );
+
+                return;
+            }
+
+            $studentUserId = (int) ($meetingSchedule->meeting?->tutorAssignment?->student_user_id ?? 0);
 
             if ($studentUserId > 0 && $userId !== $studentUserId) {
                 $validator->errors()->add(
@@ -97,7 +106,7 @@ class StoreMeetingAttendanceRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'user_id.unique' => 'Attendance has already been recorded for this student in this meeting.',
+            'user_id.unique' => 'Attendance has already been recorded for this student in this schedule.',
         ];
     }
 }

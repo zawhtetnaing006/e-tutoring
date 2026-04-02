@@ -19,6 +19,7 @@ import { isEndBeforeOrEqualStart, isLocalScheduleStartInPast } from '@/utils'
 
 type EditMeetingModalProps = {
   meeting: Meeting
+  scheduleId?: number | null
   onClose: () => void
   onSuccess: () => void
 }
@@ -33,8 +34,17 @@ function firstActiveSchedule(meeting: Meeting) {
   )
 }
 
+function resolveEditableSchedule(meeting: Meeting, scheduleId?: number | null) {
+  return (
+    (scheduleId != null
+      ? meeting.meeting_schedules.find(schedule => schedule.id === scheduleId)
+      : undefined) ?? firstActiveSchedule(meeting)
+  )
+}
+
 export function EditMeetingModal({
   meeting,
+  scheduleId,
   onClose,
   onSuccess,
 }: EditMeetingModalProps) {
@@ -50,7 +60,7 @@ export function EditMeetingModal({
     meeting.tutor_assignment_id
   )
 
-  const initialSchedule = firstActiveSchedule(meeting)
+  const initialSchedule = resolveEditableSchedule(meeting, scheduleId)
   const [scheduleDate, setScheduleDate] = useState(initialSchedule?.date ?? '')
   const [scheduleStart, setScheduleStart] = useState(
     initialSchedule ? initialSchedule.start_time.substring(0, 5) : ''
@@ -94,8 +104,10 @@ export function EditMeetingModal({
   const updateScheduleMutation = useUpdateMeetingSchedule()
 
   const recurrenceType =
-    meeting.meeting_schedules.length > 1 ? 'weekly' : 'one-time'
-  const editableSchedule = firstActiveSchedule(meeting)
+    (meeting.schedule_count ?? meeting.meeting_schedules.length) > 1
+      ? 'weekly'
+      : 'one-time'
+  const editableSchedule = resolveEditableSchedule(meeting, scheduleId)
 
   const handleMutationSuccess = () => {
     toast.success('Meeting updated', {
