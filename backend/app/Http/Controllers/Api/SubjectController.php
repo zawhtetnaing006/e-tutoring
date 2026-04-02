@@ -28,6 +28,7 @@ class SubjectController
     }
 
     #[Endpoint(title: 'List Subjects')]
+    #[QueryParameter('name', required: false, example: 'Math')]
     #[QueryParameter('per_page', required: false, example: 15)]
     #[QueryParameter('page', required: false, example: 1)]
     #[Response(
@@ -47,10 +48,18 @@ class SubjectController
     )]
     public function index(Request $request): JsonResponse
     {
+        $filters = $request->validate([
+            'name' => ['sometimes', 'string'],
+        ]);
+
         $perPage = max(1, min(100, (int) $request->integer('per_page', 15)));
         $page = max(1, (int) $request->integer('page', 1));
+        $name = trim((string) ($filters['name'] ?? ''));
 
         $subjects = Subject::query()
+            ->when($name !== '', function ($query) use ($name): void {
+                $query->where('name', 'like', '%' . $name . '%');
+            })
             ->latest('id')
             ->paginate($perPage, ['*'], 'page', $page);
 

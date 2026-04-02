@@ -7,6 +7,7 @@ import {
   toggleSubjectStatus,
   type Subject,
 } from '@/features/subjects/api'
+import { useDebouncedValue } from '@/hooks'
 import { QUERY_KEYS } from '@/utils/constants'
 
 type SubjectSortKey = 'name' | 'description' | 'status'
@@ -59,6 +60,7 @@ export function useSubjectListPage(showStaffActions: boolean) {
   const [sortKey, setSortKey] = useState<SubjectSortKey | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [statusFilter, setStatusFilter] = useState<SubjectStatusFilter>('all')
+  const debouncedSearch = useDebouncedValue(search.trim(), 350)
 
   const queryClient = useQueryClient()
   const invalidateList = () =>
@@ -67,6 +69,7 @@ export function useSubjectListPage(showStaffActions: boolean) {
   const { data, isLoading, isError } = useSubjects({
     page,
     per_page: perPage,
+    name: debouncedSearch,
   })
 
   const toggleStatusMutation = useMutation({
@@ -118,19 +121,16 @@ export function useSubjectListPage(showStaffActions: boolean) {
     } else if (statusFilter === 'inactive') {
       rows = rows.filter(r => !r.is_active)
     }
-    if (search.trim()) {
-      const q = search.toLowerCase().trim()
-      rows = rows.filter(
-        r =>
-          r.name.toLowerCase().includes(q) ||
-          (r.description ?? '').toLowerCase().includes(q)
-      )
-    }
     if (sortKey) {
       rows = [...rows].sort((a, b) => compareSubjects(a, b, sortKey, sortDir))
     }
     return rows
-  }, [data?.data, search, statusFilter, sortKey, sortDir])
+  }, [data?.data, statusFilter, sortKey, sortDir])
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value)
+    setPage(1)
+  }
 
   const allSelected =
     filteredRows.length > 0 && filteredRows.every(r => selectedIds.has(r.id))
@@ -192,7 +192,7 @@ export function useSubjectListPage(showStaffActions: boolean) {
     perPage,
     setPerPage,
     search,
-    setSearch,
+    setSearch: handleSearchChange,
     selectedIds,
     viewSubject,
     setViewSubject,
