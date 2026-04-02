@@ -15,6 +15,7 @@ import { getAuthSession } from '@/features/auth/storage'
 import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { useAllocations } from '@/features/allocations/useAllocations'
 import { useUsers } from '@/features/users/useUsers'
+import { isEndBeforeOrEqualStart, isLocalScheduleStartInPast } from '@/utils'
 
 type EditMeetingModalProps = {
   meeting: Meeting
@@ -132,6 +133,26 @@ export function EditMeetingModal({
       return
     }
 
+    if (isEndBeforeOrEqualStart(scheduleDate, scheduleStart, scheduleEnd)) {
+      toast.error('End time must be after start time')
+      return
+    }
+
+    const scheduleChanged =
+      scheduleDate !== editableSchedule.date ||
+      scheduleStart !== editableSchedule.start_time.substring(0, 5) ||
+      scheduleEnd !== editableSchedule.end_time.substring(0, 5)
+
+    if (
+      scheduleChanged &&
+      isLocalScheduleStartInPast(scheduleDate, scheduleStart)
+    ) {
+      toast.error(
+        'Schedule must be in the present or future (your local time).'
+      )
+      return
+    }
+
     const payload: UpdateMeetingPayload = {
       title: title.trim(),
       description: description.trim() || null,
@@ -144,11 +165,6 @@ export function EditMeetingModal({
 
     try {
       await updateMutation.mutateAsync({ id: meeting.id, payload })
-
-      const scheduleChanged =
-        scheduleDate !== editableSchedule.date ||
-        scheduleStart !== editableSchedule.start_time.substring(0, 5) ||
-        scheduleEnd !== editableSchedule.end_time.substring(0, 5)
 
       if (scheduleChanged) {
         await updateScheduleMutation.mutateAsync({

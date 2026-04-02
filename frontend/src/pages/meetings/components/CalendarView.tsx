@@ -142,11 +142,11 @@ function MonthView({ currentDate, events, onViewDetails }: MonthViewProps) {
 
   return (
     <div className="h-full py-3">
-      <div className="grid h-full grid-cols-7 grid-rows-[auto_repeat(6,1fr)] gap-0 divide-x divide-y divide-border overflow-hidden rounded-lg border border-border">
+      <div className="grid h-full grid-cols-7 grid-rows-[auto_repeat(6,1fr)] gap-0 divide-x divide-y divide-border overflow-hidden rounded-lg border border-l-0 border-t-0 border-border">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
           <div
             key={day}
-            className="bg-muted px-3 py-2 text-center text-sm font-medium text-muted-foreground"
+            className="border-l border-t border-border bg-muted px-3 py-2 text-center text-sm font-medium text-muted-foreground"
           >
             {day}
           </div>

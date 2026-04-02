@@ -35,16 +35,17 @@ export function BlogToolbar({
       />
 
       <div className="flex items-center gap-2 sm:gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onExportCsv}
-          className="flex-1 rounded-xl border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:flex-none"
-          leftIcon={<Download className="size-4" />}
-        >
-          <span className="hidden text-sm xs:inline">Excel</span>
-        </Button>
-
+        {canManageBlogs ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onExportCsv}
+            className="flex-1 rounded-xl border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:flex-none"
+            leftIcon={<Download className="size-4" />}
+          >
+            <span className="hidden text-sm xs:inline">Excel</span>
+          </Button>
+        ) : null}
         {canManageBlogs ? (
           <StatusFilterDropdown
             value={statusFilter}

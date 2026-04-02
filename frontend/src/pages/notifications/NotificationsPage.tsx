@@ -1,4 +1,5 @@
 import { createElement, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Calendar,
   FileText,
@@ -14,6 +15,7 @@ import {
   useMarkAllAsRead,
   useUnreadCount,
 } from '@/features/notifications'
+import { buildNotificationActionSearch } from '@/utils'
 import { Button } from '@/components/ui/Button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -79,11 +81,19 @@ function NotificationItem({
   notification,
   onMarkAsRead,
 }: NotificationItemProps) {
+  const navigate = useNavigate()
   const iconColor = getNotificationIconColor(notification.type)
 
   const handleClick = () => {
     if (!notification.is_read) {
       onMarkAsRead(notification.id)
+    }
+    const action = notification.action
+    if (action?.route) {
+      navigate({
+        pathname: action.route,
+        search: buildNotificationActionSearch(action),
+      })
     }
   }
 
