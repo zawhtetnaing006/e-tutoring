@@ -141,7 +141,7 @@ export function BlogDetailModal({
       {/* Header - Fixed */}
       <div className="shrink-0 border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4">
         <div className="flex items-start justify-between gap-2">
-          <h2 className="line-clamp-2 text-sm font-semibold text-slate-800 sm:text-base">
+          <h2 className="line-clamp-2 text-base font-semibold text-slate-800 sm:text-lg">
             {blogQuery.isLoading
               ? 'Loading...'
               : (blog?.title ?? 'Blog Details')}
