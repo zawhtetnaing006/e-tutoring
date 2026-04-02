@@ -7,6 +7,8 @@ export type NotificationType =
 
 export interface NotificationAction {
   route?: string
+  /** Query string params for the target route (e.g. `{ conversation: 1 }`). */
+  query?: Record<string, string | number | boolean>
   conversation_id?: number
 }
 
