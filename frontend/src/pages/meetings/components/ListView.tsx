@@ -13,7 +13,7 @@ type MeetingScheduleCard = {
   meeting: Meeting
   schedule: MeetingScheduleListItem
   recurrence: 'weekly' | 'one-time'
-  status: 'upcoming' | 'ongoing' | 'present' | 'cancelled'
+  status: 'upcoming' | 'today' | 'ongoing' | 'previous' | 'cancelled'
 }
 
 function buildMeetingFromScheduleListItem(
@@ -67,8 +67,9 @@ export function ListView({
 
   const meetingScheduleCards = useMemo<MeetingScheduleCard[]>(() => {
     const now = new Date()
-    const nowStr = now.toISOString().split('T')[0]
-    const nowTime = now.toTimeString().substring(0, 8)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+    const nowTime = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
 
     return meetingSchedules.map(schedule => {
       const meeting = buildMeetingFromScheduleListItem(schedule)
@@ -81,14 +82,18 @@ export function ListView({
       let status: MeetingScheduleCard['status'] = 'upcoming'
       if (schedule.cancel_at) {
         status = 'cancelled'
-      } else if (schedule.date === nowStr) {
+      } else if (schedule.date < todayStr) {
+        status = 'previous'
+      } else if (schedule.date > todayStr) {
+        status = 'upcoming'
+      } else {
         if (nowTime >= schedule.start_time && nowTime <= schedule.end_time) {
           status = 'ongoing'
         } else if (nowTime > schedule.end_time) {
-          status = 'present'
+          status = 'previous'
+        } else {
+          status = 'today'
         }
-      } else if (schedule.date < nowStr) {
-        status = 'present'
       }
 
       return {
@@ -179,21 +184,25 @@ export function ListView({
                           className={`flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                             status === 'ongoing'
                               ? 'bg-green-500/10 text-green-600'
-                              : status === 'upcoming'
-                                ? 'bg-blue-500/10 text-blue-600'
-                                : status === 'present'
-                                  ? 'bg-emerald-500/10 text-emerald-600'
-                                  : 'bg-gray-500/10 text-gray-600'
+                              : status === 'today'
+                                ? 'bg-sky-500/10 text-sky-600'
+                                : status === 'upcoming'
+                                  ? 'bg-blue-500/10 text-blue-600'
+                                  : status === 'previous'
+                                    ? 'bg-emerald-500/10 text-emerald-600'
+                                    : 'bg-gray-500/10 text-gray-600'
                           }`}
                         >
                           <Clock className="mr-1 inline h-3 w-3" />
                           {status === 'ongoing'
                             ? 'Ongoing'
-                            : status === 'upcoming'
-                              ? 'Upcoming'
-                              : status === 'present'
-                                ? 'Present'
-                                : 'Cancelled'}
+                            : status === 'today'
+                              ? 'Today'
+                              : status === 'upcoming'
+                                ? 'Upcoming'
+                                : status === 'previous'
+                                  ? 'Previous'
+                                  : 'Cancelled'}
                         </span>
                       </div>
                     </div>
