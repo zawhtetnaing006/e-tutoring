@@ -209,7 +209,7 @@ export function AuditLogPage() {
             'transition-opacity'
           )}
         >
-          <table className="w-full min-w-[720px] table-fixed border-collapse text-left text-xs sm:min-w-[900px] sm:text-sm 2xl:min-w-full 2xl:text-base">
+          <table className="w-full min-w-[880px] table-fixed border-collapse text-left text-xs sm:min-w-[1000px] sm:text-sm 2xl:min-w-full 2xl:text-base">
             <thead className="sticky top-0 z-10 bg-muted shadow-[0_1px_0_0_hsl(var(--border))]">
               <tr className="border-b border-border bg-muted">
                 <th className="w-10 shrink-0 bg-muted p-2 sm:w-12 sm:p-3 2xl:w-14 2xl:p-4">
@@ -327,11 +327,13 @@ export function AuditLogPage() {
                     <td className="w-[130px] whitespace-nowrap px-2 py-3 text-foreground sm:w-[150px] sm:px-3 sm:py-3.5 2xl:px-4 2xl:py-4">
                       {formatAuditLogDateTime(row.date_time)}
                     </td>
-                    <td className="w-[120px] px-2 py-3 text-sm sm:w-[140px] sm:px-3 sm:py-3.5 2xl:px-4 2xl:py-4">
+                    <td className="w-[200px] px-2 py-3 text-sm sm:w-[220px] sm:px-3 sm:py-3.5 2xl:w-[260px] 2xl:px-4 2xl:py-4">
                       <AuditLogActorCell actor={row.actor} />
                     </td>
-                    <td className="w-[100px] px-2 py-3 font-mono text-[11px] text-foreground sm:w-[120px] sm:px-3 sm:py-3.5 sm:text-sm 2xl:px-4 2xl:py-4">
-                      <span className="block truncate">{row.action}</span>
+                    <td className="w-[160px] px-2 py-3 font-mono text-[11px] text-foreground sm:w-[180px] sm:px-3 sm:py-3.5 sm:text-sm 2xl:w-[200px] 2xl:px-4 2xl:py-4">
+                      <span className="block truncate" title={row.action}>
+                        {row.action}
+                      </span>
                     </td>
                     <td className="w-[100px] px-2 py-3 text-muted-foreground sm:w-[120px] sm:px-3 sm:py-3.5 2xl:px-4 2xl:py-4">
                       <span className="block truncate">{row.target}</span>

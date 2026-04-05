@@ -296,7 +296,7 @@ export function CreateMeetingModal({
                 htmlFor="meeting-title"
                 className="block text-sm font-medium text-foreground"
               >
-                Meeting Title <span className="text-red-500">*</span>
+                Meeting Title <span className="text-destructive">*</span>
               </label>
               <input
                 id="meeting-title"
@@ -333,7 +333,7 @@ export function CreateMeetingModal({
                     htmlFor="tutor-select"
                     className="block text-sm font-medium text-foreground"
                   >
-                    Select Tutor <span className="text-red-500">*</span>
+                    Select Tutor <span className="text-destructive">*</span>
                   </label>
                   <select
                     id="tutor-select"
@@ -361,7 +361,7 @@ export function CreateMeetingModal({
                   htmlFor="student-select"
                   className="block text-sm font-medium text-foreground"
                 >
-                  Select Student <span className="text-red-500">*</span>
+                  Select Student <span className="text-destructive">*</span>
                 </label>
                 <select
                   id="student-select"
@@ -402,7 +402,7 @@ export function CreateMeetingModal({
 
             <div>
               <div className="mb-2 block text-sm font-medium text-foreground">
-                Meeting Type <span className="text-red-500">*</span>
+                Meeting Type <span className="text-destructive">*</span>
               </div>
               <div
                 className="grid grid-cols-2 gap-3"
@@ -457,7 +457,7 @@ export function CreateMeetingModal({
                     htmlFor="platform-select"
                     className="block text-sm font-medium text-foreground"
                   >
-                    Online Platform <span className="text-red-500">*</span>
+                    Online Platform <span className="text-destructive">*</span>
                   </label>
                   <select
                     id="platform-select"
@@ -485,7 +485,7 @@ export function CreateMeetingModal({
                     className="block text-sm font-medium text-foreground"
                   >
                     Meeting Invitation Link{' '}
-                    <span className="text-red-500">*</span>
+                    <span className="text-destructive">*</span>
                   </label>
                   <input
                     id="meeting-link"
@@ -506,7 +506,7 @@ export function CreateMeetingModal({
                   htmlFor="meeting-location"
                   className="block text-sm font-medium text-foreground"
                 >
-                  Physical Location <span className="text-red-500">*</span>
+                  Physical Location <span className="text-destructive">*</span>
                 </label>
                 <input
                   id="meeting-location"
@@ -555,7 +555,7 @@ export function CreateMeetingModal({
                     htmlFor="one-time-date"
                     className="block text-sm font-medium text-foreground"
                   >
-                    Date <span className="text-red-500">*</span>
+                    Date <span className="text-destructive">*</span>
                   </label>
                   <div className="relative mt-1">
                     <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -576,7 +576,7 @@ export function CreateMeetingModal({
                       htmlFor="one-time-start"
                       className="block text-sm font-medium text-foreground"
                     >
-                      Start Time <span className="text-red-500">*</span>
+                      Start Time <span className="text-destructive">*</span>
                     </label>
                     <div className="relative mt-1">
                       <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -595,7 +595,7 @@ export function CreateMeetingModal({
                       htmlFor="one-time-end"
                       className="block text-sm font-medium text-foreground"
                     >
-                      End Time <span className="text-red-500">*</span>
+                      End Time <span className="text-destructive">*</span>
                     </label>
                     <div className="relative mt-1">
                       <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -621,7 +621,7 @@ export function CreateMeetingModal({
                       htmlFor="weekly-start-date"
                       className="block text-sm font-medium text-foreground"
                     >
-                      Start Date <span className="text-red-500">*</span>
+                      Start Date <span className="text-destructive">*</span>
                     </label>
                     <div className="relative mt-1">
                       <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -641,7 +641,7 @@ export function CreateMeetingModal({
                       htmlFor="weekly-end-date"
                       className="block text-sm font-medium text-foreground"
                     >
-                      End Date <span className="text-red-500">*</span>
+                      End Date <span className="text-destructive">*</span>
                     </label>
                     <div className="relative mt-1">
                       <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -662,7 +662,7 @@ export function CreateMeetingModal({
                     htmlFor="weekly-weekday"
                     className="block text-sm font-medium text-foreground"
                   >
-                    Weekday <span className="text-red-500">*</span>
+                    Weekday <span className="text-destructive">*</span>
                   </label>
                   <select
                     id="weekly-weekday"
@@ -685,7 +685,7 @@ export function CreateMeetingModal({
                       htmlFor="weekly-start-time"
                       className="block text-sm font-medium text-foreground"
                     >
-                      Start Time <span className="text-red-500">*</span>
+                      Start Time <span className="text-destructive">*</span>
                     </label>
                     <div className="relative mt-1">
                       <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -704,7 +704,7 @@ export function CreateMeetingModal({
                       htmlFor="weekly-end-time"
                       className="block text-sm font-medium text-foreground"
                     >
-                      End Time <span className="text-red-500">*</span>
+                      End Time <span className="text-destructive">*</span>
                     </label>
                     <div className="relative mt-1">
                       <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

@@ -226,7 +226,7 @@ export function EditMeetingModal({
                 htmlFor="edit-meeting-title"
                 className="block text-sm font-medium text-foreground"
               >
-                Meeting Title <span className="text-red-500">*</span>
+                Meeting Title <span className="text-destructive">*</span>
               </label>
               <input
                 id="edit-meeting-title"
@@ -262,7 +262,7 @@ export function EditMeetingModal({
                   htmlFor="edit-tutor-select"
                   className="block text-sm font-medium text-foreground"
                 >
-                  Select Tutor <span className="text-red-500">*</span>
+                  Select Tutor <span className="text-destructive">*</span>
                 </label>
                 <select
                   id="edit-tutor-select"
@@ -298,7 +298,7 @@ export function EditMeetingModal({
                   htmlFor="edit-student-select"
                   className="block text-sm font-medium text-foreground"
                 >
-                  Select Student <span className="text-red-500">*</span>
+                  Select Student <span className="text-destructive">*</span>
                 </label>
                 <select
                   id="edit-student-select"
@@ -320,7 +320,7 @@ export function EditMeetingModal({
 
             <div>
               <div className="mb-2 block text-sm font-medium text-foreground">
-                Meeting Type <span className="text-red-500">*</span>
+                Meeting Type <span className="text-destructive">*</span>
               </div>
               <div
                 className="grid grid-cols-2 gap-3"
@@ -375,7 +375,7 @@ export function EditMeetingModal({
                     htmlFor="edit-platform-select"
                     className="block text-sm font-medium text-foreground"
                   >
-                    Online Platform <span className="text-red-500">*</span>
+                    Online Platform <span className="text-destructive">*</span>
                   </label>
                   <select
                     id="edit-platform-select"
@@ -403,7 +403,7 @@ export function EditMeetingModal({
                     className="block text-sm font-medium text-foreground"
                   >
                     Meeting Invitation Link{' '}
-                    <span className="text-red-500">*</span>
+                    <span className="text-destructive">*</span>
                   </label>
                   <input
                     id="edit-meeting-link"
@@ -424,7 +424,7 @@ export function EditMeetingModal({
                   htmlFor="edit-meeting-location"
                   className="block text-sm font-medium text-foreground"
                 >
-                  Physical Location <span className="text-red-500">*</span>
+                  Physical Location <span className="text-destructive">*</span>
                 </label>
                 <input
                   id="edit-meeting-location"
@@ -481,7 +481,7 @@ export function EditMeetingModal({
                     htmlFor="edit-schedule-date"
                     className="block text-sm font-medium text-foreground"
                   >
-                    Date <span className="text-red-500">*</span>
+                    Date <span className="text-destructive">*</span>
                   </label>
                   <div className="relative mt-1">
                     <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -501,7 +501,7 @@ export function EditMeetingModal({
                       htmlFor="edit-schedule-start-time"
                       className="block text-sm font-medium text-foreground"
                     >
-                      Start Time <span className="text-red-500">*</span>
+                      Start Time <span className="text-destructive">*</span>
                     </label>
                     <div className="relative mt-1">
                       <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -520,7 +520,7 @@ export function EditMeetingModal({
                       htmlFor="edit-schedule-end-time"
                       className="block text-sm font-medium text-foreground"
                     >
-                      End Time <span className="text-red-500">*</span>
+                      End Time <span className="text-destructive">*</span>
                     </label>
                     <div className="relative mt-1">
                       <Clock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

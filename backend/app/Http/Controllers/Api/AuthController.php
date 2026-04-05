@@ -155,6 +155,10 @@ class AuthController
     {
         $user = $request->user();
 
+        if ($user instanceof User) {
+            $user->load(['subjects:id,name,description']);
+        }
+
         return response()->json($user ? new UserResource($user) : null);
     }
 

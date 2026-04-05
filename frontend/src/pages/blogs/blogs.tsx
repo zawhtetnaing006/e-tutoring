@@ -139,10 +139,17 @@ export function BlogsPage() {
     setDeleteTarget(null)
   }
 
-  const handleRequestToggleStatus = (blogId: number) => {
+  const handleRequestActivateBlog = (blogId: number) => {
     const blog = blogs.find(b => b.id === blogId)
-    if (blog) {
-      setToggleStatusTarget({ blogId, currentlyActive: blog.is_active })
+    if (blog && !blog.is_active) {
+      setToggleStatusTarget({ blogId, currentlyActive: false })
+    }
+  }
+
+  const handleRequestDeactivateBlog = (blogId: number) => {
+    const blog = blogs.find(b => b.id === blogId)
+    if (blog && blog.is_active) {
+      setToggleStatusTarget({ blogId, currentlyActive: true })
     }
   }
 
@@ -217,13 +224,11 @@ export function BlogsPage() {
               currentUserRole={currentUserRole}
               selectedIds={selectedIds}
               onOpenDetail={openBlogDetail}
-              onToggleSelect={(blogId, event) => {
-                event.stopPropagation()
-                handleToggleSelect(blogId)
-              }}
+              onToggleSelect={handleToggleSelect}
               onViewDetails={openBlogDetail}
               onEdit={openEditEditor}
-              onToggleStatus={handleRequestToggleStatus}
+              onActivateBlog={handleRequestActivateBlog}
+              onDeactivateBlog={handleRequestDeactivateBlog}
               onDelete={handleRequestDelete}
             />
           </div>
@@ -277,8 +282,8 @@ export function BlogsPage() {
         onConfirm={handleConfirmToggleStatus}
         title={
           toggleStatusTarget?.currentlyActive
-            ? 'Deactivate blog?'
-            : 'Activate blog?'
+            ? 'Inactive Blog?'
+            : 'Active Blog?'
         }
         description={
           toggleStatusTarget?.currentlyActive
@@ -286,10 +291,10 @@ export function BlogsPage() {
             : 'This blog will become visible to users.'
         }
         confirmLabel={
-          toggleStatusTarget?.currentlyActive ? 'Deactivate' : 'Activate'
+          toggleStatusTarget?.currentlyActive ? 'Inactive Blog' : 'Active Blog'
         }
         cancelLabel="Cancel"
-        variant={toggleStatusTarget?.currentlyActive ? 'warning' : 'info'}
+        variant={toggleStatusTarget?.currentlyActive ? 'inactive' : 'success'}
         isLoading={actions.isTogglingStatus}
       />
     </div>

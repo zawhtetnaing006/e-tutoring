@@ -22,7 +22,6 @@ import type { ResponsiveTableColumn } from '@/components/dashboard/ResponsiveTab
 import { ResponsiveTable } from '@/components/dashboard/ResponsiveTable'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { formatLastLoginDisplay } from '@/utils/formatters'
 import { useAnalytics, useDashboardWelcomeFirstVisit } from '@/hooks'
 import { useCurrentUser } from '@/features/auth'
 import type { TutorAnalyticsPayload, TutorStudentRow } from '@/api/analytics'
@@ -87,25 +86,22 @@ export function TutorDashboard() {
 
   return (
     <div className="w-full min-w-0 space-y-4 sm:space-y-6">
-      <LastLoginBanner lastLoginAt={analytics.lastLoginAt} />
-
-      {showWelcomeCard && (
+      {showWelcomeCard ? (
         <DashboardWelcomeCard
           heading={
-            <>Welcome back, {analytics.displayName || user?.name || 'Tutor'}</>
+            <>Greetings, {analytics.displayName || user?.name || 'Tutor'}</>
           }
         >
           <p className="mt-1 text-xs text-gray-700 sm:text-sm">
-            We are glad to see you again. Your last login was on{' '}
-            <span className="font-medium">
-              {formatLastLoginDisplay(analytics.lastLoginAt)}
-            </span>
-            .
+            Welcome to our teaching community! We are excited to have you on
+            board.
           </p>
           <p className="mt-1 text-xs text-gray-700 sm:text-sm">
             {analytics.welcomeSubtitle}
           </p>
         </DashboardWelcomeCard>
+      ) : (
+        <LastLoginBanner lastLoginAt={analytics.lastLoginAt} />
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -1,8 +1,13 @@
-import { AlertTriangle, Info, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Info, Trash2, UserCheck, UserX, X } from 'lucide-react'
 import { Button } from './Button'
 import { Modal } from './Modal'
 
-export type ConfirmDialogVariant = 'danger' | 'warning' | 'info'
+export type ConfirmDialogVariant =
+  | 'danger'
+  | 'inactive'
+  | 'warning'
+  | 'info'
+  | 'success'
 
 export interface ConfirmDialogProps {
   isOpen: boolean
@@ -23,11 +28,23 @@ const VARIANT_CONFIG = {
     iconColor: 'text-red-600',
     buttonClass: 'bg-red-600 hover:bg-red-700 text-white',
   },
+  inactive: {
+    icon: UserX,
+    iconBg: 'bg-red-100',
+    iconColor: 'text-red-600',
+    buttonClass: 'bg-red-600 hover:bg-red-700 text-white',
+  },
   warning: {
     icon: AlertTriangle,
     iconBg: 'bg-amber-100',
     iconColor: 'text-amber-600',
     buttonClass: 'bg-amber-600 hover:bg-amber-700 text-white',
+  },
+  success: {
+    icon: UserCheck,
+    iconBg: 'bg-green-100',
+    iconColor: 'text-green-600',
+    buttonClass: 'bg-green-600 hover:bg-green-700 text-white',
   },
   info: {
     icon: Info,
@@ -52,8 +69,12 @@ export function ConfirmDialog({
     switch (variant) {
       case 'danger':
         return VARIANT_CONFIG.danger
+      case 'inactive':
+        return VARIANT_CONFIG.inactive
       case 'warning':
         return VARIANT_CONFIG.warning
+      case 'success':
+        return VARIANT_CONFIG.success
       default:
         return VARIANT_CONFIG.info
     }

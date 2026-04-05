@@ -23,8 +23,14 @@ import {
 import { useAllocations } from '@/features/allocations/useAllocations'
 import { useUsers } from '@/features/users/useUsers'
 import { useDebouncedValue } from '@/hooks'
+import { ConfirmDialog } from '@/components/ui'
 import { CreateAllocationModal } from './components/CreateAllocationModal'
 import { AllocationDetailsModal } from './components/AllocationDetailsModal'
+
+type AllocationDeleteTarget =
+  | { mode: 'single'; allocation: Allocation }
+  | { mode: 'bulk'; ids: number[] }
+  | null
 
 type AllocationRow = Allocation & {
   tutorName: string
@@ -66,6 +72,7 @@ export function AllocationsPage() {
     number | null
   >(null)
   const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [deleteTarget, setDeleteTarget] = useState<AllocationDeleteTarget>(null)
 
   const debouncedSearch = useDebouncedValue(search.trim(), 400)
 
@@ -175,27 +182,29 @@ export function AllocationsPage() {
     },
   })
 
-  const handleDelete = (allocation: Allocation) => {
-    const confirmed = window.confirm(
-      `Delete the allocation for student #${allocation.student_user_id}?`
-    )
-
-    if (!confirmed) return
-
-    deleteMutation.mutate(allocation.id)
+  const requestDeleteAllocation = (allocation: Allocation) => {
+    setDeleteTarget({ mode: 'single', allocation })
   }
 
-  const handleBulkDelete = () => {
+  const requestBulkDelete = () => {
     if (visibleSelectedIds.length === 0) return
-
-    const confirmed = window.confirm(
-      `Delete ${visibleSelectedIds.length} selected allocation(s)?`
-    )
-
-    if (!confirmed) return
-
-    bulkDeleteMutation.mutate(visibleSelectedIds)
+    setDeleteTarget({ mode: 'bulk', ids: [...visibleSelectedIds] })
   }
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return
+    if (deleteTarget.mode === 'single') {
+      const id = deleteTarget.allocation.id
+      setDeleteTarget(null)
+      deleteMutation.mutate(id)
+    } else {
+      const ids = deleteTarget.ids
+      setDeleteTarget(null)
+      bulkDeleteMutation.mutate(ids)
+    }
+  }
+
+  const handleCancelDelete = () => setDeleteTarget(null)
 
   const handleToggleRow = (id: number) => {
     setSelectedIds(current =>
@@ -242,7 +251,7 @@ export function AllocationsPage() {
               {isStaff && visibleSelectedIds.length > 0 ? (
                 <button
                   type="button"
-                  onClick={handleBulkDelete}
+                  onClick={requestBulkDelete}
                   disabled={bulkDeleteMutation.isPending}
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 hover:bg-red-100 disabled:opacity-50"
                 >
@@ -373,7 +382,7 @@ export function AllocationsPage() {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleDelete(row)}
+                                  onClick={() => requestDeleteAllocation(row)}
                                   disabled={deleteMutation.isPending}
                                   className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive disabled:opacity-50 sm:p-2"
                                   aria-label={`Delete allocation ${row.id}`}
@@ -478,6 +487,28 @@ export function AllocationsPage() {
         allocationId={selectedAllocationId}
         onClose={() => setSelectedAllocationId(null)}
         users={users}
+      />
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title={
+          deleteTarget?.mode === 'bulk'
+            ? `Delete ${deleteTarget.ids.length} allocation(s)?`
+            : 'Delete allocation?'
+        }
+        description={
+          deleteTarget?.mode === 'bulk'
+            ? 'This will permanently delete the selected allocations. This cannot be undone.'
+            : deleteTarget?.mode === 'single'
+              ? `This will remove the allocation for student #${deleteTarget.allocation.student_user_id}. This cannot be undone.`
+              : ''
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={deleteMutation.isPending || bulkDeleteMutation.isPending}
       />
     </>
   )

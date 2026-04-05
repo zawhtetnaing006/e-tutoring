@@ -20,10 +20,10 @@ import {
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { formatLastLoginDisplay } from '@/utils/formatters'
 import { useAnalytics, useDashboardWelcomeFirstVisit } from '@/hooks'
 import { useCurrentUser } from '@/features/auth'
 import type { StudentAnalyticsPayload } from '@/api/analytics'
+import { formatLastInteractionDisplay } from '@/utils/formatters'
 
 export function StudentDashboard() {
   const { data, loading, error } = useAnalytics()
@@ -44,22 +44,16 @@ export function StudentDashboard() {
   }
 
   const upcoming = analytics.upcomingMeetings[0]
-  const lastLoginRaw = analytics.lastLoginAt ?? analytics.lastActiveAt
-  const lastLoginDisplay = formatLastLoginDisplay(lastLoginRaw)
 
   return (
     <div className="w-full min-w-0 space-y-4 sm:space-y-6">
-      <LastLoginBanner
-        lastLoginAt={analytics.lastLoginAt ?? analytics.lastActiveAt ?? null}
-      />
-
-      {showWelcomeCard && (
+      {showWelcomeCard ? (
         <DashboardWelcomeCard
-          heading={<>Welcome back, {user?.name || 'Student'}</>}
+          heading={<>Greetings, {user?.name || 'Student'}</>}
         >
           <p className="mt-1 text-xs text-gray-700 sm:text-sm">
-            We are glad to see you again. Your last login was on{' '}
-            <span className="font-medium">{lastLoginDisplay}</span>.
+            Welcome to your personalized learning journey! We are thrilled to
+            help you reach your academic goals.
           </p>
           <p className="mt-1 text-xs text-gray-700 sm:text-sm">
             Please check your messages and upcoming{' '}
@@ -67,6 +61,10 @@ export function StudentDashboard() {
             your personal tutor.
           </p>
         </DashboardWelcomeCard>
+      ) : (
+        <LastLoginBanner
+          lastLoginAt={analytics.lastLoginAt ?? analytics.lastActiveAt ?? null}
+        />
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -92,6 +90,7 @@ export function StudentDashboard() {
           icon={<Clock className="size-6 sm:size-8" />}
           label="Last Interaction"
           isValueDate
+          formatDateValue={formatLastInteractionDisplay}
           value={analytics.lastActiveAt}
           variant="info"
         />

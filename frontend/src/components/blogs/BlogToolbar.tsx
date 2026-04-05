@@ -53,7 +53,7 @@ export function BlogToolbar({
           />
         ) : null}
 
-        {canManageBlogs ? (
+        {canManageBlogs && hasSelection ? (
           <Button
             type="button"
             variant="outline"

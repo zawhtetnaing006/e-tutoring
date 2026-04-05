@@ -11,6 +11,8 @@ export interface ModalProps {
   showCloseButton?: boolean
   closeOnOverlayClick?: boolean
   closeOnEscape?: boolean
+  /** When false, body scroll is not locked (use for dialogs stacked inside another modal). */
+  lockBodyScroll?: boolean
   className?: string
   overlayClassName?: string
   contentClassName?: string
@@ -36,6 +38,7 @@ export function Modal({
   showCloseButton = true,
   closeOnOverlayClick = true,
   closeOnEscape = true,
+  lockBodyScroll = true,
   className = '',
   overlayClassName = 'fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-4',
   contentClassName = 'max-h-[calc(100vh-200px)] overflow-y-auto',
@@ -52,13 +55,17 @@ export function Modal({
     }
 
     document.addEventListener('keydown', handleEscape)
-    document.body.style.overflow = 'hidden'
+    if (lockBodyScroll) {
+      document.body.style.overflow = 'hidden'
+    }
 
     return () => {
       document.removeEventListener('keydown', handleEscape)
-      document.body.style.overflow = ''
+      if (lockBodyScroll) {
+        document.body.style.overflow = ''
+      }
     }
-  }, [isOpen, closeOnEscape, onClose])
+  }, [isOpen, closeOnEscape, onClose, lockBodyScroll])
 
   const handleOverlayClick = (e: React.MouseEvent) => {
     if (closeOnOverlayClick && e.target === e.currentTarget) {

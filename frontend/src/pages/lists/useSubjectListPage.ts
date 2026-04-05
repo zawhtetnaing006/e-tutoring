@@ -51,6 +51,7 @@ export function useSubjectListPage(showStaffActions: boolean) {
   const [viewSubject, setViewSubject] = useState<Subject | null>(null)
   const [editSubject, setEditSubject] = useState<Subject | null>(null)
   const [addOpen, setAddOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Subject | null>(null)
   const [openRowId, setOpenRowId] = useState<number | null>(null)
   const [dropdownRect, setDropdownRect] = useState<{
     top: number
@@ -95,10 +96,14 @@ export function useSubjectListPage(showStaffActions: boolean) {
     },
   })
 
-  const handleDelete = (row: Subject) => {
-    if (!window.confirm(`Delete "${row.name}"? This cannot be undone.`)) return
-    deleteMutation.mutate(row.id)
+  const requestDelete = (row: Subject) => setDeleteTarget(row)
+  const confirmDelete = () => {
+    if (!deleteTarget) return
+    const id = deleteTarget.id
+    setDeleteTarget(null)
+    deleteMutation.mutate(id)
   }
+  const cancelDelete = () => setDeleteTarget(null)
 
   const totalItems = data?.total_items ?? 0
   const totalPages = data?.total_page ?? 1
@@ -207,7 +212,10 @@ export function useSubjectListPage(showStaffActions: boolean) {
     isError,
     toggleStatusMutation,
     deleteMutation,
-    handleDelete,
+    deleteTarget,
+    requestDelete,
+    confirmDelete,
+    cancelDelete,
     totalItems,
     totalPages,
     start,

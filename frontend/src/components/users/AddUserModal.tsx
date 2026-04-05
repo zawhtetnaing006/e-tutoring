@@ -126,13 +126,25 @@ export function AddUserModal({
   const useTutorLayout = layoutVariant === 'tutor'
   const useStudentLayout = layoutVariant === 'student'
   const nameLabel =
-    useStaffLayout || useTutorLayout || useStudentLayout
-      ? 'Full Name *'
-      : 'Name *'
+    useStaffLayout || useTutorLayout || useStudentLayout ? (
+      <>
+        Full Name <span className="text-destructive">*</span>
+      </>
+    ) : (
+      <>
+        Name <span className="text-destructive">*</span>
+      </>
+    )
   const emailLabel =
-    useStaffLayout || useTutorLayout || useStudentLayout
-      ? 'Email Address *'
-      : 'Email *'
+    useStaffLayout || useTutorLayout || useStudentLayout ? (
+      <>
+        Email Address <span className="text-destructive">*</span>
+      </>
+    ) : (
+      <>
+        Email <span className="text-destructive">*</span>
+      </>
+    )
 
   return (
     <div className="fixed inset-0 z-modal !mt-0 flex items-center justify-center overflow-y-auto bg-black/50 p-3 sm:p-4">
@@ -204,7 +216,7 @@ export function AddUserModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">
-                    Phone Number *
+                    Phone Number <span className="text-destructive">*</span>
                     <input
                       type="text"
                       required
@@ -222,7 +234,8 @@ export function AddUserModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">
-                    Subject Speciality *
+                    Subject Speciality{' '}
+                    <span className="text-destructive">*</span>
                     <select
                       required
                       value={form.subject_ids?.[0] ?? ''}
@@ -294,7 +307,10 @@ export function AddUserModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">
-                    Phone Number {useStudentLayout ? '*' : ''}
+                    Phone Number{' '}
+                    {useStudentLayout ? (
+                      <span className="text-destructive">*</span>
+                    ) : null}
                     <input
                       type="text"
                       required={!!useStudentLayout}
@@ -319,7 +335,7 @@ export function AddUserModal({
                 {useStaffLayout && (
                   <div>
                     <label className="block text-sm font-medium text-foreground">
-                      Choose Role *
+                      Choose Role <span className="text-destructive">*</span>
                       <select
                         required
                         value={form.role_code ?? userType}
@@ -370,7 +386,8 @@ export function AddUserModal({
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-foreground">
-                          Select Tutor *
+                          Select Tutor{' '}
+                          <span className="text-destructive">*</span>
                           <select
                             required
                             value={assignedTutorId}
@@ -396,7 +413,8 @@ export function AddUserModal({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-foreground">
-                        Semester Period *
+                        Semester Period{' '}
+                        <span className="text-destructive">*</span>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           Tutor assignments automatically expire when the
                           semester ends.
@@ -668,7 +686,8 @@ export function AddUserModal({
                   <div className="flex gap-2">
                     <div className="w-full">
                       <label className="block text-sm font-medium text-foreground">
-                        Account Password *
+                        Account Password{' '}
+                        <span className="text-destructive">*</span>
                         <input
                           type="password"
                           minLength={8}
@@ -683,7 +702,8 @@ export function AddUserModal({
                     </div>
                     <div className="w-full">
                       <label className="block text-sm font-medium text-foreground">
-                        Confirm Password *
+                        Confirm Password{' '}
+                        <span className="text-destructive">*</span>
                         <input
                           type="password"
                           minLength={8}
