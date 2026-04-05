@@ -25,6 +25,7 @@ import {
   useMeetingDetails,
   useUpdateMeetingSchedule,
 } from '@/features/meetings/useMeetings'
+import { MeetingScheduleStatusBadge } from '@/features/meetings/MeetingScheduleStatusBadge'
 
 type MeetingDetailModalProps = {
   meeting: Meeting
@@ -274,7 +275,7 @@ function MeetingDetailModalDraft({
 
       <div className="my-auto w-full max-w-2xl rounded-xl border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <h2 className="text-lg font-semibold text-foreground">
               {meeting.title}
             </h2>
@@ -283,6 +284,9 @@ function MeetingDetailModalDraft({
                 <Calendar className="mr-1 inline h-3 w-3" />
                 Weekly
               </span>
+            )}
+            {primarySchedule && (
+              <MeetingScheduleStatusBadge schedule={primarySchedule} />
             )}
           </div>
           <button
