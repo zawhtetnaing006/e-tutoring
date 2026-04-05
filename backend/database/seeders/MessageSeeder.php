@@ -6,6 +6,7 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\ChatService;
 use Illuminate\Database\Seeder;
 
 class MessageSeeder extends Seeder
@@ -49,7 +50,7 @@ class MessageSeeder extends Seeder
     }
 
     /**
-     * @param  list<array{0: User, 1: string}>  $messageData
+     * @param  list<array{0: User|null, 1: string}>  $messageData
      * @return list<Message>
      */
     private function seedMessages(Conversation $conversation, array $messageData): array
@@ -59,7 +60,7 @@ class MessageSeeder extends Seeder
         foreach ($messageData as [$sender, $content]) {
             $messages[] = Message::create([
                 'conversation_id' => $conversation->id,
-                'sender_user_id' => $sender->id,
+                'sender_user_id' => $sender?->id,
                 'content' => $content,
             ]);
         }
@@ -89,10 +90,29 @@ class MessageSeeder extends Seeder
     }
 
     /**
-     * @return list<array{0: User, 1: string}>
+     * @return list<array{0: User|null, 1: string}>
      */
     private function buildMessageData(User $firstUser, User $secondUser): array
     {
+        if ($this->matchesFixedTutorStudentPair($firstUser, $secondUser)) {
+            $tutor = $firstUser->email === UserSeeder::TUTOR_EMAIL ? $firstUser : $secondUser;
+            $student = $firstUser->email === UserSeeder::STUDENT_EMAIL ? $firstUser : $secondUser;
+
+            return [
+                [null, ChatService::DEFAULT_ASSIGNMENT_WELCOME_MESSAGE],
+                [$tutor, 'I have mapped out our February to May computer science tutoring plan so each week builds toward the mock practical.'],
+                [$student, 'That helps a lot. The weekly structure makes the programming topics feel much more manageable.'],
+                [$tutor, 'Please keep sending your code before each Wednesday session so I can tailor the debugging examples.'],
+                [$student, 'I sent the control-flow and function exercises from last week. Recursion is still the hardest topic for me.'],
+                [$tutor, 'I reviewed them. We will spend the first half of the next meeting on recursion and then move into timed coding practice.'],
+                [$student, 'Sounds good. I also wanted to ask whether we can revisit the cancelled recursion workshop with a new exercise sheet.'],
+                [$tutor, 'Yes. I added a replacement problem set and folded the missed material into our next two meetings.'],
+                [$student, 'Thank you. The feedback on my mock quiz was useful even though I was on leave for that session.'],
+                [$tutor, 'Before the upcoming meeting, complete the searching and sorting tasks and flag any bugs you want to review live.'],
+                [$student, 'I will finish them tonight and upload the files before tomorrow afternoon.'],
+            ];
+        }
+
         $firstRole = strtoupper((string) $firstUser->role?->code);
         $secondRole = strtoupper((string) $secondUser->role?->code);
 
@@ -134,5 +154,16 @@ class MessageSeeder extends Seeder
     ): bool {
         return ($firstRole === $expectedRoleOne && $secondRole === $expectedRoleTwo)
             || ($firstRole === $expectedRoleTwo && $secondRole === $expectedRoleOne);
+    }
+
+    private function matchesFixedTutorStudentPair(User $firstUser, User $secondUser): bool
+    {
+        $emails = [$firstUser->email, $secondUser->email];
+        sort($emails);
+
+        return $emails === [
+            UserSeeder::STUDENT_EMAIL,
+            UserSeeder::TUTOR_EMAIL,
+        ];
     }
 }

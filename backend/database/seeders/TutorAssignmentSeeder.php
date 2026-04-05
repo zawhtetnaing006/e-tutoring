@@ -64,8 +64,15 @@ class TutorAssignmentSeeder extends Seeder
         $baseStartDate = today()->subWeeks(2);
 
         foreach ($pairs as $index => [$tutor, $student]) {
-            $startDate = $baseStartDate->copy()->addDays($index * 3);
-            $endDate = $startDate->copy()->addMonths(4);
+            $isFixedPair = $tutor->email === UserSeeder::TUTOR_EMAIL
+                && $student->email === UserSeeder::STUDENT_EMAIL;
+
+            $startDate = $isFixedPair
+                ? today()->subMonths(3)->startOfDay()
+                : $baseStartDate->copy()->addDays($index * 3);
+            $endDate = $isFixedPair
+                ? $startDate->copy()->addMonths(5)
+                : $startDate->copy()->addMonths(4);
 
             TutorAssignment::create([
                 'tutor_user_id' => $tutor->id,

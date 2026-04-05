@@ -16,7 +16,7 @@ class UserSubjectSeeder extends Seeder
     {
         $subjectAssignments = [
             UserSeeder::TUTOR_EMAIL => ['Computer Science', 'Mathematics', 'Software Engineering'],
-            UserSeeder::STUDENT_EMAIL => ['Mathematics'],
+            UserSeeder::STUDENT_EMAIL => ['Computer Science'],
         ];
 
         $usersByEmail = User::whereIn('email', array_keys($subjectAssignments))

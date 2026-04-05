@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             SubjectSeeder::class,
             UserSubjectSeeder::class,
             TutorAssignmentSeeder::class,
+            MeetingSeeder::class,
             BlogSeeder::class,
             BlogCommentSeeder::class,
             ConversationSeeder::class,
