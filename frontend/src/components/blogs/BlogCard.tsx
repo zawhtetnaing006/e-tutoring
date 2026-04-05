@@ -4,9 +4,10 @@ import {
   Edit,
   Eye,
   MoreVertical,
-  Power,
   Trash2,
   User,
+  UserCheck,
+  UserX,
 } from 'lucide-react'
 import type { Blog } from '@/features/blogs/api'
 import { Dropdown, DropdownItem } from '@/components/ui'
@@ -19,10 +20,11 @@ export interface BlogCardProps {
   canManage: boolean
   isSelected: boolean
   onOpenDetail: () => void
-  onToggleSelect: (event: React.MouseEvent) => void
+  onToggleSelect: () => void
   onViewDetails: () => void
   onEdit: () => void
-  onToggleStatus: () => void
+  onActivateBlog: () => void
+  onDeactivateBlog: () => void
   onDelete: () => void
 }
 
@@ -34,7 +36,8 @@ export function BlogCard({
   onToggleSelect,
   onViewDetails,
   onEdit,
-  onToggleStatus,
+  onActivateBlog,
+  onDeactivateBlog,
   onDelete,
 }: BlogCardProps) {
   const isToolbarTarget = (target: EventTarget | null) =>
@@ -66,7 +69,10 @@ export function BlogCard({
         {canManage ? (
           <button
             type="button"
-            onClick={onToggleSelect}
+            onClick={e => {
+              e.stopPropagation()
+              onToggleSelect()
+            }}
             className={`absolute left-3 top-3 z-10 inline-flex size-6 items-center justify-center rounded border transition-opacity ${
               isSelected
                 ? 'border-slate-600 bg-slate-600 text-white opacity-100'
@@ -110,10 +116,22 @@ export function BlogCard({
               </DropdownItem>
 
               <DropdownItem
-                icon={<Power className="size-4" />}
-                onClick={onToggleStatus}
+                icon={
+                  <UserCheck className="h-5 w-5 shrink-0 2xl:h-5 2xl:w-5" />
+                }
+                onClick={onActivateBlog}
+                disabled={blog.is_active}
+                variant="success"
               >
-                {blog.is_active ? 'Deactivate' : 'Activate'}
+                Active Blog
+              </DropdownItem>
+              <DropdownItem
+                icon={<UserX className="h-5 w-5 shrink-0 2xl:h-5 2xl:w-5" />}
+                onClick={onDeactivateBlog}
+                disabled={!blog.is_active}
+                variant="danger"
+              >
+                Inactive Blog
               </DropdownItem>
 
               <DropdownItem
@@ -121,7 +139,7 @@ export function BlogCard({
                 onClick={onDelete}
                 variant="danger"
               >
-                Delete
+                Delete Record
               </DropdownItem>
             </Dropdown>
           ) : (
@@ -139,7 +157,7 @@ export function BlogCard({
 
       <div className="space-y-2 p-3 sm:space-y-3 sm:p-4">
         <div className="flex items-start justify-between gap-2 sm:items-center sm:gap-3">
-          <h3 className="line-clamp-2 h-[48px] text-base font-medium text-slate-700">
+          <h3 className="line-clamp-2 text-base font-medium text-slate-700">
             {blog.title}
           </h3>
           <span
@@ -153,7 +171,7 @@ export function BlogCard({
           </span>
         </div>
 
-        <p className="line-clamp-3 h-[96px] text-xs leading-6 text-slate-600 sm:leading-8">
+        <p className="line-clamp-3 text-xs leading-6 text-slate-600">
           {getExcerpt(stripHtml(blog.content))}
         </p>
 

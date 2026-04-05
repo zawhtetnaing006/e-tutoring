@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Upload, X } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Blog } from '@/features/blogs/api'
 import { Button, ConfirmDialog, FormLabel, Modal } from '@/components/ui'
 import { hashtagsToInput, hasMeaningfulContent } from '@/utils/string'
-import { RichTextToolbar } from './RichTextToolbar'
+import { BlogRichTextEditor } from './BlogRichTextEditor'
 
 export interface BlogFormData {
   title: string
@@ -86,8 +86,9 @@ function BlogEditorModalContent({
   )
   const [removeCoverImage, setRemoveCoverImage] = useState(false)
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
+  const [editorNestedModalOpen, setEditorNestedModalOpen] = useState(false)
   const [initialState] = useState<InitialFormState>(initialValues.initialState)
-  const editorRef = useRef<HTMLDivElement | null>(null)
+  const initialContentHtml = initialValues.content
 
   const isDirty = useMemo(() => {
     const titleChanged = title !== initialState.title
@@ -97,12 +98,6 @@ function BlogEditorModalContent({
 
     return titleChanged || hashtagsChanged || contentChanged || coverChanged
   }, [title, hashtags, content, coverFile, removeCoverImage, initialState])
-
-  useEffect(() => {
-    if (!editorRef.current) return
-    if (editorRef.current.innerHTML === content) return
-    editorRef.current.innerHTML = content
-  }, [content])
 
   useEffect(() => {
     return () => {
@@ -156,12 +151,6 @@ function BlogEditorModalContent({
     setRemoveCoverImage(true)
   }
 
-  const applyEditorCommand = (command: string, value?: string) => {
-    editorRef.current?.focus()
-    document.execCommand(command, false, value)
-    setContent(editorRef.current?.innerHTML ?? '')
-  }
-
   const handleSubmit = () => {
     const trimmedTitle = title.trim()
 
@@ -189,6 +178,7 @@ function BlogEditorModalContent({
         size="5xl"
         showCloseButton={false}
         closeOnOverlayClick={false}
+        closeOnEscape={!showDiscardConfirm && !editorNestedModalOpen}
         overlayClassName="fixed inset-0 z-modal flex items-center justify-center bg-black/30 p-2 sm:p-4"
         className="flex max-h-[95vh] w-full flex-col overflow-hidden rounded-xl p-0 shadow-2xl"
         contentClassName="flex min-h-0 flex-1 flex-col"
@@ -288,21 +278,11 @@ function BlogEditorModalContent({
               <FormLabel htmlFor="blog-content-editor" required>
                 Content
               </FormLabel>
-              <div className="rounded-lg border border-slate-200">
-                <RichTextToolbar onCommand={applyEditorCommand} />
-                <div
-                  id="blog-content-editor"
-                  ref={editorRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  onInput={event =>
-                    setContent(
-                      (event.currentTarget as HTMLDivElement).innerHTML
-                    )
-                  }
-                  className="min-h-[200px] w-full rounded-b-lg px-3 py-2 text-sm text-slate-700 outline-none"
-                />
-              </div>
+              <BlogRichTextEditor
+                initialHtml={initialContentHtml}
+                onChange={setContent}
+                onNestedModalOpenChange={setEditorNestedModalOpen}
+              />
             </div>
           </div>
         </div>

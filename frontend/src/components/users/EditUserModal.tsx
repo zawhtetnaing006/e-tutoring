@@ -108,7 +108,7 @@ export function EditUserModal({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground">
-                    Full Name *
+                    Full Name <span className="text-destructive">*</span>
                     <input
                       type="text"
                       required
@@ -122,7 +122,7 @@ export function EditUserModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">
-                    Email Address *
+                    Email Address <span className="text-destructive">*</span>
                     <input
                       type="email"
                       required
@@ -136,7 +136,7 @@ export function EditUserModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">
-                    Phone Number *
+                    Phone Number <span className="text-destructive">*</span>
                     <input
                       type="text"
                       value={form.phone ?? ''}
@@ -152,7 +152,8 @@ export function EditUserModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">
-                    Subject Speciality *
+                    Subject Speciality{' '}
+                    <span className="text-destructive">*</span>
                     <select
                       value={form.subject_ids?.[0] ?? ''}
                       onChange={e =>
@@ -255,9 +256,15 @@ export function EditUserModal({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground">
-                    {useStaffLayout || useStudentLayout
-                      ? 'Full Name *'
-                      : 'Name *'}
+                    {useStaffLayout || useStudentLayout ? (
+                      <>
+                        Full Name <span className="text-destructive">*</span>
+                      </>
+                    ) : (
+                      <>
+                        Name <span className="text-destructive">*</span>
+                      </>
+                    )}
                     <input
                       type="text"
                       required
@@ -271,9 +278,16 @@ export function EditUserModal({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-foreground">
-                    {useStaffLayout || useStudentLayout
-                      ? 'Email Address *'
-                      : 'Email *'}
+                    {useStaffLayout || useStudentLayout ? (
+                      <>
+                        Email Address{' '}
+                        <span className="text-destructive">*</span>
+                      </>
+                    ) : (
+                      <>
+                        Email <span className="text-destructive">*</span>
+                      </>
+                    )}
                     <input
                       type="email"
                       required
@@ -287,9 +301,13 @@ export function EditUserModal({
                 </div>
                 <div className="w-full">
                   <label className="block text-sm font-medium text-foreground">
-                    {useStaffLayout || useStudentLayout
-                      ? 'Phone Number *'
-                      : 'Phone'}
+                    {useStaffLayout || useStudentLayout ? (
+                      <>
+                        Phone Number <span className="text-destructive">*</span>
+                      </>
+                    ) : (
+                      'Phone'
+                    )}
                     <input
                       type="text"
                       value={form.phone ?? ''}
@@ -306,7 +324,7 @@ export function EditUserModal({
                 {useStaffLayout && (
                   <div className="w-full">
                     <label className="block text-sm font-medium text-foreground">
-                      Choose Role *
+                      Choose Role <span className="text-destructive">*</span>
                       <select
                         value="STAFF"
                         className="mt-1 w-full rounded border border-input bg-background px-3 py-2 text-sm text-foreground"

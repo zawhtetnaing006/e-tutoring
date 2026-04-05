@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 
 const DropdownContext = createContext<{ close: () => void } | null>(null)
 
@@ -59,7 +60,10 @@ export function Dropdown({
       <div ref={dropdownRef} className={`relative ${className}`}>
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={e => {
+            e.stopPropagation()
+            setIsOpen(!isOpen)
+          }}
           className="w-full"
           aria-expanded={isOpen}
           aria-haspopup="true"
@@ -86,12 +90,13 @@ export interface DropdownItemProps {
   onClick?: () => void
   icon?: ReactNode
   children: ReactNode
-  variant?: 'default' | 'danger'
+  variant?: 'default' | 'danger' | 'success'
   disabled?: boolean
 }
 
 const VARIANT_CLASSES = {
   default: 'text-gray-700 hover:bg-gray-100',
+  success: 'text-green-600 hover:bg-green-50',
   danger: 'text-red-600 hover:bg-red-50',
 } as const
 
@@ -106,7 +111,8 @@ export function DropdownItem({
   // eslint-disable-next-line security/detect-object-injection
   const variantClasses = VARIANT_CLASSES[variant]
 
-  const handleClick = () => {
+  const handleClick = (e: ReactMouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation()
     onClick?.()
     context?.close()
   }

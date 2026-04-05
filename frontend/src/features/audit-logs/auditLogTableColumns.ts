@@ -24,7 +24,7 @@ export const AUDIT_LOG_TABLE_COLUMNS: AuditLogTableColumnDef[] = [
     key: 'actor',
     label: 'Actor (Role)',
     thClassName:
-      'w-[120px] whitespace-nowrap bg-muted p-2 font-semibold text-foreground sm:w-[140px] sm:p-3 2xl:p-4',
+      'w-[200px] whitespace-nowrap bg-muted p-2 font-semibold text-foreground sm:w-[220px] sm:p-3 2xl:w-[260px] 2xl:p-4',
     labelWrapperClassName:
       'inline-flex w-full items-center justify-start gap-1.5 2xl:gap-2',
   },
@@ -32,7 +32,7 @@ export const AUDIT_LOG_TABLE_COLUMNS: AuditLogTableColumnDef[] = [
     key: 'action',
     label: 'Action',
     thClassName:
-      'w-[100px] whitespace-nowrap bg-muted p-2 font-semibold text-foreground sm:w-[120px] sm:p-3 2xl:p-4',
+      'w-[160px] whitespace-nowrap bg-muted p-2 font-semibold text-foreground sm:w-[180px] sm:p-3 2xl:w-[200px] 2xl:p-4',
     labelWrapperClassName:
       'inline-flex w-full items-center justify-start gap-1.5 2xl:gap-2',
   },

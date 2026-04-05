@@ -11,10 +11,11 @@ export interface BlogGridProps {
   currentUserRole: 'staff' | 'tutor' | 'student'
   selectedIds: number[]
   onOpenDetail: (blogId: number) => void
-  onToggleSelect: (blogId: number, event: React.MouseEvent) => void
+  onToggleSelect: (blogId: number) => void
   onViewDetails: (blogId: number) => void
   onEdit: (blog: Blog) => void
-  onToggleStatus: (blogId: number) => void
+  onActivateBlog: (blogId: number) => void
+  onDeactivateBlog: (blogId: number) => void
   onDelete: (blogId: number) => void
 }
 
@@ -28,7 +29,8 @@ export function BlogGrid({
   onToggleSelect,
   onViewDetails,
   onEdit,
-  onToggleStatus,
+  onActivateBlog,
+  onDeactivateBlog,
   onDelete,
 }: BlogGridProps) {
   if (isLoading) {
@@ -64,10 +66,11 @@ export function BlogGrid({
           onOpenDetail={() => {
             onOpenDetail(blog.id)
           }}
-          onToggleSelect={event => onToggleSelect(blog.id, event)}
+          onToggleSelect={() => onToggleSelect(blog.id)}
           onViewDetails={() => onViewDetails(blog.id)}
           onEdit={() => onEdit(blog)}
-          onToggleStatus={() => onToggleStatus(blog.id)}
+          onActivateBlog={() => onActivateBlog(blog.id)}
+          onDeactivateBlog={() => onDeactivateBlog(blog.id)}
           onDelete={() => onDelete(blog.id)}
         />
       ))}

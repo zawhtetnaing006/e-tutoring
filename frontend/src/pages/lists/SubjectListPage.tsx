@@ -1,4 +1,5 @@
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui'
 import {
   SubjectListHeader,
   ViewSubjectModal,
@@ -51,7 +52,10 @@ export function SubjectListPage({
     isError,
     toggleStatusMutation,
     deleteMutation,
-    handleDelete,
+    deleteTarget,
+    requestDelete,
+    confirmDelete,
+    cancelDelete,
     totalItems,
     totalPages,
     start,
@@ -106,7 +110,7 @@ export function SubjectListPage({
         onToggleSelect={toggleSelect}
         onView={setViewSubject}
         onEdit={setEditSubject}
-        onDelete={handleDelete}
+        onDelete={requestDelete}
         onToggleRowMenu={handleToggleRowMenu}
         openRowId={openRowId}
         showStaffActions={showStaffActions}
@@ -173,6 +177,21 @@ export function SubjectListPage({
           subtitle={editModalSubtitle}
         />
       )}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={cancelDelete}
+        onConfirm={confirmDelete}
+        title="Delete subject?"
+        description={
+          deleteTarget
+            ? `Delete "${deleteTarget.name}"? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }

@@ -77,6 +77,8 @@ class AuthService
 
         $token = $user->createToken($tokenName ?? 'api')->plainTextToken;
 
+        $user->load(['subjects:id,name,description']);
+
         return [
             'status' => 'success',
             'token' => $token,

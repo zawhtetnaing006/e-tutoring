@@ -437,12 +437,12 @@ class UserController
             return;
         }
 
-        if (! $currentUser->hasRole(Role::TUTOR)) {
-            abort(403, 'You are not allowed to view this user.');
-        }
-
         if ((int) $currentUser->id === (int) $user->id) {
             return;
+        }
+
+        if (! $currentUser->hasRole(Role::TUTOR)) {
+            abort(403, 'You are not allowed to view this user.');
         }
 
         $isAssignedStudent = TutorAssignment::query()

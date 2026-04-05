@@ -63,7 +63,7 @@ export function ResetPasswordModal({
         <form onSubmit={handleSubmit} className="mt-4 space-y-3">
           <div>
             <label className="block text-sm font-medium text-foreground">
-              New Password *
+              New Password <span className="text-destructive">*</span>
               <input
                 type="password"
                 required
@@ -76,7 +76,7 @@ export function ResetPasswordModal({
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground">
-              Confirm Password *
+              Confirm Password <span className="text-destructive">*</span>
               <input
                 type="password"
                 required

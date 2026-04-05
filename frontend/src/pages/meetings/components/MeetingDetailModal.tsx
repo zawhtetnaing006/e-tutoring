@@ -11,6 +11,7 @@ import {
   LoaderCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { ConfirmDialog } from '@/components/ui'
 import { ApiError } from '@/lib/api-client'
 import {
   createMeetingAttendance,
@@ -259,48 +260,17 @@ function MeetingDetailModalDraft({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-      {deleteConfirmOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="cancel-schedule-dialog-title"
-        >
-          <div className="my-auto w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
-            <h3
-              id="cancel-schedule-dialog-title"
-              className="text-lg font-semibold text-foreground"
-            >
-              Cancel this schedule?
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              This will cancel only this scheduled session for &quot;
-              {meeting.title}&quot;. Other schedules for the same meeting will
-              remain.
-            </p>
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmOpen(false)}
-                disabled={cancelScheduleMutation.isPending}
-                className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
-              >
-                Keep schedule
-              </button>
-              <button
-                type="button"
-                onClick={confirmCancelSchedule}
-                disabled={cancelScheduleMutation.isPending}
-                className="rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
-              >
-                {cancelScheduleMutation.isPending
-                  ? 'Cancelling…'
-                  : 'Cancel schedule'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={deleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
+        onConfirm={confirmCancelSchedule}
+        title="Cancel this schedule?"
+        description={`This will cancel only this scheduled session for "${meeting.title}". Other schedules for the same meeting will remain.`}
+        confirmLabel="Cancel schedule"
+        cancelLabel="Keep schedule"
+        variant="danger"
+        isLoading={cancelScheduleMutation.isPending}
+      />
 
       <div className="my-auto w-full max-w-2xl rounded-xl border border-border bg-card shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-6 py-4">
@@ -456,7 +426,7 @@ function MeetingDetailModalDraft({
           {canManageMeeting && (
             <div className="mt-6">
               <h3 className="mb-3 font-medium text-foreground">
-                Student Attendance <span className="text-red-500">*</span>
+                Student Attendance <span className="text-destructive">*</span>
               </h3>
               {detailLoading && (
                 <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">

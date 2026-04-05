@@ -7,6 +7,8 @@ export interface StatCardProps {
   label: string
   value: string | number
   isValueDate?: boolean
+  /** When `isValueDate` is true, use this instead of the default `formatDateTime`. */
+  formatDateValue?: (iso: string) => string
   variant?: 'default' | 'warning' | 'danger' | 'info' | 'success'
   className?: string
 }
@@ -16,6 +18,7 @@ export function StatCard({
   label,
   value,
   isValueDate = false,
+  formatDateValue,
   variant = 'default',
   className,
 }: StatCardProps) {
@@ -54,7 +57,9 @@ export function StatCard({
               isValueDate ? 'text-sm' : 'text-2xl sm:text-3xl'
             )}
           >
-            {isValueDate ? formatDateTime(value as string) : value}
+            {isValueDate
+              ? (formatDateValue ?? formatDateTime)(value as string)
+              : value}
           </p>
         </div>
         <p className="text-base font-medium text-gray-600">{label}</p>

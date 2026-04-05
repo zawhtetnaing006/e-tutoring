@@ -22,7 +22,12 @@ export function FormLabel({
       )}
     >
       {children}
-      {required ? <span className="text-red-500"> *</span> : null}
+      {required ? (
+        <>
+          {' '}
+          <span className="text-destructive">*</span>
+        </>
+      ) : null}
     </label>
   )
 }

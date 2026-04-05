@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { X } from 'lucide-react'
@@ -9,6 +9,7 @@ import { useCurrentUser } from '@/features/auth/useCurrentUser'
 import { getUserRole, getUserRoleLabel } from '@/features/auth/role-utils'
 import { getAuthSession, saveAuthSession } from '@/features/auth/storage'
 import type { User } from '@/features/auth'
+import type { Subject } from '@/features/subjects/api'
 import { useSubjects } from '@/features/subjects/useSubjects'
 import { updateUser } from '@/features/users/api'
 
@@ -150,11 +151,37 @@ export function ProfilePage() {
     is_active: true,
   })
 
+  const subjectOptions = useMemo((): Subject[] => {
+    const fromCatalog = subjectsData?.data ?? []
+    const fromUser = user?.subjects ?? []
+    const seen = new Set<number>()
+    const merged: Subject[] = []
+    for (const s of fromCatalog) {
+      if (!seen.has(s.id)) {
+        seen.add(s.id)
+        merged.push(s)
+      }
+    }
+    for (const s of fromUser) {
+      if (!seen.has(s.id)) {
+        seen.add(s.id)
+        merged.push({
+          id: s.id,
+          name: s.name,
+          description: s.description,
+          is_active: true,
+          created_at: '',
+          updated_at: '',
+        })
+      }
+    }
+    return merged.sort((a, b) => a.name.localeCompare(b.name))
+  }, [subjectsData?.data, user?.subjects])
+
   const profileMutation = useMutation({
     mutationFn: async (values: ProfileFormValues) => {
       const selectedSubjectId = shouldShowSubject
-        ? subjectsData?.data.find(subject => subject.name === values.subject)
-            ?.id
+        ? subjectOptions.find(subject => subject.name === values.subject)?.id
         : undefined
       const shouldSyncSubjectIds =
         shouldShowSubject && subjectsData != null && !isSubjectsLoading
@@ -385,7 +412,7 @@ export function ProfilePage() {
                           ? 'Loading subjects…'
                           : 'Select subject'}
                       </option>
-                      {subjectsData?.data.map(subject => (
+                      {subjectOptions.map(subject => (
                         <option key={subject.id} value={subject.name}>
                           {subject.name}
                         </option>
@@ -511,7 +538,7 @@ export function ProfilePage() {
                     htmlFor="currentPassword"
                     className="text-subtext font-medium text-foreground"
                   >
-                    Current Password
+                    Current Password <span className="text-destructive">*</span>
                   </label>
                   <input
                     id="currentPassword"
@@ -532,7 +559,7 @@ export function ProfilePage() {
                     htmlFor="newPassword"
                     className="text-subtext font-medium text-foreground"
                   >
-                    New Password
+                    New Password <span className="text-destructive">*</span>
                   </label>
                   <input
                     id="newPassword"
@@ -553,7 +580,8 @@ export function ProfilePage() {
                     htmlFor="confirmNewPassword"
                     className="text-subtext font-medium text-foreground"
                   >
-                    Confirm New Password
+                    Confirm New Password{' '}
+                    <span className="text-destructive">*</span>
                   </label>
                   <input
                     id="confirmNewPassword"

@@ -195,12 +195,20 @@ export function BlogDetailModal({
               </span>
             </div>
 
-            <article
-              className="space-y-2 text-sm leading-7 text-slate-700 sm:text-[14px] sm:leading-9"
-              dangerouslySetInnerHTML={{
-                __html: sanitizeRichText(blog.content),
-              }}
-            />
+            <article className="text-sm leading-7 text-slate-700 sm:text-[14px] sm:leading-9">
+              {/*
+                Same wrapper classes as the editor (blog-tiptap-root + tiptap) so list/blockquote/link
+                styles in global.css apply. Tailwind Preflight removes list markers on raw ul/ol.
+              */}
+              <div className="blog-tiptap-root">
+                <div
+                  className="tiptap space-y-2"
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeRichText(blog.content),
+                  }}
+                />
+              </div>
+            </article>
 
             <p className="text-sm font-medium text-slate-600 sm:text-base">
               {blog.hashtags.length > 0

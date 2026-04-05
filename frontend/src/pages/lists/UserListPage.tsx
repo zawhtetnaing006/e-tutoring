@@ -31,9 +31,8 @@ import { ViewUserModal } from '@/components/users/ViewUserModal'
 import { AddUserModal } from '@/components/users/AddUserModal'
 import { EditUserModal } from '@/components/users/EditUserModal'
 import { ResetPasswordModal } from '@/components/users/ResetPasswordModal'
-import { DeleteUserConfirmation } from '@/components/users/DeleteUserConfirmation'
 import type { LayoutVariant } from '@/components/users/types'
-import { SortColumnChevrons } from '@/components/ui'
+import { ConfirmDialog, SortColumnChevrons } from '@/components/ui'
 
 const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100]
 
@@ -875,14 +874,23 @@ export function UserListPage({
           ) : null
         })()}
 
-      {deleteTarget && (
-        <DeleteUserConfirmation
-          userName={deleteTarget.name}
-          onClose={() => setDeleteTarget(null)}
-          onConfirm={() => deleteMutation.mutate(deleteTarget.uuid)}
-          isPending={deleteMutation.isPending}
-        />
-      )}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.uuid)
+        }}
+        title="Delete user"
+        description={
+          deleteTarget
+            ? `Delete "${deleteTarget.name}"? This cannot be undone.`
+            : ''
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }

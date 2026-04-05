@@ -106,11 +106,11 @@ export function formatPercentage(value: number, decimals: number = 0): string {
 }
 
 /**
- * Parse last-login timestamps for display in the browser's local timezone.
+ * Parse analytics timestamps for display in the browser's local timezone.
  * - ISO 8601 from the API (`toIso8601String`) encodes the real instant.
  * - Legacy `Y/m/d H:i` strings were UTC wall-clock without a zone; treat as UTC.
  */
-function parseLastLoginToLocalDate(value: string): Date | null {
+export function parseLastLoginToLocalDate(value: string): Date | null {
   const trimmed = value.trim()
   const slash = trimmed.match(/^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2})$/)
   if (slash) {
@@ -151,6 +151,60 @@ export function formatLastLoginDisplay(
   } catch {
     return trimmed
   }
+}
+
+const relativeTimeFormatter = new Intl.RelativeTimeFormat(undefined, {
+  numeric: 'auto',
+})
+
+function formatFriendlyAbsoluteInstant(date: Date): string {
+  return date.toLocaleString(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  })
+}
+
+/**
+ * "Last interaction" style copy: relative when recent ("2 hours ago"), otherwise
+ * a locale-aware absolute line (e.g. "Apr 5, 2026, 1:59 PM") without raw ISO-style digits.
+ */
+export function formatLastInteractionDisplay(
+  value: string | null | undefined
+): string {
+  if (value == null || value === '') return '—'
+  const trimmed = value.trim()
+  const date = parseLastLoginToLocalDate(trimmed)
+  if (date === null) return trimmed
+
+  const diffMs = Date.now() - date.getTime()
+  if (diffMs < 0) {
+    return formatFriendlyAbsoluteInstant(date)
+  }
+
+  const diffSec = Math.floor(diffMs / 1000)
+  if (diffSec < 45) {
+    return 'Just now'
+  }
+
+  const diffMin = Math.floor(diffSec / 60)
+  if (diffMin < 1) {
+    return 'Just now'
+  }
+  if (diffMin < 60) {
+    return relativeTimeFormatter.format(-diffMin, 'minute')
+  }
+
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) {
+    return relativeTimeFormatter.format(-diffH, 'hour')
+  }
+
+  const diffDays = Math.floor(diffH / 24)
+  if (diffDays < 7) {
+    return relativeTimeFormatter.format(-diffDays, 'day')
+  }
+
+  return formatFriendlyAbsoluteInstant(date)
 }
 
 /** en-US date/time without seconds (matches legacy blog list formatting). */

@@ -1,0 +1,101 @@
+/**
+ * Styles aligned with Tiptap UI primitives (toolbar + ghost buttons).
+ * @see https://tiptap.dev/docs/ui-components/primitives/toolbar
+ * @see https://tiptap.dev/docs/ui-components/primitives/button
+ */
+:root {
+  --tt-toolbar-bg: hsl(0 0% 98%);
+  --tt-toolbar-border: hsl(220 13% 91%);
+  --tt-toolbar-fg: hsl(220 9% 46%);
+  --tt-button-hover-bg: hsl(220 14% 96%);
+  --tt-button-active-bg: hsl(220 13% 91%);
+  --tt-button-radius: 6px;
+  --tt-separator: hsl(220 13% 91%);
+}
+
+.tiptap-toolbar[data-variant='default'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  background-color: var(--tt-toolbar-bg);
+  border-bottom: 1px solid var(--tt-toolbar-border);
+  color: var(--tt-toolbar-fg);
+}
+
+.tiptap-toolbar-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.tiptap-toolbar-separator[data-orientation='vertical'] {
+  align-self: stretch;
+  width: 1px;
+  min-height: 24px;
+  margin: 0 4px;
+  background-color: var(--tt-separator);
+  flex-shrink: 0;
+}
+
+.tiptap-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.25;
+  color: inherit;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.tiptap-button:disabled,
+.tiptap-button[data-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.tiptap-button[data-style='ghost'][data-size='default'] {
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: var(--tt-button-radius);
+  background-color: transparent;
+}
+
+.tiptap-button[data-style='ghost'][data-size='default']:not(:disabled):hover {
+  background-color: var(--tt-button-hover-bg);
+}
+
+.tiptap-button[data-style='ghost'][data-size='default'][data-active-state='on'] {
+  background-color: var(--tt-button-active-bg);
+  color: hsl(220 9% 20%);
+}
+
+.tiptap-button-icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+}
+
+.tiptap-button-text {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+@media (max-width: 639px) {
+  .tiptap-button-text {
+    display: none;
+  }
+
+  .tiptap-button[data-style='ghost'][data-size='default'] {
+    min-width: 32px;
+    padding: 4px;
+  }
+}

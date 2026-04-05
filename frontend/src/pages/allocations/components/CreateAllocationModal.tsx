@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Calendar, LoaderCircle, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -15,7 +15,7 @@ import { useUsers } from '@/features/users/useUsers'
 import { useDebouncedValue } from '@/hooks'
 
 type UserPickerProps = {
-  label: string
+  label: ReactNode
   placeholder: string
   users: User[]
   searchValue: string
@@ -25,6 +25,7 @@ type UserPickerProps = {
 }
 
 type SingleUserPickerProps = UserPickerProps & {
+  radioGroupName: string
   value: number | null
   selectedUser: User | null
   onSelect: (userId: number) => void
@@ -36,6 +37,7 @@ function getUserLabel(user: User) {
 
 function SingleUserPicker({
   label,
+  radioGroupName,
   placeholder,
   users,
   searchValue,
@@ -83,7 +85,7 @@ function SingleUserPicker({
                 >
                   <input
                     type="radio"
-                    name={label}
+                    name={radioGroupName}
                     checked={value === user.id}
                     onChange={() => onSelect(user.id as number)}
                     className="size-4"
@@ -392,7 +394,12 @@ export function CreateAllocationModal({
         <div className="space-y-5 px-6 py-5">
           <div className="grid gap-5 lg:grid-cols-2">
             <SingleUserPicker
-              label="Select Tutor *"
+              label={
+                <>
+                  Select Tutor <span className="text-destructive">*</span>
+                </>
+              }
+              radioGroupName="allocation-tutor"
               placeholder="Find tutor by name"
               users={tutorOptions}
               searchValue={tutorSearch}
@@ -408,7 +415,12 @@ export function CreateAllocationModal({
 
             {isEditMode ? (
               <SingleUserPicker
-                label="Select Student *"
+                label={
+                  <>
+                    Select Student <span className="text-destructive">*</span>
+                  </>
+                }
+                radioGroupName="allocation-student"
                 placeholder="Find student by name"
                 users={studentOptions}
                 searchValue={studentSearch}
@@ -426,7 +438,11 @@ export function CreateAllocationModal({
               />
             ) : (
               <MultiUserPicker
-                label="Select Students *"
+                label={
+                  <>
+                    Select Students <span className="text-destructive">*</span>
+                  </>
+                }
                 placeholder="Find students by name"
                 users={studentOptions}
                 searchValue={studentSearch}
@@ -462,7 +478,7 @@ export function CreateAllocationModal({
                   htmlFor="allocation-from-date"
                   className="text-sm font-medium text-foreground"
                 >
-                  From Date *
+                  From Date <span className="text-destructive">*</span>
                 </label>
                 <input
                   id="allocation-from-date"
@@ -486,7 +502,7 @@ export function CreateAllocationModal({
                   htmlFor="allocation-to-date"
                   className="text-sm font-medium text-foreground"
                 >
-                  To Date *
+                  To Date <span className="text-destructive">*</span>
                 </label>
                 <input
                   id="allocation-to-date"

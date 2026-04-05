@@ -7,5 +7,4 @@ export { ResetPasswordModal } from './ResetPasswordModal'
 export type { ResetPasswordModalProps } from './ResetPasswordModal'
 /** Alias — same component as reset-password flow in the list UI */
 export { ResetPasswordModal as ChangePasswordModal } from './ResetPasswordModal'
-export { DeleteUserConfirmation } from './DeleteUserConfirmation'
 export type { LayoutVariant } from './types'
