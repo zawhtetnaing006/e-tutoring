@@ -43,7 +43,7 @@ class TutorStudentSeeder extends Seeder
             ]);
 
             $user->role_id = $roleId;
-            $user->password = 'password';
+            $user->password = 'Pass@w0rd!#';
             $user->save();
         }
     }

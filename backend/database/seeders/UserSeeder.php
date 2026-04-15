@@ -51,7 +51,7 @@ class UserSeeder extends Seeder
                 'email' => $userData['email'],
                 'role_id' => $roleIdsByCode[$userData['role_code']] ?? null,
                 'is_active' => true,
-                'password' => 'password',
+                'password' => 'Pass@w0rd!#',
             ]);
         }
 
@@ -71,7 +71,7 @@ class UserSeeder extends Seeder
                 'city' => fake()->city(),
                 'township' => fake()->city(),
                 'is_active' => true,
-                'password' => 'password',
+                'password' => 'Pass@w0rd!#',
             ])
             ->create();
     }
